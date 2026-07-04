@@ -1,0 +1,71 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -File ${CLAUDE_PROJECT_DIR}/hooks/git-guardrails.ps1",
+            "timeout": 5,
+            "statusMessage": "Git guardrails check..."
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -File ${CLAUDE_PROJECT_DIR}/hooks/ts-check.ps1",
+            "timeout": 30,
+            "statusMessage": "TypeScript check..."
+          },
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -File ${CLAUDE_PROJECT_DIR}/hooks/eslint-fix.ps1",
+            "timeout": 30,
+            "statusMessage": "ESLint fix..."
+          },
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -File ${CLAUDE_PROJECT_DIR}/hooks/maven-compile.ps1",
+            "timeout": 60,
+            "statusMessage": "Maven compile..."
+          },
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -File ${CLAUDE_PROJECT_DIR}/hooks/prettier-format.ps1",
+            "timeout": 15,
+            "statusMessage": "Prettier format..."
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -File ${CLAUDE_PROJECT_DIR}/hooks/sdd-status-banner.ps1",
+            "timeout": 5,
+            "statusMessage": "SDD status..."
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -File ${CLAUDE_PROJECT_DIR}/hooks/project-init-check.ps1",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

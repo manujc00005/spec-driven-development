@@ -1,0 +1,17 @@
+# Local Claude Code settings — machine-specific paths and session command history, never publish
+.claude/settings.local.json
+
+# Graphify output and other generated artifacts
+graphify-out/
+.tmp/
+
+# Secrets
+.env
+.env.*
+
+# Logs
+*.log
+
+# OS/editor noise
+.DS_Store
+Thumbs.db

@@ -1,0 +1,177 @@
+# Project instructions — Spec-Driven Development
+
+> This is a **generic, sanitized example**. Copy it into your own project as `CLAUDE.md` (or merge it into an existing one) and adjust the stack-specific details — nothing here should be treated as universal just because it's the default.
+
+## Development mode
+
+This project uses Spec-Driven Development (SDD).
+
+For non-trivial changes, follow this workflow:
+
+1. Create or update a `SPEC.md`.
+2. Clarify and strengthen the spec before planning.
+3. Create or update a `PLAN.md`.
+4. Analyze consistency before implementing.
+5. Implement only the tasks described in the spec.
+6. Do not introduce behavior that is not covered by the spec.
+7. If something is ambiguous, document the assumption or decision in `DECISIONS.md`.
+
+## Project constitution
+
+If the project has a `specs/CONSTITUTION.md`, read it before planning or implementing non-trivial changes. Project rules in this file must be respected unless explicitly overridden by the user.
+
+If it does not exist, run `/project-init` to create it before starting any spec.
+
+## SDD structure
+
+Feature specifications live under:
+
+`specs/features/`
+
+Expected structure:
+
+```
+specs/features/001-feature-name/
+├── SPEC.md
+├── PLAN.md
+├── TASKS.md
+└── DECISIONS.md
+```
+
+## File purpose
+
+- `SPEC.md` — defines what and why.
+- `PLAN.md` — defines the implementation strategy.
+- `TASKS.md` — defines small, actionable tasks.
+- `DECISIONS.md` — records assumptions and technical decisions.
+- `specs/CONSTITUTION.md` — permanent engineering rules for the project.
+
+## Spec status lifecycle
+
+```
+Draft → Ready → In Progress → In Review → Done | Archived
+```
+
+- `Draft` — spec created, not yet plannable.
+- `Ready` — plan and tasks exist, implementation can start.
+- `In Progress` — at least one task has been implemented.
+- `In Review` — all tasks complete and spec-review passed — QA and specialized reviews pending.
+- `Done` — all reviews complete and spec-close run — ready for PR.
+- `Archived` — spec abandoned or superseded.
+
+## Workflow selection
+
+Use `/sdd` as the main entry point for any non-trivial feature — it auto-detects complexity and selects the medium or full workflow.
+
+If the change touches authentication, authorization, user data, tenant isolation, public APIs, file uploads, secrets, database schema, migrations, or persistence, `/sdd` selects the full workflow automatically.
+
+Use `/sdd-medium` or `/sdd-full` only when you want to force a specific workflow explicitly.
+
+Use `/spec-status <feature-folder>` when a feature already exists and the next step is unclear.
+
+## Global SDD guardrails
+
+Before planning, implementing, or closing a feature, apply the consistency guardrails:
+
+`skills/sdd-guardrails/SKILL.md`
+
+Do not implement if:
+
+- active decisions contradict each other
+- a plan is obsolete, partial, superseded, or marked needs-review
+- acceptance criteria and tasks are not aligned
+- the source of truth differs between SPEC/PLAN/TASKS/DECISIONS
+- money/unit/deployment rules are unclear
+- a scope change invalidated the current plan
+
+> If you maintain a shared skill set across multiple projects instead of copying `skills/` into each repo, point this at wherever that shared location lives on your machine, e.g. `<central-claude-config>/skills/sdd-guardrails/SKILL.md` — just don't hardcode a path that only exists on one machine into a repo other people will clone.
+
+## Available skills
+
+- `/project-init` — initialize a project's SDD structure: creates `specs/CONSTITUTION.md` by interviewing the user about stack, architecture rules, coding conventions, and review gates. Run once per project before creating any specs.
+- `/sdd` — main entry point: auto-detects complexity and guides the right workflow.
+- `/sdd-medium`, `/sdd-full` — force a specific workflow explicitly.
+- `/prototype` — explore whether an approach is viable before writing a spec.
+- `/decision-mapping` — turn a vague idea into a sequenced map of investigation tickets when too many questions remain to write a spec.
+- `/spec-create` — create a new feature specification (includes an auto-clarify pass).
+- `/spec-clarify` — deepen spec clarification when blocking questions remain.
+- `/spec-status` — overview of all specs, or a deep-dive/resume of a single feature.
+- `/spec-close` — close a completed feature: resolve open questions, generate an implementation summary.
+- `/spec-plan` — convert a specification into an implementation plan and task list.
+- `/spec-analyze` — analyze consistency between spec, plan, tasks, and decisions before implementation.
+- `/spec-implement` — implement the next pending task from a feature spec.
+- `/spec-update` — update an existing spec mid-implementation, propagating changes to plan and tasks.
+- `/spec-review` — review implementation against the spec, plan, and tasks.
+- `/spec-resume` — resume an in-progress feature without re-reading the full spec.
+- `/qa-review` — review functional quality, edge cases, regressions, and tests.
+- `/security-review` — review authentication, authorization, data exposure, file upload, secrets, and API risks.
+- `/database-review` — review schema changes, migrations, indexes, queries, transactions, data integrity, and rollback risks.
+- `/performance-review` — review N+1 queries, re-renders, caching, bundle size, algorithmic complexity, and performance risks.
+- `/api-review` — review API contracts, backward compatibility, versioning, DTOs, and error semantics.
+- `/backend-review` — backend-focused review of APIs, services, data access, and business logic.
+- `/frontend-review` — frontend-focused review of components, rendering, state, and UX correctness.
+- `/seo-review` — review public-facing pages for metadata, Open Graph, JSON-LD, Core Web Vitals, sitemap, and canonical URLs.
+- `/privacy-compliance-review` — review data-protection compliance risks (adapt the specific regulation to your jurisdiction).
+- `/refactor-review` — optional cleanup review before spec-close.
+- `/review-all` — run all applicable specialized reviews in one command.
+- `/pr-description` — generate a pull request description from the current diff and related specs.
+- `/architect-review` — analyze architecture, diagnose root causes, and evaluate trade-offs.
+- `/test-engineer` — design test strategy, identify coverage gaps, enforce TDD.
+- `/debugger` — trace bugs and build failures to their root cause.
+- `/handoff` — compact the current conversation into a document for a fresh session to continue.
+
+## Recommended workflow (adapt per feature type)
+
+For most features:
+
+1. `/spec-create` (includes auto-clarify)
+2. `/spec-plan`
+3. `/spec-analyze`
+4. `/spec-implement`
+5. `/spec-review`
+6. `/qa-review`
+7. Specialized reviews as detected by `/spec-analyze` (database, security, performance, API, backend, frontend, SEO, privacy)
+8. `/spec-close`
+9. `/pr-description`
+
+## Rules
+
+- Do not start implementation before a plan exists.
+- Keep changes small and reviewable.
+- Prefer existing project patterns over new abstractions.
+- Add or update tests when behavior changes.
+- Do not change unrelated files.
+- Do not implement behavior that is not described in the active spec.
+- Do not silently make architectural decisions; document them in `DECISIONS.md`.
+- Every task in `TASKS.md` should map back to one or more acceptance criteria.
+- Mark tasks as completed only when the implementation is actually done.
+- If tests cannot be run, explain why.
+
+## Review rules
+
+Before considering a feature complete, run the reviews relevant to what the change touches — see `/spec-analyze`'s detection rules for which ones apply. Don't run every specialized review on every change; run the ones the spec actually triggers.
+
+## Scope control
+
+For small, trivial changes, SDD is optional. Examples: typo fixes, small styling tweaks, renaming a local variable, minor copy changes, isolated one-line bug fixes.
+
+For non-trivial changes, SDD is required. Examples: new features, backend changes, frontend flows, API changes, database changes, security-sensitive changes, multi-file refactors, changes involving business logic or external integrations.
+
+## Small-change shortcut
+
+For small, low-risk changes, skip SDD documents and use a direct instruction instead:
+
+"Make this small change. Do not create specs. Do not modify unrelated files. Summarize only files changed and tests run."
+
+## Token economy
+
+- Keep responses concise and actionable.
+- Do not repeat full contents of specs, plans, tasks, decisions, or constitution files.
+- Read only the active feature folder unless explicitly asked.
+- Avoid scanning unrelated files or archived specs unless explicitly asked.
+- Prefer summaries over pasted file contents.
+- Suggest the next command instead of re-explaining the full workflow.
+
+## Project-specific extensions
+
+This is the place for rules specific to *your* stack, tooling, or machine setup — for example, preview-server conventions for a particular framework, a required local dev-server restart procedure, or team-specific lint rules. Keep those out of the generic sections above so this file stays reusable across projects; add them here explicitly scoped to when they apply.
