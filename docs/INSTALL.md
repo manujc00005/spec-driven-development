@@ -157,3 +157,24 @@ readlink "$HOME/.claude/skills"
 - **Restore an overwritten file**: copy it back from `<central-dir>/_install-backups/<timestamp>/...`.
 
 Nothing in this repo automatically deletes a `.bak-*` directory or an `_install-backups` snapshot — cleanup, if wanted, is a manual, explicit step.
+
+---
+
+## Graphify (optional)
+
+This workflow includes **Graphify-aware skills** (`/context-manager`, `/graphify-context`, `/sdd-onboard`) and a **`graphify-stale-reminder`** hook. These are designed to use a `GRAPH_REPORT.md` file (an architecture/dependency map) to speed up impact analysis and reduce token waste on large codebases.
+
+**Graphify is not installed by this repo.** It is an external tool that the user runs independently to produce `GRAPH_REPORT.md` in a project's root.
+
+**What happens without Graphify:**
+
+- All Graphify-aware skills **work without it** — they detect the absence of `GRAPH_REPORT.md` and fall back to heuristic scanning or bounded file reads.
+- The `graphify-stale-reminder` hook prints a one-line suggestion if the file is missing; it never blocks.
+- No skill, hook, or workflow step **requires** Graphify to function.
+
+**To take advantage of Graphify:**
+
+1. Install and run Graphify externally against your project (follow Graphify's own documentation).
+2. Ensure it outputs `GRAPH_REPORT.md` at your project root.
+3. The skills and hook will automatically detect it and use it for impact analysis.
+4. Re-run Graphify periodically — the hook warns if the map is >7 days stale relative to source changes.

@@ -104,7 +104,7 @@ Not every change goes through the full ceremony. Trivial, low-risk changes — t
 
 ## Command lifecycle
 
-Each step below is implemented as a Claude Code skill and invoked as a slash command. **33 skills are published in [`skills/`](skills/)** — every command in this section and the next exists as a real `SKILL.md` file in this repository, not as a description of a future feature. This is the core lifecycle:
+Each step below is implemented as a Claude Code skill and invoked as a slash command. **36 skills are published in [`skills/`](skills/)** — every command in this section and the next exists as a real `SKILL.md` file in this repository, not as a description of a future feature. This is the core lifecycle:
 
 | Command | Purpose | Output |
 |---|---|---|
@@ -146,14 +146,17 @@ Beyond the core lifecycle, the following commands exist and cover situations the
 | `/debugger` | Root-cause analysis for failing tests or builds |
 | `/decision-mapping`, `/prototype` | Used *before* `/spec-create` when the technical approach itself is uncertain |
 | `/pr-description`, `/handoff` | Final PR text generation, and conversation hand-off to a fresh session |
+| `/context-manager` | Produces a bounded reading list (minimal files to load) before implementing — reduces token waste on large codebases |
+| `/graphify-context` | Interprets `GRAPH_REPORT.md` for impact analysis; degrades gracefully when Graphify is absent |
+| `/sdd-onboard` | Onboards an existing project into SDD: detects stack, scaffolds context docs (`PROJECT_CONTEXT`, `TECH_STACK`, `ARCHITECTURE`), never modifies application code |
 
-All commands listed above exist and are in active use. None are aspirational — all 33 `SKILL.md` files are published in [`skills/`](skills/) (32 individual skill folders plus the guardrails template at [`skills/sdd-guardrails/templates/source-of-truth-matrix.md`](skills/sdd-guardrails/templates/source-of-truth-matrix.md)).
+All commands listed above exist and are in active use. None are aspirational — all 36 `SKILL.md` files are published in [`skills/`](skills/) (35 individual skill folders plus the guardrails template at [`skills/sdd-guardrails/templates/source-of-truth-matrix.md`](skills/sdd-guardrails/templates/source-of-truth-matrix.md)).
 
 ---
 
 ## Enforcement, not just documentation
 
-A workflow that only lives in a markdown file doesn't stop anyone — human or AI — from skipping it under time pressure. Part of this setup is wired into actual Claude Code hooks that intervene at tool-call level. **8 hook families / 15 scripts are published in [`hooks/`](hooks/)** — full detail, including exactly when each one runs and how to enable it, is in [`hooks/README.md`](hooks/README.md).
+A workflow that only lives in a markdown file doesn't stop anyone — human or AI — from skipping it under time pressure. Part of this setup is wired into actual Claude Code hooks that intervene at tool-call level. **9 hook families / 18 scripts are published in [`hooks/`](hooks/)** — full detail, including exactly when each one runs and how to enable it, is in [`hooks/README.md`](hooks/README.md).
 
 | Hook | Trigger | Read-only or can modify files? | Wired by default or opt-in? | Effect |
 |---|---|---|---|---|
@@ -165,6 +168,7 @@ A workflow that only lives in a markdown file doesn't stop anyone — human or A
 | `eslint-fix` | After every file write/edit (`.ts`/`.tsx`/`.js`/`.jsx`) | **Can modify the file** — runs `eslint --fix` in place | Wired by default | Auto-fixes lint violations if the project has ESLint configured |
 | `prettier-format` | After every file write/edit (`.ts`/`.tsx`/`.css`/`.json`/`.js`/`.jsx`) | **Can modify the file** — runs `prettier --write` in place | Wired by default | Keeps formatting consistent if the project has Prettier configured |
 | `maven-compile` | After every file write/edit (`.java`) | Read-only (runs `mvnw compile`, doesn't rewrite source) | Wired by default | Surfaces Java compile errors if the project has a Maven wrapper |
+| `graphify-stale-reminder` | On session start | Read-only | **Opt-in** | Warns if `GRAPH_REPORT.md` is missing or stale (>7 days older than newest source). Never blocks — reminder only |
 
 Every hook is scoped defensively — the format/lint/type/build hooks only act if the project actually has the relevant tool configured (`tsconfig.json`, `.eslintrc*`, `.prettierrc*`, `mvnw`); otherwise they're a no-op.
 
@@ -265,8 +269,12 @@ spec-driven-development/
 ├── .gitignore
 ├── docs/
 │   ├── INSTALL.md                      # step-by-step installation guide (Windows, macOS/Linux)
-│   └── ROADMAP_JAVA_SPRING_CONTEXT.md  # roadmap for Java/Spring profile + Graphify context layer
-├── skills/                             # 33 skill definitions — every command in this README
+│   ├── ROADMAP_JAVA_SPRING_CONTEXT.md  # roadmap for Java/Spring profile + Graphify context layer
+│   └── _templates/                     # context doc templates (copied into projects by /sdd-onboard)
+│       ├── PROJECT_CONTEXT.md
+│       ├── TECH_STACK.md
+│       └── ARCHITECTURE.md
+├── skills/                             # 36 skill definitions — every command in this README
 │   ├── sdd/SKILL.md
 │   ├── sdd-medium/SKILL.md
 │   ├── sdd-full/SKILL.md
@@ -301,8 +309,11 @@ spec-driven-development/
 │   ├── prototype/SKILL.md
 │   ├── decision-mapping/SKILL.md
 │   ├── pr-description/SKILL.md
-│   └── handoff/SKILL.md
-├── hooks/                              # 8 hook families, 16 scripts (.ps1 + .sh)
+│   ├── handoff/SKILL.md
+│   ├── context-manager/SKILL.md
+│   ├── graphify-context/SKILL.md
+│   └── sdd-onboard/SKILL.md
+├── hooks/                              # 9 hook families, 18 scripts (.ps1 + .sh)
 │   ├── README.md
 │   ├── git-guardrails.ps1 / .sh
 │   ├── sdd-spec-guard.ps1 / .sh
@@ -311,7 +322,8 @@ spec-driven-development/
 │   ├── ts-check.ps1 / .sh
 │   ├── eslint-fix.ps1 / .sh
 │   ├── prettier-format.ps1 / .sh
-│   └── maven-compile.ps1 / .sh
+│   ├── maven-compile.ps1 / .sh
+│   └── graphify-stale-reminder.ps1 / .sh
 ├── specs/
 │   ├── _templates/
 │   │   ├── CONSTITUTION.md            # draft template — see Templates section above
@@ -333,10 +345,11 @@ spec-driven-development/
 This repository currently ships:
 
 - [x] `README.md` — methodology, philosophy, command reference, and enforcement model.
-- [x] `skills/` — 33 published skill definitions.
-- [x] `hooks/` — 8 hook families, 15 scripts.
+- [x] `skills/` — 36 published skill definitions.
+- [x] `hooks/` — 9 hook families, 18 scripts.
 - [x] `hooks/README.md` — per-hook trigger, effect, and activation guide.
 - [x] `specs/_templates/` — `SPEC.md`, `PLAN.md`, `TASKS.md`, `DECISIONS.md` (verbatim), `CONSTITUTION.md` (draft), `PR_DESCRIPTION.md`, `REVIEW_REPORT_TEMPLATE.md`.
+- [x] `docs/_templates/` — `PROJECT_CONTEXT.md`, `TECH_STACK.md`, `ARCHITECTURE.md` (context doc templates for project onboarding).
 - [x] `examples/README.md` — placeholder for a future worked example.
 - [x] `CLAUDE.md.example` — sanitized, generic project instructions.
 - [x] `settings.template.json` — sanitized hook wiring.
@@ -344,12 +357,15 @@ This repository currently ships:
 - [x] `docs/INSTALL.md` — step-by-step installation guide (Windows, macOS/Linux).
 - [x] `LICENSE` — MIT.
 - [x] `.gitignore` — excludes local Claude Code settings, generated artifacts, and secrets.
+- [x] Graphify-aware context layer — `context-manager`, `graphify-context`, `sdd-onboard` skills + `graphify-stale-reminder` hook.
 
 Not yet in this repository:
 
-- [ ] Graphify integration — see [Graphify integration (Planned)](#graphify-integration-planned).
+- [ ] Graphify external tool integration — see [Graphify integration (Planned)](#graphify-integration-planned).
 - [ ] Real-world example specs in `examples/`.
 - [ ] `CONTRIBUTING.md`.
+
+> **Note:** Graphify-aware skills are shipped and functional, but Graphify itself is still an optional external tool. The workflow degrades gracefully when `GRAPH_REPORT.md` is missing — no skill or hook fails because of it.
 
 ---
 
@@ -358,16 +374,20 @@ Not yet in this repository:
 **Completed:**
 
 - [x] README with methodology, philosophy, command reference, and enforcement model
-- [x] 33 skills published
-- [x] Hooks published (8 families / 15 scripts) with activation guide
-- [x] Templates published (`SPEC.md`, `PLAN.md`, `TASKS.md`, `DECISIONS.md`, draft `CONSTITUTION.md`)
+- [x] 36 skills published (33 original + `context-manager`, `graphify-context`, `sdd-onboard`)
+- [x] Hooks published (9 families / 18 scripts) with activation guide
+- [x] Templates published — SDD lifecycle (`specs/_templates/`) + project context (`docs/_templates/`)
 - [x] Sanitized `CLAUDE.md.example`
 - [x] Sanitized `settings.template.json`
+- [x] `profiles.json` — profile manifest
+- [x] `docs/INSTALL.md` — installation guide
+- [x] `LICENSE` — MIT
 - [x] `examples/` placeholder
+- [x] Graphify-aware context layer (skills + hook — degrades gracefully without Graphify)
 
 **Planned:**
 
-- [ ] Graphify integration (architecture discovery layer — accelerator, not a dependency)
+- [ ] Graphify external tool integration (the *skills* are shipped; the *tool itself* is still external and optional)
 - [ ] Real example specs (a feature carried end-to-end through the workflow)
 - [ ] `CONTRIBUTING.md`
 - [ ] Java/Spring backend skills (Phase 2 — see `docs/ROADMAP_JAVA_SPRING_CONTEXT.md`)

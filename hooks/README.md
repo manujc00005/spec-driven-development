@@ -1,6 +1,6 @@
 # Hooks
 
-Eight hook families (15 scripts — 7 ship as a `.ps1`/`.sh` pair, one is PowerShell-only). Each hook is a small, single-purpose script invoked by Claude Code at a specific lifecycle point, configured in `.claude/settings.json` (see [`settings.template.json`](../settings.template.json) at the repo root).
+Nine hook families (18 scripts — all ship as a `.ps1`/`.sh` pair). Each hook is a small, single-purpose script invoked by Claude Code at a specific lifecycle point, configured in `.claude/settings.json` (see [`settings.template.json`](../settings.template.json) at the repo root).
 
 None of these hooks call out to the network. All of them read local files or shell input and either allow, block, or annotate an action.
 
@@ -16,6 +16,7 @@ None of these hooks call out to the network. All of them read local files or she
 | `eslint-fix` | `PostToolUse` on `Write`/`Edit` (`.ts`/`.tsx`/`.js`/`.jsx`) | **Modifies the file** — runs `eslint --fix` in place | Wired by default | Lint violations and auto-fixable style drift accumulating silently |
 | `prettier-format` | `PostToolUse` on `Write`/`Edit` (`.ts`/`.tsx`/`.css`/`.json`/`.js`/`.jsx`) | **Modifies the file** — runs `prettier --write` in place | Wired by default | Inconsistent formatting across AI-generated and human-written code |
 | `maven-compile` | `PostToolUse` on `Write`/`Edit` (`.java`) | Read-only — runs `mvnw compile`, does not edit source | Wired by default | A Java change that doesn't compile going unnoticed until the next manual build |
+| `graphify-stale-reminder` | `SessionStart` | Read-only — checks `GRAPH_REPORT.md` existence and mtime | **Opt-in** | Relying on a stale or missing architecture map for impact analysis. Warns if `GRAPH_REPORT.md` is absent or >7 days older than the newest source file. **Never blocks** — reminder only (exit 0) |
 
 ## How each hook decides whether to run
 
@@ -25,6 +26,7 @@ Every hook is defensive about scope — they exit immediately (exit code `0`, no
 - `git-guardrails` only inspects `Bash` tool calls and only blocks a fixed list of destructive patterns — every other git command passes through untouched.
 - `sdd-spec-guard` always allows edits under `specs/` and `.claude/`, and allows root-level `.md` files outside `specs/features/`. It only blocks edits to application code, and only when `specs/features/` exists but has no spec in `Ready` or `In Progress` status.
 - `project-init-check` and `sdd-status-banner` both exit silently if the project has no `specs/` directory at all — they assume nothing about non-SDD projects.
+- `graphify-stale-reminder` exits silently (exit 0, no output) when `GRAPH_REPORT.md` exists and is fresh. If it doesn't exist, it prints a reminder suggesting the user run Graphify. If it exists but is stale (>7 days older than the newest source file), it prints a staleness warning. It never blocks.
 
 ## How to activate them
 
@@ -49,9 +51,9 @@ Every hook is defensive about scope — they exit immediately (exit code `0`, no
 
    On macOS/Linux, replace the `command` with `bash ${CLAUDE_PROJECT_DIR}/hooks/sdd-spec-guard.sh`.
 
-## Known limitation
+## Cross-platform coverage
 
-`git-guardrails` currently ships **PowerShell-only** (`git-guardrails.ps1`) — there is no `git-guardrails.sh` counterpart yet. On macOS/Linux, this specific safety net is not active unless you port it yourself. Every other hook family has both variants.
+All 9 hook families ship as both `.ps1` (Windows/PowerShell) and `.sh` (macOS/Linux/bash) variants.
 
 ## Cross-platform note on `settings.template.json`
 

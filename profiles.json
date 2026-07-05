@@ -38,13 +38,17 @@
         "prototype",
         "decision-mapping",
         "pr-description",
-        "handoff"
+        "handoff",
+        "context-manager",
+        "graphify-context",
+        "sdd-onboard"
       ],
       "hooks": [
         "git-guardrails",
         "sdd-spec-guard",
         "sdd-status-banner",
-        "project-init-check"
+        "project-init-check",
+        "graphify-stale-reminder"
       ],
       "templates": [
         "SPEC.md",
@@ -53,7 +57,10 @@
         "DECISIONS.md",
         "CONSTITUTION.md",
         "PR_DESCRIPTION.md",
-        "REVIEW_REPORT_TEMPLATE.md"
+        "REVIEW_REPORT_TEMPLATE.md",
+        "PROJECT_CONTEXT.md",
+        "TECH_STACK.md",
+        "ARCHITECTURE.md"
       ]
     },
     "java-spring-backend": {
