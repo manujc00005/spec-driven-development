@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "Manifest mapping profiles to skills/hooks/templates. Consumed by install.ps1/install.sh -Profile flag (Phase 2). Skills/hooks stay in their current flat layout; this file declares membership, not file location.",
+  "version": "0.1.0",
+  "defaults": {
+    "profile": "java-spring-backend",
+    "buildTool": "maven",
+    "note": "If no -Profile is passed, install.ps1/install.sh installs core + java-spring-backend."
+  },
+  "profiles": {
+    "core": {
+      "description": "Stack-agnostic SDD lifecycle, guardrails, and generic reviews. Always installed.",
+      "alwaysInstalled": true,
+      "skills": [
+        "sdd",
+        "sdd-medium",
+        "sdd-full",
+        "sdd-guardrails",
+        "project-init",
+        "spec-create",
+        "spec-clarify",
+        "spec-plan",
+        "spec-analyze",
+        "spec-implement",
+        "spec-review",
+        "spec-close",
+        "spec-status",
+        "spec-update",
+        "spec-resume",
+        "qa-review",
+        "security-review",
+        "performance-review",
+        "refactor-review",
+        "review-all",
+        "architect-review",
+        "test-engineer",
+        "debugger",
+        "prototype",
+        "decision-mapping",
+        "pr-description",
+        "handoff"
+      ],
+      "hooks": [
+        "git-guardrails",
+        "sdd-spec-guard",
+        "sdd-status-banner",
+        "project-init-check"
+      ],
+      "templates": [
+        "SPEC.md",
+        "PLAN.md",
+        "TASKS.md",
+        "DECISIONS.md",
+        "CONSTITUTION.md",
+        "PR_DESCRIPTION.md",
+        "REVIEW_REPORT_TEMPLATE.md"
+      ]
+    },
+    "java-spring-backend": {
+      "description": "Java 17/21, Spring Boot, Spring Cloud, Maven (primary), REST APIs, JPA/Hibernate, Flyway, Keycloak/OAuth2, Vault. Default profile.",
+      "default": true,
+      "buildTool": "maven",
+      "buildToolFallback": "gradle",
+      "skills": [
+        "database-review",
+        "api-review",
+        "backend-review",
+        "java-spring-reviewer",
+        "spring-boot-api-reviewer",
+        "spring-security-reviewer",
+        "java-performance-reviewer",
+        "contract-testing-reviewer",
+        "observability-reviewer"
+      ],
+      "hooks": [
+        "maven-compile",
+        "java-build-test-guard",
+        "spring-config-guard",
+        "openapi-contract-reminder"
+      ],
+      "templates": [
+        "PROJECT_CONTEXT.md",
+        "TECH_STACK.md",
+        "ARCHITECTURE.md",
+        "TESTING.md",
+        "SECURITY.md",
+        "DEPLOYMENT.md",
+        "CONTRACT_TESTING.md",
+        "OBSERVABILITY.md"
+      ],
+      "note": "Skills marked here that do not yet have a SKILL.md are planned (Phase 2+). The installer skips missing skills gracefully."
+    },
+    "messaging-event-driven": {
+      "description": "Kafka, RabbitMQ, ActiveMQ, event-driven architecture, outbox, saga, exactly-once/at-least-once semantics.",
+      "default": false,
+      "skills": [
+        "event-driven-reviewer",
+        "kafka-reviewer",
+        "rabbitmq-reviewer",
+        "microservices-patterns-reviewer",
+        "outbox-pattern-reviewer",
+        "saga-orchestration-reviewer"
+      ],
+      "hooks": [
+        "messaging-review-reminder"
+      ],
+      "templates": [
+        "MESSAGING.md",
+        "MICROSERVICES_PATTERNS.md"
+      ],
+      "note": "Designed as overlay on java-spring-backend. Skills planned for Phase 3."
+    },
+    "payments-fintech": {
+      "description": "Payment processing, Stripe/PSP integration, idempotency, reconciliation, money/units safety, webhook signature verification.",
+      "default": false,
+      "skills": [
+        "stripe-payments-reviewer",
+        "payment-idempotency-reviewer"
+      ],
+      "hooks": [
+        "stripe-review-reminder"
+      ],
+      "templates": [],
+      "note": "Overlay profile. Can combine with java-spring-backend or next-prisma-web."
+    },
+    "next-prisma-web": {
+      "description": "Next.js App Router, React, TypeScript, Prisma ORM, PostgreSQL, Server Components/Actions, Tailwind.",
+      "default": false,
+      "skills": [
+        "frontend-review",
+        "seo-review",
+        "privacy-compliance-review",
+        "database-review",
+        "prisma-migration-reviewer",
+        "nextjs-server-actions-reviewer"
+      ],
+      "hooks": [
+        "ts-check",
+        "eslint-fix",
+        "prettier-format",
+        "prisma-migration-guard"
+      ],
+      "templates": [
+        "PROJECT_CONTEXT.md",
+        "TECH_STACK.md",
+        "ARCHITECTURE.md"
+      ],
+      "note": "Optional profile. Skills like prisma-migration-reviewer are planned (Phase 2+)."
+    },
+    "blockchain-crypto": {
+      "description": "On-chain/wallet/transaction reviews. DISABLED BY DEFAULT — must be explicitly enabled.",
+      "default": false,
+      "disabled": true,
+      "skills": [],
+      "hooks": [],
+      "templates": [],
+      "note": "Placeholder. No skills/hooks shipped yet. Never auto-enabled. Enable explicitly with -Profile blockchain-crypto."
+    }
+  }
+}

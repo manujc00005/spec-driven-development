@@ -157,7 +157,7 @@ A workflow that only lives in a markdown file doesn't stop anyone — human or A
 
 | Hook | Trigger | Read-only or can modify files? | Wired by default or opt-in? | Effect |
 |---|---|---|---|---|
-| `git-guardrails` | Before any shell git command | Read-only | Wired by default | Blocks destructive operations outright — `push --force`, `reset --hard`, `clean -f`/`-fd`, `branch -D`, `checkout .`, `restore .`. **PowerShell-only** — no `.sh` counterpart exists yet |
+| `git-guardrails` | Before any shell git command | Read-only | Wired by default | Blocks destructive operations outright — `push --force`, `reset --hard`, `clean -f`/`-fd`, `branch -D`, `checkout .`, `restore .` |
 | `sdd-spec-guard` | Before file writes/edits | Read-only (blocks the call, doesn't edit anything) | **Opt-in** — ships as a script but is not wired in `settings.template.json` by default; must be added manually | Blocks edits to application code when no spec is `Ready` or `In Progress` |
 | `project-init-check` | On session start | Read-only | Wired by default | Warns if `specs/CONSTITUTION.md` is missing or has unresolved `TODO:` sections before any spec work begins |
 | `sdd-status-banner` | On session stop | Read-only | Wired by default | Reports the status of every active spec so nothing gets lost between sessions |
@@ -258,9 +258,14 @@ Once integrated, the intended use is to run discovery before `spec-plan`, `spec-
 ```
 spec-driven-development/
 ├── README.md
+├── LICENSE                             # MIT
 ├── CLAUDE.md.example                   # sanitized, generic project instructions — copy into your own project as CLAUDE.md
 ├── settings.template.json              # Claude Code hook wiring, using ${CLAUDE_PROJECT_DIR}
+├── profiles.json                       # profile manifest — maps profiles to skills/hooks/templates
 ├── .gitignore
+├── docs/
+│   ├── INSTALL.md                      # step-by-step installation guide (Windows, macOS/Linux)
+│   └── ROADMAP_JAVA_SPRING_CONTEXT.md  # roadmap for Java/Spring profile + Graphify context layer
 ├── skills/                             # 33 skill definitions — every command in this README
 │   ├── sdd/SKILL.md
 │   ├── sdd-medium/SKILL.md
@@ -297,9 +302,9 @@ spec-driven-development/
 │   ├── decision-mapping/SKILL.md
 │   ├── pr-description/SKILL.md
 │   └── handoff/SKILL.md
-├── hooks/                              # 8 hook families, 15 scripts (.ps1 + .sh, git-guardrails is .ps1-only)
+├── hooks/                              # 8 hook families, 16 scripts (.ps1 + .sh)
 │   ├── README.md
-│   ├── git-guardrails.ps1
+│   ├── git-guardrails.ps1 / .sh
 │   ├── sdd-spec-guard.ps1 / .sh
 │   ├── sdd-status-banner.ps1 / .sh
 │   ├── project-init-check.ps1 / .sh
@@ -308,12 +313,15 @@ spec-driven-development/
 │   ├── prettier-format.ps1 / .sh
 │   └── maven-compile.ps1 / .sh
 ├── specs/
-│   └── _templates/
-│       ├── CONSTITUTION.md            # draft template — see Templates section above
-│       ├── SPEC.md
-│       ├── PLAN.md
-│       ├── TASKS.md
-│       └── DECISIONS.md
+│   ├── _templates/
+│   │   ├── CONSTITUTION.md            # draft template — see Templates section above
+│   │   ├── SPEC.md
+│   │   ├── PLAN.md
+│   │   ├── TASKS.md
+│   │   ├── DECISIONS.md
+│   │   ├── PR_DESCRIPTION.md
+│   │   └── REVIEW_REPORT_TEMPLATE.md
+│   └── features/                       # feature specs (when dogfooding the repo itself)
 └── examples/
     └── README.md                       # placeholder — no worked example yet
 ```
@@ -328,19 +336,20 @@ This repository currently ships:
 - [x] `skills/` — 33 published skill definitions.
 - [x] `hooks/` — 8 hook families, 15 scripts.
 - [x] `hooks/README.md` — per-hook trigger, effect, and activation guide.
-- [x] `specs/_templates/` — `SPEC.md`, `PLAN.md`, `TASKS.md`, `DECISIONS.md` (verbatim), `CONSTITUTION.md` (draft).
+- [x] `specs/_templates/` — `SPEC.md`, `PLAN.md`, `TASKS.md`, `DECISIONS.md` (verbatim), `CONSTITUTION.md` (draft), `PR_DESCRIPTION.md`, `REVIEW_REPORT_TEMPLATE.md`.
 - [x] `examples/README.md` — placeholder for a future worked example.
 - [x] `CLAUDE.md.example` — sanitized, generic project instructions.
 - [x] `settings.template.json` — sanitized hook wiring.
+- [x] `profiles.json` — profile manifest (core, java-spring-backend, messaging, payments, next-prisma, blockchain-crypto).
+- [x] `docs/INSTALL.md` — step-by-step installation guide (Windows, macOS/Linux).
+- [x] `LICENSE` — MIT.
 - [x] `.gitignore` — excludes local Claude Code settings, generated artifacts, and secrets.
 
 Not yet in this repository:
 
 - [ ] Graphify integration — see [Graphify integration (Planned)](#graphify-integration-planned).
 - [ ] Real-world example specs in `examples/`.
-- [ ] Installation guide (how to wire this into a new or existing project step by step).
 - [ ] `CONTRIBUTING.md`.
-- [ ] `LICENSE`.
 
 ---
 
@@ -358,14 +367,34 @@ Not yet in this repository:
 
 **Planned:**
 
-- [ ] Graphify integration
+- [ ] Graphify integration (architecture discovery layer — accelerator, not a dependency)
 - [ ] Real example specs (a feature carried end-to-end through the workflow)
-- [ ] Installation guide
 - [ ] `CONTRIBUTING.md`
-- [ ] `LICENSE`
+- [ ] Java/Spring backend skills (Phase 2 — see `docs/ROADMAP_JAVA_SPRING_CONTEXT.md`)
+- [ ] Messaging/event-driven skills (Phase 3)
+- [ ] Installer `-Profile` flag consuming `profiles.json` (Phase 2)
+
+---
+
+## Profiles
+
+This workflow supports **stack profiles** declared in [`profiles.json`](profiles.json). Profiles control which skills, hooks, and templates are active for a given project:
+
+| Profile | Status | Build tool |
+|---|---|---|
+| `core` | Always installed | — |
+| `java-spring-backend` | **Default** | Maven (primary); Gradle detection as fallback |
+| `messaging-event-driven` | Optional overlay | — |
+| `payments-fintech` | Optional overlay | — |
+| `next-prisma-web` | Optional | — |
+| `blockchain-crypto` | Optional — **disabled by default** | — |
+
+The installer installs `core` + the default profile (`java-spring-backend`) when no `-Profile` flag is passed. Blockchain is never auto-enabled.
+
+> **Note:** the `-Profile` installer flag is planned (Phase 2). Today, all skills/hooks install together regardless of profile. `profiles.json` is declarative-only until the installer consumes it.
 
 ---
 
 ## License
 
-To be defined.
+MIT — see [`LICENSE`](LICENSE).
