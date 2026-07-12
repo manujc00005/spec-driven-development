@@ -28,6 +28,51 @@ The central directory is the single source of truth. Everything else — your us
 
 ---
 
+## Profile-aware installation
+
+Both scripts read [`profiles.json`](../profiles.json) to decide **which** skills, hooks, and templates to install. Every profile declares SHIPPED entries (`skills`/`hooks`/`templates` — must exist on disk) and PLANNED entries (`plannedSkills`/`plannedHooks`/`plannedTemplates` — roadmap-only, may not exist yet). See [Profiles](../README.md#profiles) in the main README for the full explanation.
+
+```bash
+# Install default: core + java-spring-backend (the default profile in profiles.json)
+./install.sh
+.\install.ps1                                          # Windows equivalent
+
+# Install an explicit profile (still adds core automatically)
+./install.sh --profile java-spring-backend
+.\install.ps1 -Profile java-spring-backend              # Windows equivalent
+
+# Install multiple profiles at once (comma-separated, or repeat the flag)
+./install.sh --profile java-spring-backend,messaging-event-driven
+./install.sh --profile java-spring-backend --profile messaging-event-driven
+.\install.ps1 -Profile java-spring-backend,messaging-event-driven   # Windows equivalent
+```
+
+**What you'll see for planned items** — a profile like `messaging-event-driven` mostly consists of Phase 3 candidates that don't exist in the repo yet. Installing it prints one line per planned item and installs nothing for it:
+
+```
+[planned] skill 'kafka-reviewer'  - not installed (planned for a future phase)
+[planned] hook 'messaging-review-reminder'  - not installed (planned for a future phase)
+```
+
+This is expected and not an error — planned items are declared for roadmap visibility, not for installation.
+
+**What never happens** — the installer never falls back to "install everything" or "no filtering." These all abort with a clear `[ERROR]` and a non-zero exit code, before any files are written (or, for the last case, alongside the rest of the dry-run preview):
+
+- An unknown `--profile`/`-Profile` name (typo protection).
+- An explicit request for the disabled `blockchain-crypto` profile.
+- A SHIPPED item (declared under `skills`/`hooks`/`templates`, not the `planned*` arrays) that doesn't actually exist on disk — this means `profiles.json` has drifted from the repo, which is a manifest integrity bug, not a planned gap.
+- `profiles.json` itself missing or not valid JSON.
+
+**macOS/Linux requires `python3`** to resolve `profiles.json` (standard library `json` module only — no `jq`, no dependency installs). If `python3` isn't available or doesn't actually run (some systems ship a non-functional `python3` shim), `install.sh` fails with:
+
+```
+[ERROR]   python3 is required to resolve profiles.json on macOS/Linux. Install Python 3 or use the Windows installer.
+```
+
+`install.ps1` uses PowerShell's built-in `ConvertFrom-Json` and has no external dependency for profile resolution.
+
+---
+
 ## Windows
 
 ### Install
@@ -130,6 +175,7 @@ Claude Code is a terminal/CLI tool that requires a local shell (PowerShell, bash
 - **Never writes `CLAUDE.md` or `settings.json` directly** — only `CLAUDE.md.example` and `settings.template.json` are ever installed under those exact names, so an existing real `CLAUDE.md`/`settings.json` at your central directory is never silently replaced by the generic example.
 - **User-level linking is opt-in** — installing content into the central directory never touches `~/.claude` unless you explicitly pass `-LinkUserClaude` / `--link-user-claude`.
 - **`-DryRun` / `--dry-run`** — every script supports a full preview mode. Use it before the first real run on a machine you care about.
+- **Profile resolution never guesses** — an unknown profile name, a disabled profile requested explicitly, a missing shipped item, or an unparsable `profiles.json` all abort with a clear `[ERROR]` and a non-zero exit code rather than silently installing everything or skipping the filter. See [Profile-aware installation](#profile-aware-installation) above.
 
 ---
 

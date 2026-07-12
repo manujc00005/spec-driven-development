@@ -6,11 +6,13 @@
 
 set -euo pipefail
 
+source "$(dirname "${BASH_SOURCE[0]}")/lib/claude-json.sh"
+
 # Read the tool-call JSON from stdin (Claude Code pipes it)
-INPUT=$(cat)
+INPUT="$(claude_json_read_stdin)"
 
 # Extract the command string from the tool_input.command field
-COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null)
+COMMAND="$(claude_json_get_command "$INPUT")"
 
 if [ -z "$COMMAND" ]; then
   exit 0

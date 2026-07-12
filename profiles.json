@@ -1,11 +1,11 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$comment": "Manifest mapping profiles to skills/hooks/templates. Consumed by install.ps1/install.sh -Profile flag (Phase 2). Skills/hooks stay in their current flat layout; this file declares membership, not file location.",
-  "version": "0.1.0",
+  "$comment": "Manifest mapping profiles to skills/hooks/templates, consumed by install.ps1 (--Profile) / install.sh (--profile). 'skills'/'hooks'/'templates' are SHIPPED — they MUST exist on disk; the installer treats a missing shipped item as a hard error (profiles.json out of sync with the repo, not a planned gap). 'plannedSkills'/'plannedHooks'/'plannedTemplates' are declared for roadmap visibility only, may legitimately not exist yet, and are reported as 'planned, not installed' without error.",
+  "version": "0.2.0",
   "defaults": {
     "profile": "java-spring-backend",
     "buildTool": "maven",
-    "note": "If no -Profile is passed, install.ps1/install.sh installs core + java-spring-backend."
+    "note": "If no --profile/-Profile is passed, the installer installs core + java-spring-backend."
   },
   "profiles": {
     "core": {
@@ -43,6 +43,7 @@
         "graphify-context",
         "sdd-onboard"
       ],
+      "plannedSkills": [],
       "hooks": [
         "git-guardrails",
         "sdd-spec-guard",
@@ -50,6 +51,7 @@
         "project-init-check",
         "graphify-stale-reminder"
       ],
+      "plannedHooks": [],
       "templates": [
         "SPEC.md",
         "PLAN.md",
@@ -61,7 +63,8 @@
         "PROJECT_CONTEXT.md",
         "TECH_STACK.md",
         "ARCHITECTURE.md"
-      ]
+      ],
+      "plannedTemplates": []
     },
     "java-spring-backend": {
       "description": "Java 17/21, Spring Boot, Spring Cloud, Maven (primary), REST APIs, JPA/Hibernate, Flyway, Keycloak/OAuth2, Vault. Default profile.",
@@ -75,14 +78,18 @@
         "java-spring-reviewer",
         "spring-boot-api-reviewer",
         "spring-security-reviewer",
-        "java-performance-reviewer",
+        "java-performance-reviewer"
+      ],
+      "plannedSkills": [
         "contract-testing-reviewer",
         "observability-reviewer"
       ],
       "hooks": [
         "maven-compile",
         "java-build-test-guard",
-        "spring-config-guard",
+        "spring-config-guard"
+      ],
+      "plannedHooks": [
         "openapi-contract-reminder"
       ],
       "templates": [
@@ -91,16 +98,19 @@
         "ARCHITECTURE.md",
         "TESTING.md",
         "SECURITY.md",
-        "DEPLOYMENT.md",
+        "DEPLOYMENT.md"
+      ],
+      "plannedTemplates": [
         "CONTRACT_TESTING.md",
         "OBSERVABILITY.md"
       ],
-      "note": "Skills marked here that do not yet have a SKILL.md are planned (Phase 2+). The installer skips missing skills gracefully."
+      "note": "Phase 2 delivered 4 review skills, 2 defensive hooks (maven-compile shipped earlier), and 3 context templates. contract-testing-reviewer, observability-reviewer, openapi-contract-reminder, CONTRACT_TESTING.md, and OBSERVABILITY.md are Phase 3 candidates and are declared under the planned* arrays — the installer reports them as 'planned, not installed' and never errors on their absence."
     },
     "messaging-event-driven": {
       "description": "Kafka, RabbitMQ, ActiveMQ, event-driven architecture, outbox, saga, exactly-once/at-least-once semantics.",
       "default": false,
-      "skills": [
+      "skills": [],
+      "plannedSkills": [
         "event-driven-reviewer",
         "kafka-reviewer",
         "rabbitmq-reviewer",
@@ -108,27 +118,32 @@
         "outbox-pattern-reviewer",
         "saga-orchestration-reviewer"
       ],
-      "hooks": [
+      "hooks": [],
+      "plannedHooks": [
         "messaging-review-reminder"
       ],
-      "templates": [
+      "templates": [],
+      "plannedTemplates": [
         "MESSAGING.md",
         "MICROSERVICES_PATTERNS.md"
       ],
-      "note": "Designed as overlay on java-spring-backend. Skills planned for Phase 3."
+      "note": "Designed as overlay on java-spring-backend. Nothing is shipped yet — the entire profile is planned for Phase 3. Selecting it today installs core (+ the default profile, unless overridden) and reports every declared item as 'planned, not installed'."
     },
     "payments-fintech": {
       "description": "Payment processing, Stripe/PSP integration, idempotency, reconciliation, money/units safety, webhook signature verification.",
       "default": false,
-      "skills": [
+      "skills": [],
+      "plannedSkills": [
         "stripe-payments-reviewer",
         "payment-idempotency-reviewer"
       ],
-      "hooks": [
+      "hooks": [],
+      "plannedHooks": [
         "stripe-review-reminder"
       ],
       "templates": [],
-      "note": "Overlay profile. Can combine with java-spring-backend or next-prisma-web."
+      "plannedTemplates": [],
+      "note": "Overlay profile. Can combine with java-spring-backend or next-prisma-web. Nothing is shipped yet."
     },
     "next-prisma-web": {
       "description": "Next.js App Router, React, TypeScript, Prisma ORM, PostgreSQL, Server Components/Actions, Tailwind.",
@@ -137,14 +152,18 @@
         "frontend-review",
         "seo-review",
         "privacy-compliance-review",
-        "database-review",
+        "database-review"
+      ],
+      "plannedSkills": [
         "prisma-migration-reviewer",
         "nextjs-server-actions-reviewer"
       ],
       "hooks": [
         "ts-check",
         "eslint-fix",
-        "prettier-format",
+        "prettier-format"
+      ],
+      "plannedHooks": [
         "prisma-migration-guard"
       ],
       "templates": [
@@ -152,16 +171,20 @@
         "TECH_STACK.md",
         "ARCHITECTURE.md"
       ],
-      "note": "Optional profile. Skills like prisma-migration-reviewer are planned (Phase 2+)."
+      "plannedTemplates": [],
+      "note": "Optional profile. The 4 shipped skills and 3 hooks are generic/stack-agnostic already present in the repo. prisma-migration-reviewer, nextjs-server-actions-reviewer, and prisma-migration-guard are planned."
     },
     "blockchain-crypto": {
-      "description": "On-chain/wallet/transaction reviews. DISABLED BY DEFAULT — must be explicitly enabled.",
+      "description": "On-chain/wallet/transaction reviews. DISABLED BY DEFAULT.",
       "default": false,
       "disabled": true,
       "skills": [],
+      "plannedSkills": [],
       "hooks": [],
+      "plannedHooks": [],
       "templates": [],
-      "note": "Placeholder. No skills/hooks shipped yet. Never auto-enabled. Enable explicitly with -Profile blockchain-crypto."
+      "plannedTemplates": [],
+      "note": "Placeholder. Nothing shipped or planned yet. disabled=true is enforced by the installer: requesting this profile explicitly via --profile/-Profile fails with a clear error rather than silently installing nothing. There is no flag to force-enable it — that requires an explicit code change plus a new spec."
     }
   }
 }

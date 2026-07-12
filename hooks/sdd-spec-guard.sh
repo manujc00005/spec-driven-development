@@ -1,5 +1,8 @@
 #!/bin/bash
-FILE=$(jq -r '.tool_input.file_path // empty')
+source "$(dirname "${BASH_SOURCE[0]}")/lib/claude-json.sh"
+
+INPUT="$(claude_json_read_stdin)"
+FILE="$(claude_json_get_field "$INPUT" "file_path")"
 echo "$FILE" | grep -qE 'specs/|\.claude/' && exit 0
 # Allow root-level and project docs (.md files outside specs/features/)
 echo "$FILE" | grep -qE '\.md$' && ! echo "$FILE" | grep -q 'specs/features' && exit 0

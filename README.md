@@ -104,7 +104,7 @@ Not every change goes through the full ceremony. Trivial, low-risk changes — t
 
 ## Command lifecycle
 
-Each step below is implemented as a Claude Code skill and invoked as a slash command. **36 skills are published in [`skills/`](skills/)** — every command in this section and the next exists as a real `SKILL.md` file in this repository, not as a description of a future feature. This is the core lifecycle:
+Each step below is implemented as a Claude Code skill and invoked as a slash command. **40 skills are published in [`skills/`](skills/)** — every command in this section and the next exists as a real `SKILL.md` file in this repository, not as a description of a future feature. This is the core lifecycle:
 
 | Command | Purpose | Output |
 |---|---|---|
@@ -149,14 +149,18 @@ Beyond the core lifecycle, the following commands exist and cover situations the
 | `/context-manager` | Produces a bounded reading list (minimal files to load) before implementing — reduces token waste on large codebases |
 | `/graphify-context` | Interprets `GRAPH_REPORT.md` for impact analysis; degrades gracefully when Graphify is absent |
 | `/sdd-onboard` | Onboards an existing project into SDD: detects stack, scaffolds context docs (`PROJECT_CONTEXT`, `TECH_STACK`, `ARCHITECTURE`), never modifies application code |
+| `/java-spring-reviewer` | Spring Boot service review: `@Transactional` boundaries, bean lifecycle, DTO/entity separation, exception handling, null-safety |
+| `/spring-boot-api-reviewer` | Spring REST API review: controller annotations, DTO validation, error semantics (RFC 7807), OpenAPI drift, pagination |
+| `/spring-security-reviewer` | Spring Security review: SecurityFilterChain, OAuth2/OIDC/Keycloak, method security, Vault/secrets, CORS, actuator exposure |
+| `/java-performance-reviewer` | JVM/Spring performance review: JPA N+1, HikariCP sizing, thread pools, `@Cacheable` misuse, allocation/GC pressure |
 
-All commands listed above exist and are in active use. None are aspirational — all 36 `SKILL.md` files are published in [`skills/`](skills/) (35 individual skill folders plus the guardrails template at [`skills/sdd-guardrails/templates/source-of-truth-matrix.md`](skills/sdd-guardrails/templates/source-of-truth-matrix.md)).
+All commands listed above exist and are in active use. None are aspirational — all 40 `SKILL.md` files are published in [`skills/`](skills/) (39 individual skill folders plus the guardrails template at [`skills/sdd-guardrails/templates/source-of-truth-matrix.md`](skills/sdd-guardrails/templates/source-of-truth-matrix.md)).
 
 ---
 
 ## Enforcement, not just documentation
 
-A workflow that only lives in a markdown file doesn't stop anyone — human or AI — from skipping it under time pressure. Part of this setup is wired into actual Claude Code hooks that intervene at tool-call level. **9 hook families / 18 scripts are published in [`hooks/`](hooks/)** — full detail, including exactly when each one runs and how to enable it, is in [`hooks/README.md`](hooks/README.md).
+A workflow that only lives in a markdown file doesn't stop anyone — human or AI — from skipping it under time pressure. Part of this setup is wired into actual Claude Code hooks that intervene at tool-call level. **11 hook families / 22 scripts are published in [`hooks/`](hooks/)** — full detail, including exactly when each one runs and how to enable it, is in [`hooks/README.md`](hooks/README.md).
 
 | Hook | Trigger | Read-only or can modify files? | Wired by default or opt-in? | Effect |
 |---|---|---|---|---|
@@ -169,6 +173,8 @@ A workflow that only lives in a markdown file doesn't stop anyone — human or A
 | `prettier-format` | After every file write/edit (`.ts`/`.tsx`/`.css`/`.json`/`.js`/`.jsx`) | **Can modify the file** — runs `prettier --write` in place | Wired by default | Keeps formatting consistent if the project has Prettier configured |
 | `maven-compile` | After every file write/edit (`.java`) | Read-only (runs `mvnw compile`, doesn't rewrite source) | Wired by default | Surfaces Java compile errors if the project has a Maven wrapper |
 | `graphify-stale-reminder` | On session start | Read-only | **Opt-in** | Warns if `GRAPH_REPORT.md` is missing or stale (>7 days older than newest source). Never blocks — reminder only |
+| `java-build-test-guard` | After every file write/edit (`.java`) | Read-only (runs Maven compile, reports errors) | Wired by default (java-spring profile) | Compile errors in Java files going unnoticed until next manual build — Maven-first, Gradle fallback |
+| `spring-config-guard` | After every file write/edit (`application*.yml`/`.properties`) | Read-only | Wired by default (java-spring profile) | Plaintext secrets, full actuator exposure, or `debug=true` in non-local Spring profiles |
 
 Every hook is scoped defensively — the format/lint/type/build hooks only act if the project actually has the relevant tool configured (`tsconfig.json`, `.eslintrc*`, `.prettierrc*`, `mvnw`); otherwise they're a no-op.
 
@@ -205,9 +211,9 @@ Starter templates are published in [`specs/_templates/`](specs/_templates/), rea
 
 ---
 
-## Graphify integration (Planned)
+## Graphify integration
 
-> **Status: not yet integrated.** No Graphify integration exists in the current tooling. This section describes its intended role in the workflow — it documents a design goal, not shipped behavior.
+> **Status: shipped (Phase 1).** Three skills (`/context-manager`, `/graphify-context`, `/sdd-onboard`) and one hook (`graphify-stale-reminder`) provide Graphify-aware context loading. All degrade gracefully when Graphify is absent — it remains an optional accelerator, never a dependency.
 
 The intended purpose of Graphify in this workflow is architectural discovery: mapping a codebase's structure and dependencies *before* planning or reviewing a change, so specs and plans are grounded in what the system actually looks like rather than in assumption.
 
@@ -273,8 +279,11 @@ spec-driven-development/
 │   └── _templates/                     # context doc templates (copied into projects by /sdd-onboard)
 │       ├── PROJECT_CONTEXT.md
 │       ├── TECH_STACK.md
-│       └── ARCHITECTURE.md
-├── skills/                             # 36 skill definitions — every command in this README
+│       ├── ARCHITECTURE.md
+│       ├── TESTING.md
+│       ├── SECURITY.md
+│       └── DEPLOYMENT.md
+├── skills/                             # 40 skill definitions — every command in this README
 │   ├── sdd/SKILL.md
 │   ├── sdd-medium/SKILL.md
 │   ├── sdd-full/SKILL.md
@@ -312,8 +321,12 @@ spec-driven-development/
 │   ├── handoff/SKILL.md
 │   ├── context-manager/SKILL.md
 │   ├── graphify-context/SKILL.md
-│   └── sdd-onboard/SKILL.md
-├── hooks/                              # 9 hook families, 18 scripts (.ps1 + .sh)
+│   ├── sdd-onboard/SKILL.md
+│   ├── java-spring-reviewer/SKILL.md
+│   ├── spring-boot-api-reviewer/SKILL.md
+│   ├── spring-security-reviewer/SKILL.md
+│   └── java-performance-reviewer/SKILL.md
+├── hooks/                              # 11 hook families, 22 scripts (.ps1 + .sh)
 │   ├── README.md
 │   ├── git-guardrails.ps1 / .sh
 │   ├── sdd-spec-guard.ps1 / .sh
@@ -323,7 +336,9 @@ spec-driven-development/
 │   ├── eslint-fix.ps1 / .sh
 │   ├── prettier-format.ps1 / .sh
 │   ├── maven-compile.ps1 / .sh
-│   └── graphify-stale-reminder.ps1 / .sh
+│   ├── graphify-stale-reminder.ps1 / .sh
+│   ├── java-build-test-guard.ps1 / .sh
+│   └── spring-config-guard.ps1 / .sh
 ├── specs/
 │   ├── _templates/
 │   │   ├── CONSTITUTION.md            # draft template — see Templates section above
@@ -345,11 +360,11 @@ spec-driven-development/
 This repository currently ships:
 
 - [x] `README.md` — methodology, philosophy, command reference, and enforcement model.
-- [x] `skills/` — 36 published skill definitions.
-- [x] `hooks/` — 9 hook families, 18 scripts.
+- [x] `skills/` — 40 published skill definitions.
+- [x] `hooks/` — 11 hook families, 22 scripts.
 - [x] `hooks/README.md` — per-hook trigger, effect, and activation guide.
 - [x] `specs/_templates/` — `SPEC.md`, `PLAN.md`, `TASKS.md`, `DECISIONS.md` (verbatim), `CONSTITUTION.md` (draft), `PR_DESCRIPTION.md`, `REVIEW_REPORT_TEMPLATE.md`.
-- [x] `docs/_templates/` — `PROJECT_CONTEXT.md`, `TECH_STACK.md`, `ARCHITECTURE.md` (context doc templates for project onboarding).
+- [x] `docs/_templates/` — `PROJECT_CONTEXT.md`, `TECH_STACK.md`, `ARCHITECTURE.md`, `TESTING.md`, `SECURITY.md`, `DEPLOYMENT.md` (context doc templates for project onboarding and Java/Spring profile).
 - [x] `examples/README.md` — placeholder for a future worked example.
 - [x] `CLAUDE.md.example` — sanitized, generic project instructions.
 - [x] `settings.template.json` — sanitized hook wiring.
@@ -374,8 +389,8 @@ Not yet in this repository:
 **Completed:**
 
 - [x] README with methodology, philosophy, command reference, and enforcement model
-- [x] 36 skills published (33 original + `context-manager`, `graphify-context`, `sdd-onboard`)
-- [x] Hooks published (9 families / 18 scripts) with activation guide
+- [x] 40 skills published (33 original + 3 context-layer + 4 java-spring)
+- [x] Hooks published (11 families / 22 scripts) with activation guide
 - [x] Templates published — SDD lifecycle (`specs/_templates/`) + project context (`docs/_templates/`)
 - [x] Sanitized `CLAUDE.md.example`
 - [x] Sanitized `settings.template.json`
@@ -384,15 +399,17 @@ Not yet in this repository:
 - [x] `LICENSE` — MIT
 - [x] `examples/` placeholder
 - [x] Graphify-aware context layer (skills + hook — degrades gracefully without Graphify)
+- [x] Java/Spring backend profile — 4 review skills, 2 defensive hooks, 3 context templates
+- [x] Installer `-Profile` flag consuming `profiles.json` (both `.ps1` and `.sh`)
 
 **Planned:**
 
 - [ ] Graphify external tool integration (the *skills* are shipped; the *tool itself* is still external and optional)
 - [ ] Real example specs (a feature carried end-to-end through the workflow)
 - [ ] `CONTRIBUTING.md`
-- [ ] Java/Spring backend skills (Phase 2 — see `docs/ROADMAP_JAVA_SPRING_CONTEXT.md`)
 - [ ] Messaging/event-driven skills (Phase 3)
-- [ ] Installer `-Profile` flag consuming `profiles.json` (Phase 2)
+- [ ] Defensive hooks (Phase 4 — secret-scan, sensitive-file-guard, destructive-cmd-guard)
+- [ ] Example walkthroughs (Phase 5)
 
 ---
 
@@ -409,9 +426,29 @@ This workflow supports **stack profiles** declared in [`profiles.json`](profiles
 | `next-prisma-web` | Optional | — |
 | `blockchain-crypto` | Optional — **disabled by default** | — |
 
-The installer installs `core` + the default profile (`java-spring-backend`) when no `-Profile` flag is passed. Blockchain is never auto-enabled.
+The installer installs `core` + the default profile (`java-spring-backend`) when no `-Profile`/`--profile` flag is passed.
 
-> **Note:** the `-Profile` installer flag is planned (Phase 2). Today, all skills/hooks install together regardless of profile. `profiles.json` is declarative-only until the installer consumes it.
+### Shipped vs. planned
+
+Every profile in `profiles.json` declares two kinds of entries:
+
+- **`skills` / `hooks` / `templates`** — SHIPPED. These must exist on disk. If one of them is missing, the installer treats it as a manifest/repo integrity failure (profiles.json drifted from the repo) and fails loudly with `[ERROR]` — it never installs silently around the gap.
+- **`plannedSkills` / `plannedHooks` / `plannedTemplates`** — roadmap-only. These may legitimately not exist yet (e.g. Phase 3 candidates). The installer reports each one as `[planned] ... not installed (planned for a future phase)` and never treats their absence as an error.
+
+The installer never falls back to "install everything" or "no filtering." An unknown profile name, an explicit request for the disabled `blockchain-crypto` profile, or a missing shipped item all abort the run with a clear `[ERROR]` before (or, for the last case, in addition to) any files are touched.
+
+```bash
+# Install default (core + java-spring-backend)
+./install.sh
+
+# Install specific profiles
+./install.sh --profile java-spring-backend --profile messaging-event-driven
+
+# PowerShell equivalent
+.\install.ps1 -Profile java-spring-backend,messaging-event-driven
+```
+
+`install.sh` resolves `profiles.json` using **`python3`** (standard library `json` only — `jq` is not required for this). If `python3` isn't available, the script fails with a clear message instead of guessing; see [`docs/INSTALL.md`](docs/INSTALL.md) for details. `install.ps1` uses PowerShell's built-in `ConvertFrom-Json`.
 
 ---
 

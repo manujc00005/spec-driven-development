@@ -24,11 +24,28 @@
     - If they exist as real directories with real data, the script refuses to
       touch them unless -Force is given, and even then backs them up first to
       <path>.bak-<timestamp>.
+    - profiles.json separates SHIPPED items (skills/hooks/templates - must
+      exist on disk) from PLANNED items (plannedSkills/plannedHooks/
+      plannedTemplates - roadmap-only, may not exist). An unknown -Profile
+      name, an explicit request for a disabled profile, or a shipped item
+      missing from disk are all hard errors (exit 1, before any files are
+      touched for the first two; after a full dry-run-style report for the
+      third). Planned items are reported as "[planned] ... not installed"
+      and never cause an error. Nothing is ever silently skipped for a typo.
 
 .PARAMETER CentralDir
   Where to install the shared SDD configuration. Defaults to
   C:\ProgramData\ClaudeConfig  - the intended central install location on
   Windows for this workflow.
+
+.PARAMETER Profile
+  One or more profile names from profiles.json to install (e.g., -Profile
+  java-spring-backend). Core profile is always installed. If omitted, the
+  default profile from profiles.json is used (java-spring-backend). Pass
+  multiple profiles as a comma-separated list or repeat the flag:
+    -Profile java-spring-backend,messaging-event-driven
+  An unknown profile name or a disabled profile (e.g. blockchain-crypto)
+  aborts immediately with a clear error  - it is never silently dropped.
 
 .PARAMETER Force
   Allow overwriting files/links that already exist and differ. A backup is
@@ -61,6 +78,12 @@
   touch ~/.claude.
 
 .EXAMPLE
+  .\install.ps1 -Profile java-spring-backend,messaging-event-driven
+  Install core + java-spring-backend + messaging-event-driven profiles into
+  the central directory. Only skills/hooks/templates declared in those
+  profiles are installed.
+
+.EXAMPLE
   .\install.ps1 -LinkUserClaude
   Also link ~/.claude/skills, hooks, and CLAUDE.md to the central directory
   (only creates links where none exist yet, or where an existing link already
@@ -68,6 +91,7 @@
 #>
 param(
     [string]$CentralDir = "C:\ProgramData\ClaudeConfig",
+    [string[]]$Profile,
     [switch]$Force,
     [switch]$DryRun,
     [switch]$SkipLink,
@@ -78,6 +102,129 @@ param(
 $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $Timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+
+# ---------------------------------------------------------------------------
+# Profile resolution
+# ---------------------------------------------------------------------------
+# Fails loudly (exit 1) on: an unknown profile name (typo protection), an
+# explicit request for a disabled profile, or a shipped item declared in
+# profiles.json that does not actually exist on disk (manifest/repo drift).
+# None of these are silent skips. Only *planned* items are skipped silently
+# (by design — they are declared for roadmap visibility, not installation).
+$ProfilesFile = Join-Path $RepoRoot "profiles.json"
+$ActiveSkills = @()
+$ActiveHooks = @()
+$ActiveTemplates = @()
+$PlannedSkills = @()
+$PlannedHooks = @()
+$PlannedTemplates = @()
+$MissingShipped = @()
+$ProfileFiltering = $false
+
+if (-not (Test-Path $ProfilesFile)) {
+    Write-Host "[ERROR]   profiles.json not found at $ProfilesFile. This repo requires it for profile-aware installation  - refusing to fall back to installing everything unfiltered." -ForegroundColor Red
+    exit 1
+}
+
+if (Test-Path $ProfilesFile) {
+    try {
+        $profilesData = Get-Content $ProfilesFile -Raw | ConvertFrom-Json -ErrorAction Stop
+    } catch {
+        Write-Host "[ERROR]   profiles.json exists but is not valid JSON: $($_.Exception.Message)" -ForegroundColor Red
+        exit 1
+    }
+
+    # Determine which profiles were requested (comma-separated values inside
+    # a single -Profile argument are also honored, matching install.sh).
+    $requestedProfiles = @()
+    if ($Profile.Count -gt 0) {
+        foreach ($p in $Profile) { $requestedProfiles += ($p -split ',') | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' } }
+    } elseif ($profilesData.defaults.profile) {
+        $requestedProfiles = @($profilesData.defaults.profile)
+    }
+
+    # --- Hard validation: unknown profile name or explicit disabled request ---
+    $validProfileNames = @($profilesData.profiles.PSObject.Properties.Name)
+    $fatalErrors = @()
+    foreach ($pName in $requestedProfiles) {
+        if ($validProfileNames -notcontains $pName) {
+            $fatalErrors += "Unknown profile '$pName'. Valid profiles: $($validProfileNames -join ', ')"
+            continue
+        }
+        $pDef = $profilesData.profiles.$pName
+        if ($pDef.disabled -eq $true) {
+            $fatalErrors += "Profile '$pName' is disabled by design (see profiles.json) and cannot be installed via -Profile. This is intentional, not a bug."
+        }
+    }
+    if ($fatalErrors.Count -gt 0) {
+        Write-Host ""
+        foreach ($e in $fatalErrors) { Write-Host "[ERROR]   $e" -ForegroundColor Red }
+        Write-Host "[ERROR]   Aborting before any files are touched. Fix the -Profile argument and re-run." -ForegroundColor Red
+        exit 1
+    }
+
+    # Core is always installed
+    $activeProfileNames = @("core") + $requestedProfiles | Select-Object -Unique
+
+    # --- Collect shipped + planned skills/hooks/templates from active profiles ---
+    foreach ($pName in $activeProfileNames) {
+        $pDef = $profilesData.profiles.$pName
+        if (-not $pDef) { continue }
+        if ($pDef.skills) { $ActiveSkills += @($pDef.skills) }
+        if ($pDef.plannedSkills) { $PlannedSkills += @($pDef.plannedSkills) }
+        if ($pDef.hooks) { $ActiveHooks += @($pDef.hooks) }
+        if ($pDef.plannedHooks) { $PlannedHooks += @($pDef.plannedHooks) }
+        if ($pDef.templates) { $ActiveTemplates += @($pDef.templates) }
+        if ($pDef.plannedTemplates) { $PlannedTemplates += @($pDef.plannedTemplates) }
+    }
+    $ActiveSkills = $ActiveSkills | Select-Object -Unique
+    $ActiveHooks = $ActiveHooks | Select-Object -Unique
+    $ActiveTemplates = $ActiveTemplates | Select-Object -Unique
+    $PlannedSkills = $PlannedSkills | Select-Object -Unique
+    $PlannedHooks = $PlannedHooks | Select-Object -Unique
+    $PlannedTemplates = $PlannedTemplates | Select-Object -Unique
+    $ProfileFiltering = $true
+
+    # --- Integrity check: every SHIPPED item must exist on disk. A missing
+    #     shipped item means profiles.json has drifted from the repo (e.g. a
+    #     typo'd skill name, or a file that was deleted but not un-declared).
+    #     This is reported as a hard error, never a silent skip. ---
+    $MissingShipped = @()
+    foreach ($s in $ActiveSkills) {
+        if (-not (Test-Path (Join-Path (Join-Path $RepoRoot "skills") $s))) {
+            $MissingShipped += "skill '$s' (expected at skills\$s\)"
+        }
+    }
+    foreach ($h in $ActiveHooks) {
+        $hookMatch = Get-ChildItem -Path (Join-Path $RepoRoot "hooks") -File -Filter "$h.*" -ErrorAction SilentlyContinue
+        if (-not $hookMatch -or $hookMatch.Count -eq 0) {
+            $MissingShipped += "hook '$h' (expected hooks\$h.ps1 / hooks\$h.sh)"
+        }
+    }
+    foreach ($t in $ActiveTemplates) {
+        $inSpecs = Test-Path (Join-Path (Join-Path $RepoRoot "specs\_templates") $t)
+        $inDocs = Test-Path (Join-Path (Join-Path $RepoRoot "docs\_templates") $t)
+        if (-not $inSpecs -and -not $inDocs) {
+            $MissingShipped += "template '$t' (expected specs\_templates\$t or docs\_templates\$t)"
+        }
+    }
+    if ($MissingShipped.Count -gt 0) {
+        Write-Host ""
+        Write-Host "[ERROR]   profiles.json declares $($MissingShipped.Count) SHIPPED item(s) that do not exist in the repo:" -ForegroundColor Red
+        foreach ($m in $MissingShipped) { Write-Host "[ERROR]     - $m" -ForegroundColor Red }
+        Write-Host "[ERROR]   This is a manifest/repo integrity failure, not a planned gap  - fix profiles.json (move it to a planned* array if it's genuinely not built yet) or restore the missing file." -ForegroundColor Red
+        Write-Host ""
+    }
+
+    Write-Host "[install] Active profiles: $($activeProfileNames -join ', ')" -ForegroundColor Cyan
+    Write-Host "[install] Shipped  - skills: $($ActiveSkills.Count) | hooks: $($ActiveHooks.Count) | templates: $($ActiveTemplates.Count)" -ForegroundColor Cyan
+    Write-Host "[install] Planned  - skills: $($PlannedSkills.Count) | hooks: $($PlannedHooks.Count) | templates: $($PlannedTemplates.Count)" -ForegroundColor Cyan
+    foreach ($s in $PlannedSkills)    { Write-Host "[planned] skill '$s'  - not installed (planned for a future phase)" -ForegroundColor DarkGray }
+    foreach ($h in $PlannedHooks)     { Write-Host "[planned] hook '$h'  - not installed (planned for a future phase)" -ForegroundColor DarkGray }
+    foreach ($t in $PlannedTemplates) { Write-Host "[planned] template '$t'  - not installed (planned for a future phase)" -ForegroundColor DarkGray }
+}
+
+# ---------------------------------------------------------------------------
 
 function Write-Action([string]$msg) { Write-Host "[install] $msg" }
 function Write-Skip([string]$msg)   { Write-Host "[skip]    $msg" -ForegroundColor DarkYellow }
@@ -202,9 +349,130 @@ if (-not (Test-Path $CentralDir)) {
     else { New-Item -ItemType Directory -Path $CentralDir -Force | Out-Null; Write-Action "Created $CentralDir" }
 }
 
-Copy-TreeSafely (Join-Path $RepoRoot "skills") (Join-Path $CentralDir "skills") "skills" $CentralDir
-Copy-TreeSafely (Join-Path $RepoRoot "hooks") (Join-Path $CentralDir "hooks") "hooks" $CentralDir
-Copy-TreeSafely (Join-Path $RepoRoot "specs\_templates") (Join-Path $CentralDir "specs\_templates") "specs/_templates" $CentralDir
+# --- Skills (filtered by profile: each skill is a subdirectory) ---
+$skillsSrc = Join-Path $RepoRoot "skills"
+$skillsDst = Join-Path $CentralDir "skills"
+if ($ProfileFiltering) {
+    foreach ($skillName in $ActiveSkills) {
+        $skillDir = Join-Path $skillsSrc $skillName
+        if (-not (Test-Path $skillDir)) {
+            # Already reported under [ERROR] above (shipped item missing from disk) — don't copy.
+            continue
+        }
+        Copy-TreeSafely $skillDir (Join-Path $skillsDst $skillName) "skills/$skillName" $CentralDir
+    }
+} else {
+    Copy-TreeSafely $skillsSrc $skillsDst "skills" $CentralDir
+}
+
+# --- Hooks (filtered by profile: each hook is one or more files with the same base name) ---
+$hooksSrc = Join-Path $RepoRoot "hooks"
+$hooksDst = Join-Path $CentralDir "hooks"
+if ($ProfileFiltering) {
+    foreach ($hookName in $ActiveHooks) {
+        $hookFiles = Get-ChildItem -Path $hooksSrc -File -Filter "$hookName.*" -ErrorAction SilentlyContinue
+        if (-not $hookFiles -or $hookFiles.Count -eq 0) {
+            # Already reported under [ERROR] above (shipped item missing from disk) — don't copy.
+            continue
+        }
+        foreach ($hf in $hookFiles) {
+            $destPath = Join-Path $hooksDst $hf.Name
+            $destDir = Split-Path $destPath -Parent
+            if (-not (Test-Path $destDir)) {
+                if ($DryRun) { Write-Action "[dry-run] would create directory $destDir" }
+                else { New-Item -ItemType Directory -Path $destDir -Force | Out-Null }
+            }
+            if (-not (Test-Path $destPath)) {
+                if ($DryRun) { Write-Action "[dry-run] would create $destPath" }
+                else { Copy-Item $hf.FullName -Destination $destPath -Force }
+                Write-Action "hooks/$($hf.Name)  (new)"
+                continue
+            }
+            $srcHash = (Get-FileHash $hf.FullName -Algorithm SHA256).Hash
+            $dstHash = (Get-FileHash $destPath -Algorithm SHA256).Hash
+            if ($srcHash -eq $dstHash) { continue }
+            if (-not $Force) {
+                Write-Skip "hooks/$($hf.Name) differs  - rerun with -Force to overwrite"
+                continue
+            }
+            $backupPath = Join-Path $CentralDir "_install-backups\$Timestamp\hooks\$($hf.Name)"
+            if ($DryRun) {
+                Write-Action "[dry-run] would back up and overwrite hooks/$($hf.Name)"
+            } else {
+                New-Item -ItemType Directory -Path (Split-Path $backupPath -Parent) -Force | Out-Null
+                Copy-Item $destPath -Destination $backupPath -Force
+                Copy-Item $hf.FullName -Destination $destPath -Force
+                Write-Action "hooks/$($hf.Name)  (overwritten  - backup at $backupPath)"
+            }
+        }
+    }
+    # Always copy hooks/README.md if it exists
+    $hooksReadme = Join-Path $hooksSrc "README.md"
+    if (Test-Path $hooksReadme) {
+        $destReadme = Join-Path $hooksDst "README.md"
+        if (-not (Test-Path $hooksDst)) {
+            if (-not $DryRun) { New-Item -ItemType Directory -Path $hooksDst -Force | Out-Null }
+        }
+        if (-not (Test-Path $destReadme)) {
+            if ($DryRun) { Write-Action "[dry-run] would create hooks/README.md" }
+            else { Copy-Item $hooksReadme -Destination $destReadme -Force; Write-Action "hooks/README.md  (new)" }
+        }
+    }
+} else {
+    Copy-TreeSafely $hooksSrc $hooksDst "hooks" $CentralDir
+}
+
+# --- Templates (filtered by profile: from both specs/_templates and docs/_templates) ---
+$specsTemplatesSrc = Join-Path $RepoRoot "specs\_templates"
+$docsTemplatesSrc = Join-Path $RepoRoot "docs\_templates"
+$specsTemplatesDst = Join-Path $CentralDir "specs\_templates"
+$docsTemplatesDst = Join-Path $CentralDir "docs\_templates"
+
+if ($ProfileFiltering) {
+    foreach ($tplName in $ActiveTemplates) {
+        # Check specs/_templates first, then docs/_templates
+        $srcFile = Join-Path $specsTemplatesSrc $tplName
+        $dstDir = $specsTemplatesDst
+        if (-not (Test-Path $srcFile)) {
+            $srcFile = Join-Path $docsTemplatesSrc $tplName
+            $dstDir = $docsTemplatesDst
+        }
+        if (-not (Test-Path $srcFile)) {
+            # Already reported under [ERROR] above (shipped item missing from disk) — don't copy.
+            continue
+        }
+        if (-not (Test-Path $dstDir)) {
+            if ($DryRun) { Write-Action "[dry-run] would create directory $dstDir" }
+            else { New-Item -ItemType Directory -Path $dstDir -Force | Out-Null }
+        }
+        $destPath = Join-Path $dstDir $tplName
+        if (-not (Test-Path $destPath)) {
+            if ($DryRun) { Write-Action "[dry-run] would create $destPath" }
+            else { Copy-Item $srcFile -Destination $destPath -Force }
+            Write-Action "templates/$tplName  (new)"
+            continue
+        }
+        $srcHash = (Get-FileHash $srcFile -Algorithm SHA256).Hash
+        $dstHash = (Get-FileHash $destPath -Algorithm SHA256).Hash
+        if ($srcHash -eq $dstHash) { continue }
+        if (-not $Force) {
+            Write-Skip "templates/$tplName differs  - rerun with -Force to overwrite"
+            continue
+        }
+        $backupPath = Join-Path $CentralDir "_install-backups\$Timestamp\templates\$tplName"
+        if ($DryRun) {
+            Write-Action "[dry-run] would back up and overwrite templates/$tplName"
+        } else {
+            New-Item -ItemType Directory -Path (Split-Path $backupPath -Parent) -Force | Out-Null
+            Copy-Item $destPath -Destination $backupPath -Force
+            Copy-Item $srcFile -Destination $destPath -Force
+            Write-Action "templates/$tplName  (overwritten  - backup at $backupPath)"
+        }
+    }
+} else {
+    Copy-TreeSafely $specsTemplatesSrc $specsTemplatesDst "specs/_templates" $CentralDir
+    Copy-TreeSafely $docsTemplatesSrc $docsTemplatesDst "docs/_templates" $CentralDir
+}
 
 foreach ($rootFile in @("CLAUDE.md.example", "settings.template.json")) {
     $src = Join-Path $RepoRoot $rootFile
@@ -284,4 +552,8 @@ if ($SkipLink) {
 }
 
 Write-Host ""
+if ($MissingShipped.Count -gt 0) {
+    Write-Host "[ERROR]   Finished with $($MissingShipped.Count) shipped item(s) missing from the repo (see [ERROR] lines above). profiles.json is out of sync." -ForegroundColor Red
+    exit 1
+}
 Write-Action "Done."
