@@ -103,14 +103,19 @@ warn() { echo "[warn]    $*"; }
 # design — they are declared for roadmap visibility, not installation).
 PROFILES_FILE="$REPO_ROOT/profiles.json"
 PROFILE_FILTERING=0
-declare -A ACTIVE_SKILLS_MAP=()
-declare -A ACTIVE_HOOKS_MAP=()
-declare -A ACTIVE_TEMPLATES_MAP=()
-declare -A ACTIVE_AGENTS_MAP=()
-declare -A PLANNED_SKILLS_MAP=()
-declare -A PLANNED_HOOKS_MAP=()
-declare -A PLANNED_TEMPLATES_MAP=()
-declare -A PLANNED_AGENTS_MAP=()
+# Plain indexed arrays, NOT `declare -A` associative arrays: macOS ships bash 3.2
+# (pre-GPLv3) as /bin/bash, which has no associative arrays. Uniqueness is already
+# guaranteed by the python3 resolver (it aggregates into sets and prints each item
+# once, sorted). Empty-array expansions below use the `${arr[@]+"${arr[@]}"}` guard
+# because bash 3.2 with `set -u` errors on expanding an empty array.
+ACTIVE_SKILLS=()
+ACTIVE_HOOKS=()
+ACTIVE_TEMPLATES=()
+ACTIVE_AGENTS=()
+PLANNED_SKILLS=()
+PLANNED_HOOKS=()
+PLANNED_TEMPLATES=()
+PLANNED_AGENTS=()
 MISSING_SHIPPED=()
 
 if [ ! -f "$PROFILES_FILE" ]; then
@@ -239,33 +244,33 @@ while IFS= read -r line; do
     ACTIVE_PROFILES:*)
       IFS=',' read -ra ACTIVE_PROFILES <<< "${line#ACTIVE_PROFILES:}"
       ;;
-    SKILL:*) ACTIVE_SKILLS_MAP["${line#SKILL:}"]=1 ;;
-    PLANNED_SKILL:*) PLANNED_SKILLS_MAP["${line#PLANNED_SKILL:}"]=1 ;;
-    HOOK:*) ACTIVE_HOOKS_MAP["${line#HOOK:}"]=1 ;;
-    PLANNED_HOOK:*) PLANNED_HOOKS_MAP["${line#PLANNED_HOOK:}"]=1 ;;
-    TEMPLATE:*) ACTIVE_TEMPLATES_MAP["${line#TEMPLATE:}"]=1 ;;
-    PLANNED_TEMPLATE:*) PLANNED_TEMPLATES_MAP["${line#PLANNED_TEMPLATE:}"]=1 ;;
-    AGENT:*) ACTIVE_AGENTS_MAP["${line#AGENT:}"]=1 ;;
-    PLANNED_AGENT:*) PLANNED_AGENTS_MAP["${line#PLANNED_AGENT:}"]=1 ;;
+    SKILL:*) ACTIVE_SKILLS+=("${line#SKILL:}") ;;
+    PLANNED_SKILL:*) PLANNED_SKILLS+=("${line#PLANNED_SKILL:}") ;;
+    HOOK:*) ACTIVE_HOOKS+=("${line#HOOK:}") ;;
+    PLANNED_HOOK:*) PLANNED_HOOKS+=("${line#PLANNED_HOOK:}") ;;
+    TEMPLATE:*) ACTIVE_TEMPLATES+=("${line#TEMPLATE:}") ;;
+    PLANNED_TEMPLATE:*) PLANNED_TEMPLATES+=("${line#PLANNED_TEMPLATE:}") ;;
+    AGENT:*) ACTIVE_AGENTS+=("${line#AGENT:}") ;;
+    PLANNED_AGENT:*) PLANNED_AGENTS+=("${line#PLANNED_AGENT:}") ;;
   esac
 done <<< "$PY_OUTPUT"
 
 # --- Integrity check: every SHIPPED item must exist on disk. A missing
 #     shipped item means profiles.json has drifted from the repo. ---
-for s in "${!ACTIVE_SKILLS_MAP[@]}"; do
+for s in ${ACTIVE_SKILLS[@]+"${ACTIVE_SKILLS[@]}"}; do
   [ -d "$REPO_ROOT/skills/$s" ] || MISSING_SHIPPED+=("skill '$s' (expected at skills/$s/)")
 done
-for h in "${!ACTIVE_HOOKS_MAP[@]}"; do
+for h in ${ACTIVE_HOOKS[@]+"${ACTIVE_HOOKS[@]}"}; do
   found=0
   for hf in "$REPO_ROOT/hooks/$h".*; do [ -f "$hf" ] && found=1; done
   [ "$found" -eq 1 ] || MISSING_SHIPPED+=("hook '$h' (expected hooks/$h.ps1 / hooks/$h.sh)")
 done
-for t in "${!ACTIVE_TEMPLATES_MAP[@]}"; do
+for t in ${ACTIVE_TEMPLATES[@]+"${ACTIVE_TEMPLATES[@]}"}; do
   if [ ! -f "$REPO_ROOT/specs/_templates/$t" ] && [ ! -f "$REPO_ROOT/docs/_templates/$t" ]; then
     MISSING_SHIPPED+=("template '$t' (expected specs/_templates/$t or docs/_templates/$t)")
   fi
 done
-for a in "${!ACTIVE_AGENTS_MAP[@]}"; do
+for a in ${ACTIVE_AGENTS[@]+"${ACTIVE_AGENTS[@]}"}; do
   [ -f "$REPO_ROOT/agents/$a.md" ] || MISSING_SHIPPED+=("agent '$a' (expected at agents/$a.md)")
 done
 if [ ${#MISSING_SHIPPED[@]} -gt 0 ]; then
@@ -277,12 +282,12 @@ if [ ${#MISSING_SHIPPED[@]} -gt 0 ]; then
 fi
 
 log "Active profiles: ${ACTIVE_PROFILES[*]}"
-log "Shipped  - skills: ${#ACTIVE_SKILLS_MAP[@]} | hooks: ${#ACTIVE_HOOKS_MAP[@]} | templates: ${#ACTIVE_TEMPLATES_MAP[@]} | agents: ${#ACTIVE_AGENTS_MAP[@]}"
-log "Planned  - skills: ${#PLANNED_SKILLS_MAP[@]} | hooks: ${#PLANNED_HOOKS_MAP[@]} | templates: ${#PLANNED_TEMPLATES_MAP[@]} | agents: ${#PLANNED_AGENTS_MAP[@]}"
-for s in "${!PLANNED_SKILLS_MAP[@]}"; do echo "[planned] skill '$s'  - not installed (planned for a future phase)"; done
-for h in "${!PLANNED_HOOKS_MAP[@]}"; do echo "[planned] hook '$h'  - not installed (planned for a future phase)"; done
-for t in "${!PLANNED_TEMPLATES_MAP[@]}"; do echo "[planned] template '$t'  - not installed (planned for a future phase)"; done
-for a in "${!PLANNED_AGENTS_MAP[@]}"; do echo "[planned] agent '$a'  - not installed (planned for a future phase)"; done
+log "Shipped  - skills: ${#ACTIVE_SKILLS[@]} | hooks: ${#ACTIVE_HOOKS[@]} | templates: ${#ACTIVE_TEMPLATES[@]} | agents: ${#ACTIVE_AGENTS[@]}"
+log "Planned  - skills: ${#PLANNED_SKILLS[@]} | hooks: ${#PLANNED_HOOKS[@]} | templates: ${#PLANNED_TEMPLATES[@]} | agents: ${#PLANNED_AGENTS[@]}"
+for s in ${PLANNED_SKILLS[@]+"${PLANNED_SKILLS[@]}"}; do echo "[planned] skill '$s'  - not installed (planned for a future phase)"; done
+for h in ${PLANNED_HOOKS[@]+"${PLANNED_HOOKS[@]}"}; do echo "[planned] hook '$h'  - not installed (planned for a future phase)"; done
+for t in ${PLANNED_TEMPLATES[@]+"${PLANNED_TEMPLATES[@]}"}; do echo "[planned] template '$t'  - not installed (planned for a future phase)"; done
+for a in ${PLANNED_AGENTS[@]+"${PLANNED_AGENTS[@]}"}; do echo "[planned] agent '$a'  - not installed (planned for a future phase)"; done
 
 is_excluded() {
   case "$1" in
@@ -424,7 +429,7 @@ fi
 
 # --- Skills (filtered by profile: each skill is a subdirectory) ---
 if [ "$PROFILE_FILTERING" -eq 1 ]; then
-  for skill_name in "${!ACTIVE_SKILLS_MAP[@]}"; do
+  for skill_name in ${ACTIVE_SKILLS[@]+"${ACTIVE_SKILLS[@]}"}; do
     skill_dir="$REPO_ROOT/skills/$skill_name"
     if [ ! -d "$skill_dir" ]; then
       # Already reported under [ERROR] above (shipped item missing from disk) — don't copy.
@@ -438,7 +443,7 @@ fi
 
 # --- Hooks (filtered by profile: each hook is one or more files with the same base name) ---
 if [ "$PROFILE_FILTERING" -eq 1 ]; then
-  for hook_name in "${!ACTIVE_HOOKS_MAP[@]}"; do
+  for hook_name in ${ACTIVE_HOOKS[@]+"${ACTIVE_HOOKS[@]}"}; do
     found=0
     for hook_file in "$REPO_ROOT/hooks/$hook_name".*; do
       [ -f "$hook_file" ] || continue
@@ -484,7 +489,7 @@ fi
 
 # --- Templates (filtered by profile: from both specs/_templates and docs/_templates) ---
 if [ "$PROFILE_FILTERING" -eq 1 ]; then
-  for tpl_name in "${!ACTIVE_TEMPLATES_MAP[@]}"; do
+  for tpl_name in ${ACTIVE_TEMPLATES[@]+"${ACTIVE_TEMPLATES[@]}"}; do
     src_file=""
     dst_dir=""
     if [ -f "$REPO_ROOT/specs/_templates/$tpl_name" ]; then
@@ -525,7 +530,7 @@ fi
 
 # --- Agents (filtered by profile: each agent is a single agents/<name>.md file) ---
 if [ "$PROFILE_FILTERING" -eq 1 ]; then
-  for agent_name in "${!ACTIVE_AGENTS_MAP[@]}"; do
+  for agent_name in ${ACTIVE_AGENTS[@]+"${ACTIVE_AGENTS[@]}"}; do
     agent_file="$REPO_ROOT/agents/$agent_name.md"
     if [ ! -f "$agent_file" ]; then
       # Already reported under [ERROR] above (shipped item missing from disk) — don't copy.
@@ -534,7 +539,7 @@ if [ "$PROFILE_FILTERING" -eq 1 ]; then
     copy_file_safely "$agent_file" "$CENTRAL_DIR/agents/$agent_name.md" "agents/$agent_name.md" "$CENTRAL_DIR/_install-backups/$TIMESTAMP/agents/$agent_name.md"
   done
   # Always copy agents/README.md if it exists (documentation only, not an agent)
-  if [ -f "$REPO_ROOT/agents/README.md" ] && [ ${#ACTIVE_AGENTS_MAP[@]} -gt 0 ]; then
+  if [ -f "$REPO_ROOT/agents/README.md" ] && [ ${#ACTIVE_AGENTS[@]} -gt 0 ]; then
     dest="$CENTRAL_DIR/agents/README.md"
     if [ ! -e "$dest" ]; then
       if [ "$DRY_RUN" -eq 1 ]; then log "[dry-run] would create agents/README.md"; else
@@ -602,7 +607,7 @@ else
   # directory link would hide. Additive only  - existing files that differ are
   # skipped without --force; with --force they are backed up next to
   # themselves first.
-  for agent_name in "${!ACTIVE_AGENTS_MAP[@]}"; do
+  for agent_name in ${ACTIVE_AGENTS[@]+"${ACTIVE_AGENTS[@]}"}; do
     src_agent="$CENTRAL_DIR/agents/$agent_name.md"
     if [ ! -f "$src_agent" ]; then skip "agents/$agent_name.md not present in central dir  - run the install step first"; continue; fi
     copy_file_safely "$src_agent" "$CLAUDE_HOME/agents/$agent_name.md" "~/.claude/agents/$agent_name.md" "$CLAUDE_HOME/agents/$agent_name.md.bak-$TIMESTAMP"

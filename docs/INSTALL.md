@@ -78,6 +78,8 @@ installation. Note that `--profile messaging-event-driven` on its own does **not
 
 `install.ps1` uses PowerShell's built-in `ConvertFrom-Json` and has no external dependency for profile resolution.
 
+**Works with macOS's stock bash 3.2.** macOS still ships bash 3.2 (2007) as `/bin/bash` for licensing reasons. `install.sh`, `link-project.sh`, and every `.sh` hook deliberately avoid bash-4-only features (no associative arrays, no `mapfile`, no `${var,,}`), and empty-array expansions are guarded for bash 3.2's `set -u` behavior — no Homebrew bash required.
+
 ---
 
 ## Windows
