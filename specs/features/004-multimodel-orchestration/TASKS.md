@@ -33,18 +33,62 @@ constraints verified in T014–T016 (no destructive commands added; no commits/p
   (java-spring default, blockchain disabled, core agents, backward-compat), link-project
   additive agent copy, and CLAUDE.md.example markers all verified. Secret scan and
   destructive-command grep clean.
-- **AC-017: PASS structural / NOT RUN live.** Frontmatter/skill format matches the agents
-  Claude Code already recognizes, but the agents have NOT been deployed to the real
-  `~/.claude/agents` and no new session has confirmed live discovery.
+- **AC-017: PASS live (2026-07-13).** Initially PASS structural / NOT RUN live; the live
+  check was executed on 2026-07-13 after the real deploy (`install.ps1` +
+  `install.ps1 -LinkUserClaude`, run by the user). Evidence — confirmed by the user in a
+  **fresh Claude Code session**: `deep-reasoner` available with `model: opus`,
+  `fast-worker` available with `model: sonnet`, `/sdd-orchestrate` available. All four
+  pass criteria met.
 
-### Pending before Done
+### AC-017 live-check procedure — EXECUTED AND PASSED 2026-07-13
 
-SPEC stays **In Review** until this live check passes:
+**Result: PASS.** The user ran the deploy (Step 1) and confirmed all four pass/fail
+criteria (Step 4) in a fresh Claude Code session on 2026-07-13. SPEC.md advanced
+`In Review → Done`. The procedure below is kept for reproducibility (re-verify after
+future `git pull` + reinstall cycles):
 
-1. Run `install.ps1 -LinkUserClaude` (Windows) / `install.sh --link-user-claude` to deploy
-   the agents into `~/.claude/agents` and the skill via the linked `~/.claude/skills`.
-2. Open a **new** Claude Code session.
-3. Confirm `deep-reasoner`, `fast-worker`, and `/sdd-orchestrate` are recognized (agents in
-   the available-agents list; `/sdd-orchestrate` autocompletes).
+**Step 0 — dry-run preview (verified 2026-07-13, exit 0, read-only):**
 
-Only then move SPEC.md `In Review → Done` and run `/spec-close`.
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\install.ps1 -DryRun
+powershell -NoProfile -ExecutionPolicy Bypass -File .\install.ps1 -DryRun -LinkUserClaude
+```
+
+Observed on the author's machine: 57 items would be created in the central dir (Phases 1–4
+content not yet deployed there); `~/.claude/skills`, `~/.claude/hooks`, and `~/.claude/CLAUDE.md`
+are already correctly linked (no-op); agents correctly report "not present in central dir —
+run the install step first". No `[ERROR]` lines.
+
+**Step 1 — real deploy (requires explicit user confirmation — touches
+`C:\ProgramData\ClaudeConfig` and `~/.claude`):**
+
+```powershell
+.\install.ps1                     # populate central dir (incl. agents/)
+.\install.ps1 -LinkUserClaude     # copy agents into ~/.claude/agents (links are already OK)
+```
+
+macOS/Linux equivalent: `./install.sh` then `./install.sh --link-user-claude` (needs python3).
+
+**Step 2 — verify files landed:**
+
+```powershell
+Get-ChildItem "$env:USERPROFILE\.claude\agents\deep-reasoner.md", "$env:USERPROFILE\.claude\agents\fast-worker.md"
+Get-ChildItem "$env:USERPROFILE\.claude\skills\sdd-orchestrate"
+```
+
+**Step 3 — open a NEW Claude Code session** (agent/skill discovery happens at session start;
+an existing session will not see them).
+
+**Step 4 — pass/fail criteria (all four must hold):**
+
+- `deep-reasoner` appears in the available-agents list, with `model: opus`.
+- `fast-worker` appears in the available-agents list, with `model: sonnet`.
+- `/sdd-orchestrate` autocompletes / is listed as an available skill.
+- Delegating a trivial probe to each agent succeeds (e.g. ask `deep-reasoner` to read one
+  file — it must not attempt an edit; ask `fast-worker` a no-op read — it responds in its
+  fixed report format).
+
+**PASS →** set SPEC.md `In Review → Done` and run `/spec-close`, recording the session date
+and Claude Code version. **FAIL →** record symptoms in DECISIONS.md and consult
+`docs/SDD-ORCHESTRATION.md` → Troubleshooting. Never mark AC-017 PASS live without Step 3–4
+observed in a fresh session.

@@ -18,7 +18,7 @@ restrictions, and what you must not touch. You implement exactly that.
 4. Confirm the task is concrete: exact files, exact behavior, exact done-criteria.
 5. **Stop condition:** if completing the task requires an architectural decision that is
    not documented in the brief or the SDD docs, or the brief contradicts the repo, STOP.
-   Do not guess. Return the task with the blocking question under "Decisiones no tomadas".
+   Do not guess. Return the task with the blocking question under "Decisions not taken".
 
 ## While implementing
 
@@ -37,15 +37,15 @@ restrictions, and what you must not touch. You implement exactly that.
 
 ## Output format (always, in this order)
 
-# Tarea implementada
-# Archivos modificados
-# Cambios realizados
-# Tests añadidos o actualizados
-# Comandos ejecutados
-# Resultado de validaciones
-# Decisiones no tomadas
-# Riesgos o trabajo pendiente
+# Task implemented
+# Files modified
+# Changes made
+# Tests added or updated
+# Commands executed
+# Validation results
+# Decisions not taken
+# Risks or pending work
 
 Keep it compact: paths and one-line summaries, not full diffs — the orchestrator reviews
-the real diff itself. If you stopped on the stop condition, say so in "Tarea implementada"
-and put the exact blocking question in "Decisiones no tomadas".
+the real diff itself. If you stopped on the stop condition, say so in "Task implemented"
+and put the exact blocking question in "Decisions not taken".

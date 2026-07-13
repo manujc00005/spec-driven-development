@@ -16,13 +16,13 @@ model for each job.
 ## Architecture
 
 ```
-Usuario
+User
   ↓
-Orquestador principal (sesión — Fable si está disponible)
-  ├── deep-reasoner → Opus   (análisis, solo lectura)
-  └── fast-worker   → Sonnet (implementación, tests, verificaciones)
+Main orchestrator (session — Fable when available)
+  ├── deep-reasoner → Opus   (analysis, read-only)
+  └── fast-worker   → Sonnet (implementation, tests, verifications)
   ↓
-Revisión, validación contra acceptance criteria y síntesis final
+Review, validation against acceptance criteria, final synthesis
 ```
 
 | Role | Model | Responsibility |
@@ -135,23 +135,23 @@ To update the block later, replace only what is between the markers.
 **Example 1 — small change**
 
 ```
-/sdd-orchestrate Aumenta el tamaño del icono de pago seguro sin cambiar el layout.
+/sdd-orchestrate Increase the secure-payment icon size without changing the layout.
 ```
 Expected: orchestrator → fast-worker → visual/component tests. No Opus, no ceremony.
 
-**Example 2 — complex Stripe bug**
+**Example 2 — complex payment-provider bug**
 
 ```
-/sdd-orchestrate Investiga por qué un pedido aparece cancelado en el admin pero no
-existe un evento equivalente en Stripe. No implementes hasta encontrar la causa raíz.
+/sdd-orchestrate Investigate why an order shows as cancelled in the admin panel but no
+matching event exists in the payment provider. Do not implement until the root cause is found.
 ```
 Expected: orchestrator → deep-reasoner (root cause) → SPEC/PLAN/TASKS → fast-worker → QA.
 
 **Example 3 — audit (no implementation)**
 
 ```
-/sdd-orchestrate Audita la idempotencia de los webhooks y entrega findings priorizados.
-No modifiques código.
+/sdd-orchestrate Audit webhook idempotency and deliver prioritized findings.
+Do not modify code.
 ```
 Expected: orchestrator → deep-reasoner → prioritized report. Nothing implemented.
 
@@ -185,6 +185,14 @@ Get-ChildItem "$env:USERPROFILE\.claude\skills\sdd-orchestrate"
 
 Then start a new Claude Code session: the agents appear in the available-agents list and
 `/sdd-orchestrate` autocompletes. (Agent/skill discovery happens at session start.)
+
+The full reproducible live-check procedure — dry-run preview, deploy commands, file
+verification, and the four pass/fail criteria (both agents listed with the right models,
+the skill autocompleting, and a trivial probe delegation succeeding) — is maintained in
+[`specs/features/004-multimodel-orchestration/TASKS.md`](../specs/features/004-multimodel-orchestration/TASKS.md).
+It **passed on 2026-07-13** on the reference setup (fresh session recognized both agents
+with the correct models and the command). Re-run it after any `git pull` + reinstall;
+structural verification alone is never reported as a live PASS.
 
 ## Troubleshooting
 

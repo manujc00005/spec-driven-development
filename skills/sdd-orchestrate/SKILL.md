@@ -14,10 +14,10 @@ ARGUMENTS: a free-form description of the goal.
 
 Classify what the user is asking FOR, not just what it touches:
 
-- **Analizar / Auditar / Investigar / Revisar / Diseñar** → produce analysis or a report.
-  Do NOT implement, even if fixes look obvious. Offer the follow-up spec instead.
-- **Especificar** → stop after SPEC. **Planificar** → stop after PLAN/TASKS.
-- **Implementar / Corregir** → run the full flow below.
+- **Analyze / Audit / Investigate / Review / Design** (in any language) → produce analysis
+  or a report. Do NOT implement, even if fixes look obvious. Offer the follow-up spec instead.
+- **Specify** → stop after SPEC. **Plan** → stop after PLAN/TASKS.
+- **Implement / Fix** → run the full flow below.
 
 ## Task classification
 

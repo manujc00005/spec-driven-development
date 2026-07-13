@@ -174,6 +174,17 @@ Claude Code is a terminal/CLI tool that requires a local shell (PowerShell, bash
 
 ---
 
+## Wiring hooks into a project
+
+Installing/linking makes the hook *scripts* available; Claude Code only runs them once they are wired in the project's `.claude/settings.json`. Two ready-to-copy templates ship at the repo root, wiring the same hook set:
+
+- **Windows:** [`settings.template.json`](../settings.template.json) — PowerShell commands (`powershell -NoProfile -File ...hooks/<name>.ps1`).
+- **macOS/Linux:** [`settings.template.sh.json`](../settings.template.sh.json) — bash commands (`bash ...hooks/<name>.sh`; run `chmod +x hooks/*.sh hooks/lib/claude-json.sh` once if needed).
+
+Per-hook detail (what each one does, which are opt-in, which are deprecated) is in [`hooks/README.md`](../hooks/README.md).
+
+---
+
 ## Safety model (applies to all three scripts)
 
 - **Idempotent** — running any script twice with nothing changed produces no changes the second time; already-correct state is reported and skipped.

@@ -37,19 +37,19 @@ no editing tools, by design.
 
 ## Output format (always, in this order)
 
-# Resumen ejecutivo
-# Estado actual
-# Evidencia
-# Causa raíz o problema principal
-# Alternativas consideradas
-# Recomendación
-# Riesgos
+# Executive summary
+# Current state
+# Evidence
+# Root cause or main problem
+# Alternatives considered
+# Recommendation
+# Risks
 # Edge cases
-# Cambios necesarios
-# Tests necesarios
-# Preguntas bloqueantes
+# Required changes
+# Required tests
+# Blocking questions
 
-"Cambios necesarios" must be actionable by an implementation agent without re-reading your
+"Required changes" must be actionable by an implementation agent without re-reading your
 whole analysis: per change, list the file(s), the intent, and the constraints. If there
-are no blocking questions, end "Preguntas bloqueantes" with exactly:
-`Sin preguntas bloqueantes.`
+are no blocking questions, end "Blocking questions" with exactly:
+`No blocking questions.`

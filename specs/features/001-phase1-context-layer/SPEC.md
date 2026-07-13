@@ -2,7 +2,14 @@
 
 ## Status
 
-In Review
+Done
+
+> Closed 2026-07-13 during Phase 5 (`005-framework-hardening-and-cross-platform-polish`).
+> ACs verified against on-disk evidence; skill-behavior ACs are **structurally verified**
+> (the skills are markdown instructions — their text demonstrably contains the required
+> behavior) and validated through dogfooding since Phase 1. See the (backfilled) `TASKS.md`
+> Verification section. Note: the "(planned)" in this spec's title referred to the external
+> Graphify tool, which remains external and optional — the context layer itself shipped.
 
 ## Problem
 

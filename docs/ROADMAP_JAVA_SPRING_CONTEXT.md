@@ -1,8 +1,11 @@
 # Roadmap — Java/Spring backend profile + Graphify context layer
 
-> **Status: PLAN ONLY.** Nothing in this document is implemented yet. No commits, no changes to
-> `C:\ProgramData\ClaudeConfig`, no dependency installs. This file describes the intended extension
-> of `spec-driven-development` and the order in which to build it.
+> **Status: HISTORICAL PLANNING DOCUMENT.** This was the original phase plan, written before any of
+> it was built ("PLAN ONLY" at the time). Much of it has since shipped — the context layer (Phase 1),
+> the Java/Spring profile (Phase 2), and the messaging/microservices profile (Phase 3) are implemented;
+> see `specs/features/` and the main `README.md` for current status. Counts and "current state"
+> descriptions below reflect the repo as it was when this plan was written, not today. Kept for
+> traceability of the original design reasoning.
 
 Legend used throughout:
 

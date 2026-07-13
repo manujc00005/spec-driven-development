@@ -2,7 +2,14 @@
 
 ## Status
 
-In Review
+Done
+
+> Closed 2026-07-13 during Phase 5 (`005-framework-hardening-and-cross-platform-polish`).
+> All ACs verified against on-disk evidence (see the backfilled `TASKS.md` Verification
+> section). AC-005 is closed **as superseded**: its "skipped gracefully" wording described
+> the pre-0.4.0 installer and was deliberately replaced by the shipped/planned integrity
+> model — see DECISIONS D006. Note: Phase 5 also deprecated the `maven-compile` hook in
+> favor of this phase's `java-build-test-guard` (wiring-level consolidation, 005/D001).
 
 ## Problem
 

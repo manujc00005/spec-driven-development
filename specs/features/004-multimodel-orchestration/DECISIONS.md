@@ -82,7 +82,7 @@ block. Revisit only if drift is observed in practice.
 
 ## D009 — Phase 4 held at In Review pending live agent-recognition check (AC-017)
 
-**Status:** Active
+**Status:** Superseded (by D010 — the live check passed on 2026-07-13)
 
 `/spec-review` returned PASS and `/qa-review` returned PASS on structural evidence
 (installer invariants, agent frontmatter/tools, profiles.json semantics, link-project
@@ -98,3 +98,22 @@ In Review status for unfinished implementation.
 Note on commit hygiene (informational, not a decision to act on): Phase 4 was committed
 together with Phase 3 in `c8cfa37` (message "phase 3") and pushed; the maintainer
 accepted this mixed, already-published commit rather than rewrite history. No code impact.
+
+## D010 — Phase 4 closed: AC-017 live check passed
+
+**Status:** Active
+
+**Date:** 2026-07-13
+
+The gate recorded in D009 was cleared. The user ran the real deploy (`install.ps1`, then
+`install.ps1 -LinkUserClaude`) and confirmed in a **fresh Claude Code session** that:
+
+- `deep-reasoner` is available and uses `model: opus`,
+- `fast-worker` is available and uses `model: sonnet`,
+- `/sdd-orchestrate` is available.
+
+AC-017 is therefore **PASS live** (previously PASS structural only — that distinction was
+maintained honestly from the Phase 4 close through the Phase 5 audit until this
+verification). With the last open AC verified, SPEC.md advanced `In Review → Done`. The
+reproducible live-check procedure is retained in `TASKS.md` for re-verification after
+future `git pull` + reinstall cycles. D009 is superseded by this decision.

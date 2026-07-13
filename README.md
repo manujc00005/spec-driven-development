@@ -1,253 +1,285 @@
-# Spec-Driven Development Workflow
+# Spec-Driven Development for Claude Code
 
-**A disciplined, enforceable workflow for building software with an AI copilot — without giving up engineering control.**
+**A disciplined, enforceable workflow for AI-assisted software engineering — specs, plans, reviews, guardrails, and multi-model orchestration, without giving up engineering control.**
 
 ![Methodology](https://img.shields.io/badge/methodology-Spec--Driven%20Development-1f6feb)
-![Claude Code](https://img.shields.io/badge/AI%20copilot-Claude%20Code-6b46c1)
-![Graphify](https://img.shields.io/badge/architecture%20discovery-Graphify%20(planned)-lightgrey)
-![Approach](https://img.shields.io/badge/approach-AI--Assisted%20Engineering-2ea44f)
-![Process](https://img.shields.io/badge/process-Documentation%20First-orange)
-![Quality](https://img.shields.io/badge/quality-Review%20Driven-red)
+![Claude Code](https://img.shields.io/badge/runtime-Claude%20Code-6b46c1)
+![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-2ea44f)
+![License](https://img.shields.io/badge/license-MIT-blue)
+![Status](https://img.shields.io/badge/status-active-success)
 
 > **AI accelerates execution. Engineering judgment keeps control.**
 
----
-
-## What this is
-
-This repository documents a Spec-Driven Development (SDD) workflow designed to be run with [Claude Code](https://claude.com/claude-code): a reproducible sequence of specification, clarification, planning, impact analysis, scoped implementation, and layered review that sits between "having an idea" and "opening a pull request."
-
-It is not a demo. It is the process used to build real features in real codebases, where an unreviewed change to auth, payments, or a database schema is expensive to get wrong. The workflow assumes the AI will write a meaningful share of the code — that part isn't in question. What it adds is the structure around that code: a written spec before implementation starts, an explicit plan before files change, a consistency check before tasks are marked done, and a set of review passes scoped to what the change actually touches (not a fixed checklist run blindly on every change).
-
-The AI — Claude Code — acts as an execution copilot inside this process. It writes specs, plans, code, and review reports following the rules below. It does not decide what gets built, what risk is acceptable, or which changes should not be made — those decisions, and the responsibility for them, stay with the engineer.
-
-Some of the enforcement described here is not just convention — it's wired into Claude Code hooks that can technically block an action (see [Enforcement, not just documentation](#enforcement-not-just-documentation)). Other parts, like the Graphify integration, are part of the intended design and are explicitly marked as **planned**, not shipped.
+This repository turns [Claude Code](https://claude.com/claude-code) into a process-driven engineering environment: **43 skills** (slash commands), **11 hook families** (tool-call-level guardrails), **15 document templates**, **2 orchestration agents**, and a **profile-aware installer** — all versioned, reviewable, and installed from a single source of truth.
 
 ---
 
-## Visual workflow
+## Table of contents
+
+- [What is this?](#what-is-this)
+- [Why it exists](#why-it-exists)
+- [Quickstart](#quickstart)
+- [Core workflow](#core-workflow)
+- [Multi-model orchestration](#multi-model-orchestration)
+- [Repository architecture](#repository-architecture)
+- [Profiles](#profiles)
+- [Installation](#installation)
+- [Usage examples](#usage-examples)
+- [Safety model](#safety-model)
+- [What is shipped now](#what-is-shipped-now)
+- [Roadmap](#roadmap)
+- [Design principles](#design-principles)
+- [Author's note](#authors-note)
+- [Limitations](#limitations)
+- [License](#license)
+
+---
+
+## What is this?
+
+A **Spec-Driven Development (SDD) workflow for AI-assisted software engineering**, packaged as installable Claude Code configuration. It is the reproducible sequence that sits between "having an idea" and "opening a pull request":
+
+**specification → clarification → planning → consistency analysis → scoped implementation → layered review → close-out.**
+
+Five kinds of artifacts implement it:
+
+| Artifact | What it is | Where |
+|---|---|---|
+| **Skills** | Slash commands that drive each workflow step (`/spec-create`, `/spec-plan`, `/security-review`, …) as structured, repeatable procedures | [`skills/`](skills/) |
+| **Hooks** | Small scripts Claude Code runs at tool-call level — they can block a destructive git command or surface a compile error *before* the session moves on | [`hooks/`](hooks/) |
+| **Profiles** | A manifest ([`profiles.json`](profiles.json)) mapping stacks (Java/Spring, Next.js, messaging, …) to the skills/hooks/templates/agents they need, consumed by the installers | repo root |
+| **Templates** | Starter documents for specs, plans, tasks, decisions, and project context docs | [`specs/_templates/`](specs/_templates/), [`docs/_templates/`](docs/_templates/) |
+| **Agents** | Subagent definitions for the multi-model orchestrated mode — a read-only Opus analyst and a bounded Sonnet implementer | [`agents/`](agents/) |
+
+It is not a demo. It is the process used to build real features in real codebases, where an unreviewed change to auth, payments, or a database schema is expensive to get wrong. The AI writes a meaningful share of the code — that part isn't in question. What this repo adds is the structure around that code, and the tooling that makes the structure hard to skip.
+
+## Why it exists
+
+AI coding without process has a failure mode every team has now seen: requirements live in chat scrollback, the model makes silent architectural decisions, plans drift from what was actually built, and review happens (if at all) as a vibe check on a diff nobody scoped. The result is ambiguity, regressions, and hidden debt — produced faster than ever.
+
+This workflow addresses that directly:
+
+- **A written spec before implementation starts** — with explicit out-of-scope boundaries and acceptance criteria.
+- **An explicit plan before files change** — impacted modules, risks, rollback strategy.
+- **A consistency gate before tasks are marked done** — spec, plan, tasks, and decisions must agree.
+- **Reviews scoped to what the change actually touches** — a schema change gets a database review; a UI-only change doesn't.
+- **Decisions written down** — every non-obvious choice lands in `DECISIONS.md` with its reasoning, instead of living only in a conversation that will be compacted away.
+- **Enforcement in tooling, not just prose** — hooks intervene at tool-call level (see [Safety model](#safety-model)).
+
+The engineer decides what gets built, what risk is acceptable, and which changes should not happen. The AI executes the process — it does not own it.
+
+## Quickstart
+
+```bash
+git clone https://github.com/manujc00005/spec-driven-development.git
+cd spec-driven-development
+
+# Preview — writes nothing
+./install.sh --dry-run          # macOS/Linux (requires python3)
+.\install.ps1 -DryRun           # Windows
+
+# Install core + default profile (java-spring-backend) into the central config dir
+./install.sh
+.\install.ps1
+
+# Opt-in: link your ~/.claude to the central dir (skills, hooks) + copy agents
+./install.sh --link-user-claude
+.\install.ps1 -LinkUserClaude
+```
+
+Then, in any project, start a new Claude Code session and run:
+
+```
+/project-init        # once per project — creates specs/CONSTITUTION.md
+/sdd "Add rate limiting to the public checkout API"
+```
+
+Full walkthrough, per-project linking, and verification steps: [`docs/INSTALL.md`](docs/INSTALL.md).
+
+---
+
+## Core workflow
 
 ```mermaid
 flowchart TD
-    A[Idea / Requirement] --> B[Spec]
-    B --> C[Clarify]
-    C --> D[Plan]
-    D --> E[Analyze]
-    E -- Ready --> F[Implement]
-    E -- Not ready / Partial --> C
-    F --> G[Review]
-    G --> H{Risk-based reviews}
-    H --> R1[QA review]
-    H --> R2[Security review]
-    H --> R3[Database review]
-    H --> R4[API review]
-    H --> R5[Backend review]
-    H --> R6[Frontend review]
-    H --> R7[SEO review]
-    H --> I[Close]
-    R1 --> I
-    R2 --> I
-    R3 --> I
-    R4 --> I
-    R5 --> I
-    R6 --> I
-    R7 --> I
-    I --> J[PR Description]
+    A[User request] --> B[Discovery]
+    B --> C[SPEC.md]
+    C --> D[Clarify]
+    D --> E[PLAN.md + TASKS.md]
+    E --> F[Analyze consistency]
+    F -- Ready --> G[Implement task by task]
+    F -- Not ready --> D
+    G --> H[Spec review + QA review]
+    H --> I{Risk-based reviews}
+    I --> R1[Security]
+    I --> R2[Database]
+    I --> R3[API]
+    I --> R4[Performance / Frontend / SEO / Privacy ...]
+    R1 --> J[Close]
+    R2 --> J
+    R3 --> J
+    R4 --> J
+    H --> J
+    J --> K[PR description]
 ```
 
-Specialized reviews are not run on every change. They're triggered by what the spec actually declares — a feature with no schema changes doesn't get a database review; a feature with no public endpoint doesn't get an API review. The trigger conditions are fixed and checked automatically during `spec-analyze` (see [Command lifecycle](#command-lifecycle)).
-
-### Spec status lifecycle
-
-Every feature spec carries an explicit status, and nothing skips ahead in this sequence:
-
-```mermaid
-stateDiagram-v2
-    [*] --> Draft
-    Draft --> Ready
-    Ready --> InProgress
-    InProgress --> InReview
-    InReview --> Done
-    Draft --> Archived
-    Ready --> Archived
-    InProgress --> Archived
-    InProgress: In Progress
-    InReview: In Review
-```
-
-- **Draft** — spec exists, not yet plannable.
-- **Ready** — plan and tasks exist, implementation can start.
-- **In Progress** — at least one task has been implemented.
-- **In Review** — all tasks complete, `spec-review` passed, specialized reviews pending.
-- **Done** — all required reviews complete, feature closed.
-- **Archived** — abandoned or superseded.
-
-Implementation cannot start against a `Draft` spec, and a feature cannot close from anything other than `In Review`. These checks are enforced by the corresponding skills themselves (`spec-implement` and `spec-close` both refuse to proceed if the status doesn't match), not left as a convention to remember.
-
----
-
-## Core philosophy
-
-| Principle | Meaning |
-|---|---|
-| Spec first | No non-trivial implementation starts without a written spec describing the problem, the goal, and what's explicitly out of scope. |
-| Clarify before plan | Ambiguity is resolved in writing before a plan is built on top of it — assumptions are documented, not silently made. |
-| Impact-aware | Before code changes, the plan names the impacted modules, dependencies, risks, and rollback strategy. |
-| Scoped implementation | Only the task at hand is implemented — no speculative abstractions, no unrelated file changes, no behavior outside the spec. |
-| Review-driven | Reviews are triggered by what the change actually touches (auth, schema, API, UI), not run as a blanket checklist. |
-| Traceable | Every task maps back to an acceptance criterion; every non-obvious decision is written down with its reasoning. |
-| Human-owned | The AI executes the process. The engineer decides what to build, what to accept, and what to reject. |
-
-Not every change goes through the full ceremony. Trivial, low-risk changes — typo fixes, small styling tweaks, isolated one-line bug fixes — are handled directly, without specs, plans, or review chains. The workflow is reserved for changes where the cost of being wrong justifies the cost of the process: new features, API changes, database changes, security-sensitive logic, and multi-file refactors.
-
----
-
-## Command lifecycle
-
-Each step below is implemented as a Claude Code skill and invoked as a slash command. **43 skills are published in [`skills/`](skills/)** — every command in this section and the next exists as a real `SKILL.md` file in this repository, not as a description of a future feature. This is the core lifecycle:
+Each step is a real skill invoked as a slash command. The core lifecycle:
 
 | Command | Purpose | Output |
 |---|---|---|
-| `/project-init` | Initialize or update the project's engineering constitution (stack, conventions, mandatory reviews) | `specs/CONSTITUTION.md`, `specs/features/` |
-| `/spec-create` | Create the feature specification, with an automatic clarification pass | `SPEC.md` (status: `Draft`) |
-| `/spec-clarify` | Run a deeper clarification pass when blocking questions remain | Updated `SPEC.md` |
-| `/spec-plan` | Convert an approved spec into an implementation plan | `PLAN.md`, `TASKS.md`, `DECISIONS.md`; `SPEC.md` promoted to `Ready` |
-| `/spec-analyze` | Validate consistency across spec, plan, tasks, and decisions; detect which specialized reviews are needed | Readiness verdict (`Ready` / `Partial` / `Not ready`) + findings |
-| `/spec-implement` | Implement the next scoped task, test-driven, one task at a time | Code changes, updated tests, updated `TASKS.md` |
+| `/project-init` | Create the project's engineering constitution (stack, conventions, mandatory reviews) | `specs/CONSTITUTION.md` |
+| `/sdd` | Main entry point — auto-detects complexity, drives spec → plan → analyze | Whole pre-implementation chain |
+| `/spec-create` | Create the feature specification, with an automatic clarification pass | `SPEC.md` (status `Draft`) |
+| `/spec-clarify` | Deeper clarification pass when blocking questions remain | Updated `SPEC.md` |
+| `/spec-plan` | Convert an approved spec into a plan, task list, and decision log | `PLAN.md`, `TASKS.md`, `DECISIONS.md` |
+| `/spec-analyze` | Validate consistency across all four documents; detect which specialized reviews apply | Readiness verdict + findings |
+| `/spec-implement` | Implement the next scoped task, test-driven, one task at a time | Code + tests, updated `TASKS.md` |
 | `/spec-review` | Review the implementation against spec, plan, and tasks | Review verdict |
-| `/qa-review` | Validate functional behavior, edge cases, and regressions | QA verdict |
-| `/security-review` | Review authentication, authorization, data exposure, secrets, injection risks | Security verdict |
-| `/database-review` | Review schema changes, migrations, indexes, transactions, data integrity | Database verdict |
-| `/api-review` | Review contracts, DTOs, versioning, backward compatibility | API verdict |
-| `/backend-review` | Review services, business logic, and data access patterns | Backend verdict |
-| `/frontend-review` | Review components, state management, and rendering behavior | Frontend verdict |
-| `/seo-review` | Review metadata, Core Web Vitals, and structured data on public pages | SEO verdict |
-| `/spec-close` | Close the feature: resolve open questions, confirm acceptance criteria coverage | `SPEC.md` promoted to `Done`, implementation summary |
-| `/pr-description` | Generate the final pull request description from the diff and the spec | PR description |
+| `/qa-review` | Functional behavior, edge cases, regressions | QA verdict |
+| `/spec-close` | Resolve open questions, confirm acceptance-criteria coverage, close the feature | Implementation summary |
+| `/pr-description` | Generate the pull request description from the diff and the spec | PR text |
 
-### Extended command set
+Specialized reviews are triggered by what the spec declares, not run blindly: `/security-review`, `/database-review`, `/api-review`, `/backend-review`, `/frontend-review`, `/performance-review`, `/seo-review`, `/privacy-compliance-review`. Supporting commands cover the rest of the lifecycle: `/sdd-guardrails` (consistency gate), `/spec-status`, `/spec-update`, `/spec-resume`, `/review-all`, `/architect-review`, `/test-engineer`, `/debugger`, `/prototype`, `/decision-mapping`, `/refactor-review`, `/handoff`, `/context-manager`, `/graphify-context`, `/sdd-onboard`, plus the stack-specific reviewers listed under [Profiles](#profiles). Every command in this README exists as a `SKILL.md` file in [`skills/`](skills/) — all 43 of them; none are aspirational.
 
-Beyond the core lifecycle, the following commands exist and cover situations the linear flow above doesn't fully capture:
+### Spec status lifecycle
 
-| Command | Purpose |
-|---|---|
-| `/sdd` | Auto-detects feature complexity and drives the whole pre-implementation chain (spec → plan → analyze) in one pass |
-| `/sdd-medium`, `/sdd-full` | Force a specific workflow depth explicitly instead of relying on auto-detection |
-| `/sdd-orchestrate` | Multi-model orchestrated SDD: classifies the task, delegates deep reasoning to the `deep-reasoner` agent (Opus) and implementation to the `fast-worker` agent (Sonnet), then reviews and validates — see [docs/SDD-ORCHESTRATION.md](docs/SDD-ORCHESTRATION.md) |
-| `/sdd-guardrails` | Consistency gate: decision state machine, source-of-truth matrix, active-plan rule, naming hygiene, money/units safety, deployment coupling |
-| `/spec-status` | Overview of all specs, or a deep-dive into one feature's current state |
-| `/spec-update` | Update a spec mid-implementation and propagate the change to plan, tasks, and decisions |
-| `/spec-resume` | Resume an in-progress feature without re-reading the whole spec from scratch |
-| `/review-all` | Run every applicable specialized review in one pass, producing a single consolidated report |
-| `/performance-review` | N+1 queries, unnecessary re-renders, missing indexes, caching, algorithmic complexity |
-| `/privacy-compliance-review` | GDPR/data-protection risks: personal data, consent, retention, PII in logs |
-| `/refactor-review` | Optional cleanup pass before close-out — simplifies without changing behavior |
-| `/architect-review` | Structural analysis and trade-off evaluation before or during implementation |
-| `/test-engineer` | Test strategy design and coverage gap analysis |
-| `/debugger` | Root-cause analysis for failing tests or builds |
-| `/decision-mapping`, `/prototype` | Used *before* `/spec-create` when the technical approach itself is uncertain |
-| `/pr-description`, `/handoff` | Final PR text generation, and conversation hand-off to a fresh session |
-| `/context-manager` | Produces a bounded reading list (minimal files to load) before implementing — reduces token waste on large codebases |
-| `/graphify-context` | Interprets `GRAPH_REPORT.md` for impact analysis; degrades gracefully when Graphify is absent |
-| `/sdd-onboard` | Onboards an existing project into SDD: detects stack, scaffolds context docs (`PROJECT_CONTEXT`, `TECH_STACK`, `ARCHITECTURE`), never modifies application code |
-| `/java-spring-reviewer` | Spring Boot service review: `@Transactional` boundaries, bean lifecycle, DTO/entity separation, exception handling, null-safety |
-| `/spring-boot-api-reviewer` | Spring REST API review: controller annotations, DTO validation, error semantics (RFC 7807), OpenAPI drift, pagination |
-| `/spring-security-reviewer` | Spring Security review: SecurityFilterChain, OAuth2/OIDC/Keycloak, method security, Vault/secrets, CORS, actuator exposure |
-| `/java-performance-reviewer` | JVM/Spring performance review: JPA N+1, HikariCP sizing, thread pools, `@Cacheable` misuse, allocation/GC pressure |
-| `/event-driven-reviewer` | Kafka/RabbitMQ/ActiveMQ review: delivery semantics, idempotent consumers, retry/backoff, DLQ, ordering, schema evolution, correlation IDs/tracing, outbox, saga/compensation (optional `messaging-event-driven` profile) |
-| `/microservices-patterns-reviewer` | Cross-service review: service boundaries, sync vs async, database-per-service, distributed transactions, resilience patterns, deployment coupling, API ownership, contract compatibility (optional `messaging-event-driven` profile) |
-
-All commands listed above exist and are in active use. None are aspirational — all 43 `SKILL.md` files are published in [`skills/`](skills/) (42 individual skill folders plus the guardrails template at [`skills/sdd-guardrails/templates/source-of-truth-matrix.md`](skills/sdd-guardrails/templates/source-of-truth-matrix.md)).
-
----
-
-## Enforcement, not just documentation
-
-A workflow that only lives in a markdown file doesn't stop anyone — human or AI — from skipping it under time pressure. Part of this setup is wired into actual Claude Code hooks that intervene at tool-call level. **11 hook families / 22 scripts are published in [`hooks/`](hooks/)** — full detail, including exactly when each one runs and how to enable it, is in [`hooks/README.md`](hooks/README.md).
-
-| Hook | Trigger | Read-only or can modify files? | Wired by default or opt-in? | Effect |
-|---|---|---|---|---|
-| `git-guardrails` | Before any shell git command | Read-only | Wired by default | Blocks destructive operations outright — `push --force`, `reset --hard`, `clean -f`/`-fd`, `branch -D`, `checkout .`, `restore .` |
-| `sdd-spec-guard` | Before file writes/edits | Read-only (blocks the call, doesn't edit anything) | **Opt-in** — ships as a script but is not wired in `settings.template.json` by default; must be added manually | Blocks edits to application code when no spec is `Ready` or `In Progress` |
-| `project-init-check` | On session start | Read-only | Wired by default | Warns if `specs/CONSTITUTION.md` is missing or has unresolved `TODO:` sections before any spec work begins |
-| `sdd-status-banner` | On session stop | Read-only | Wired by default | Reports the status of every active spec so nothing gets lost between sessions |
-| `ts-check` | After every file write/edit (`.ts`/`.tsx`) | Read-only (reports errors, doesn't rewrite the file) | Wired by default | Surfaces TypeScript errors introduced by the edit |
-| `eslint-fix` | After every file write/edit (`.ts`/`.tsx`/`.js`/`.jsx`) | **Can modify the file** — runs `eslint --fix` in place | Wired by default | Auto-fixes lint violations if the project has ESLint configured |
-| `prettier-format` | After every file write/edit (`.ts`/`.tsx`/`.css`/`.json`/`.js`/`.jsx`) | **Can modify the file** — runs `prettier --write` in place | Wired by default | Keeps formatting consistent if the project has Prettier configured |
-| `maven-compile` | After every file write/edit (`.java`) | Read-only (runs `mvnw compile`, doesn't rewrite source) | Wired by default | Surfaces Java compile errors if the project has a Maven wrapper |
-| `graphify-stale-reminder` | On session start | Read-only | **Opt-in** | Warns if `GRAPH_REPORT.md` is missing or stale (>7 days older than newest source). Never blocks — reminder only |
-| `java-build-test-guard` | After every file write/edit (`.java`) | Read-only (runs Maven compile, reports errors) | Wired by default (java-spring profile) | Compile errors in Java files going unnoticed until next manual build — Maven-first, Gradle fallback |
-| `spring-config-guard` | After every file write/edit (`application*.yml`/`.properties`) | Read-only | Wired by default (java-spring profile) | Plaintext secrets, full actuator exposure, or `debug=true` in non-local Spring profiles |
-
-Every hook is scoped defensively — the format/lint/type/build hooks only act if the project actually has the relevant tool configured (`tsconfig.json`, `.eslintrc*`, `.prettierrc*`, `mvnw`); otherwise they're a no-op.
-
-This is the difference between "I asked the AI to follow the spec" and "the tooling refuses to let the AI skip it."
-
----
-
-## Consistency guardrails
-
-Specs change. A feature can go through several rounds of "let's actually do it differently" before landing on a final approach, and nothing forces every document to catch up automatically. A dedicated guardrails pass runs before planning, implementing, or closing a feature, and checks for:
-
-- **Decision state machine** — at most one `Accepted` decision per architectural axis; a superseded decision is never left looking current.
-- **Source-of-truth matrix** — for each concept (data model, business rules, money/units, deployment order...), exactly one document is authoritative, and the others must agree with it.
-- **Active plan rule** — an obsolete, partial, or `NEEDS REVIEW` plan is never implemented from.
-- **Naming hygiene** — a name that already caused confusion (an ambiguous unit, an unclear contract) is never silently reused with a new meaning.
-- **Money/units safety** — any field touching pricing, discounts, or a payment provider requires an explicit units table and boundary validation before implementation starts.
-- **Deployment coupling** — a schema migration paired with dependent code requires an explicit rollout/rollback answer before the feature closes.
-
-This is what stops a spec from silently drifting out of sync with the plan, the tasks, and the actual code across multiple revisions — a common failure mode in AI-assisted development that isn't specific to any one stack.
-
----
-
-## Templates
-
-Starter templates are published in [`specs/_templates/`](specs/_templates/), ready to copy into `specs/features/<NNN-feature-name>/` or `specs/`:
-
-| Template | Status |
-|---|---|
-| `SPEC.md` | Extracted verbatim from `skills/spec-create/SKILL.md` |
-| `PLAN.md` | Extracted verbatim from `skills/spec-plan/SKILL.md` |
-| `TASKS.md` | Extracted verbatim from `skills/spec-plan/SKILL.md` |
-| `DECISIONS.md` | Extracted verbatim from `skills/spec-plan/SKILL.md` |
-| `CONSTITUTION.md` | **Draft template — not a literal extraction.** `skills/project-init/SKILL.md` builds this file through an interview rather than a fixed template, so this version is a reasonable skeleton inferred from that interview's structure (project basics, architecture, quality gates), not a copy of an existing template. Running `/project-init` is still the source of truth. |
-
----
-
-## Graphify integration
-
-> **Status: shipped (Phase 1).** Three skills (`/context-manager`, `/graphify-context`, `/sdd-onboard`) and one hook (`graphify-stale-reminder`) provide Graphify-aware context loading. All degrade gracefully when Graphify is absent — it remains an optional accelerator, never a dependency.
-
-The intended purpose of Graphify in this workflow is architectural discovery: mapping a codebase's structure and dependencies *before* planning or reviewing a change, so specs and plans are grounded in what the system actually looks like rather than in assumption.
-
-```mermaid
-flowchart LR
-    G[Graphify] --> M[Architecture map]
-    M --> IA[Impact analysis]
-    IA --> S[Better specs]
-    S --> P[Better implementation plan]
-    P --> RV[Better reviews]
+```
+Draft → Ready → In Progress → In Review → Done | Archived
 ```
 
-Once integrated, the intended use is to run discovery before `spec-plan`, `spec-analyze`, and the specialized review commands — not as a replacement for any of them.
+Implementation cannot start against a `Draft` spec, and a feature cannot close from anything other than `In Review`. These checks live in the skills themselves (`spec-implement` and `spec-close` refuse to proceed on a wrong status), not in convention.
 
-> **Graphify is a discovery layer, not a source of truth.**
-> It will not replace reading the actual files, running the actual tests, or the engineer's judgment about what the dependency graph implies. It surfaces structure; it doesn't decide correctness.
+Not every change goes through the full ceremony: typo fixes, small styling tweaks, and isolated one-line bug fixes are handled directly. The workflow is reserved for changes where the cost of being wrong justifies the cost of the process.
 
 ---
 
 ## Multi-model orchestration
 
-The workflow can run in an orchestrated multi-model mode via `/sdd-orchestrate <goal>`: the main session (Fable when available) classifies the task and keeps its context clean, delegating deep reasoning — architecture, root cause, security, concurrency, migrations — to the **`deep-reasoner`** agent (Opus, read-only) and mechanical implementation — code, tests, refactors, verifications — to the **`fast-worker`** agent (Sonnet). Analysis/audit requests produce a report without implementing; trivial changes never touch Opus. Full documentation — architecture, task-classification levels, cost control, model fallback, install and rollback — is in [docs/SDD-ORCHESTRATION.md](docs/SDD-ORCHESTRATION.md).
+The workflow can run in an orchestrated multi-model mode via **`/sdd-orchestrate <goal>`**, which splits work across models by what each is actually good (and priced) for:
+
+| Role | Model | Responsibility |
+|---|---|---|
+| **Orchestrator** | Main session (Fable when available, otherwise your session model) | Classify the task, keep context clean, write briefs, review every result, validate against acceptance criteria |
+| **`deep-reasoner`** | Opus (read-only: `Read`, `Grep`, `Glob`) | Architecture, root cause, security, concurrency, migrations, high-risk review — analyzes and recommends, structurally cannot edit |
+| **`fast-worker`** | Sonnet (can edit) | Implements one bounded task at a time; stops and reports if it hits an undocumented architectural decision instead of guessing |
+
+Key properties:
+
+- **Cost-aware routing** — trivial changes never touch Opus; four task-classification levels decide the flow.
+- **Analysis-only mode** — "audit"/"investigate" requests produce a prioritized report and implement nothing.
+- **No overlapping parallel edits** — parallel `fast-worker` tasks are allowed only when file/contract/migration/state overlap is impossible.
+- **Documented fallback policy** — model names are aliases (`opus`, `sonnet`), and there is an explicit fallback table for when Fable, Opus, or Sonnet is unavailable on your account. No configuration ever pins an invented model ID.
+- **Honest verification status** — shipped, structurally verified (frontmatter, tools, idempotent install), and **live-verified**: a fresh Claude Code session after a real deploy recognized both agents with the correct models and the `/sdd-orchestrate` command (2026-07-13; procedure and evidence in [`specs/features/004-multimodel-orchestration/`](specs/features/004-multimodel-orchestration/)). The distinction between structural and live verification was tracked explicitly until the live check passed.
+
+Full documentation — architecture, task classification, cost control, fallback, install, rollback: [`docs/SDD-ORCHESTRATION.md`](docs/SDD-ORCHESTRATION.md).
 
 ---
 
-## Example workflow
+## Repository architecture
+
+```
+spec-driven-development/
+├── README.md
+├── LICENSE                        # MIT
+├── profiles.json                  # profile manifest — the installer's source of truth
+├── CLAUDE.md.example              # sanitized project instructions — copy/merge into your own CLAUDE.md
+├── settings.template.json         # hook wiring template — Windows (PowerShell commands)
+├── settings.template.sh.json      # hook wiring template — macOS/Linux (bash commands, same hook set)
+├── install.ps1 / install.sh       # profile-aware installers (central config dir + optional ~/.claude linking)
+├── link-project.ps1 / .sh         # link one project's .claude/ to the central dir
+├── skills/                        # 43 skills — one folder per slash command
+├── hooks/                         # 11 hook families × (.ps1 + .sh) = 22 scripts
+│   ├── README.md                  # per-hook trigger, effect, and activation guide
+│   └── lib/claude-json.sh         # dependency-free JSON helper for .sh hooks (no jq, no python)
+├── agents/                        # deep-reasoner.md (Opus) + fast-worker.md (Sonnet) — copied, never linked
+├── docs/
+│   ├── INSTALL.md                 # step-by-step install guide (Windows, macOS/Linux)
+│   ├── SDD-ORCHESTRATION.md       # multi-model orchestration reference
+│   ├── ROADMAP_JAVA_SPRING_CONTEXT.md  # original phase-planning document (historical)
+│   └── _templates/                # 8 project-context doc templates (PROJECT_CONTEXT, TECH_STACK,
+│                                  #   ARCHITECTURE, TESTING, SECURITY, DEPLOYMENT, MESSAGING,
+│                                  #   MICROSERVICES_PATTERNS)
+├── specs/
+│   ├── _templates/                # 7 SDD lifecycle templates (SPEC, PLAN, TASKS, DECISIONS,
+│   │                              #   CONSTITUTION, PR_DESCRIPTION, REVIEW_REPORT_TEMPLATE)
+│   └── features/                  # this repo's own features, built with its own workflow (dogfooding)
+└── examples/                      # placeholder — worked end-to-end example planned
+```
+
+How content flows at install time:
+
+- The **central config directory** (Windows: `C:\ProgramData\ClaudeConfig`; macOS/Linux: `~/.claude-config` by default) receives a profile-filtered copy of skills, hooks, templates, and agents.
+- `~/.claude/skills` and `~/.claude/hooks` (and per-project `.claude/skills|hooks`) are **linked** (junction/symlink) to the central dir — update the central dir once, every consumer sees it.
+- **Agents are the deliberate exception: copied per-file, never linked**, because `.claude/agents` directories commonly contain user-authored agents that a directory link would hide. Consequence: re-run the installer after `git pull` to refresh agents.
+- `CLAUDE.md` and `settings.json` are **never written directly** — only `CLAUDE.md.example` and `settings.template.json` ship, and merging them into your real config is an explicit manual step.
+
+---
+
+## Profiles
+
+Profiles control which skills, hooks, templates, and agents get installed, declared in [`profiles.json`](profiles.json):
+
+| Profile | Status | What it adds |
+|---|---|---|
+| `core` | Always installed | Full SDD lifecycle, guardrails, generic reviews, orchestration (31 skills, 5 hooks, 10 templates, 2 agents) |
+| `java-spring-backend` | **Default** | 7 review skills (JPA/transactions, Spring REST, Spring Security, JVM performance, database, API, backend), 3 hooks, 6 context templates. Maven primary, Gradle fallback |
+| `messaging-event-driven` | Optional | `event-driven-reviewer` (Kafka/RabbitMQ/ActiveMQ, outbox, saga, DLQ) + `microservices-patterns-reviewer` (boundaries, resilience, contracts), 2 templates |
+| `next-prisma-web` | Optional | Frontend/SEO/privacy/database reviews + `ts-check`/`eslint-fix`/`prettier-format` hooks (Prisma-specific items still planned) |
+| `payments-fintech` | Optional overlay | **Nothing shipped yet** — Stripe/idempotency reviewers are planned entries only |
+| `blockchain-crypto` | **Disabled** | Placeholder. The installer refuses to install it — requesting it explicitly is a hard error by design |
+
+Rules the installers enforce:
+
+- **`core` is always installed.** With no `--profile`/`-Profile` flag, you get `core` + the default (`java-spring-backend`). The moment you pass any explicit profile, you get `core` + exactly what you asked for — no silent default stacking.
+- **Profiles combine explicitly.** `messaging-event-driven` assumes a Java/Spring service underneath but is *not* an automatic overlay — to get both: `--profile java-spring-backend,messaging-event-driven`.
+- **Shipped vs. planned is a hard distinction.** `skills`/`hooks`/`templates`/`agents` entries must exist on disk — a missing one is a manifest-integrity error (exit 1), never a silent skip. `planned*` entries are roadmap-only, reported as `[planned] … not installed`, never an error.
+- **No guessing.** Unknown profile name, explicitly requested disabled profile, or unparsable `profiles.json` → clear `[ERROR]`, non-zero exit, no fallback to "install everything".
+
+---
+
+## Installation
+
+Three concerns, three scripts — full guide in [`docs/INSTALL.md`](docs/INSTALL.md):
+
+| Concern | Script | Touches |
+|---|---|---|
+| Install into a central config dir | `install.ps1` / `install.sh` | Central directory only, by default |
+| Link your per-user `~/.claude` | same scripts, `-LinkUserClaude` / `--link-user-claude` | `~/.claude` — **opt-in** |
+| Link one project | `link-project.ps1` / `link-project.sh` | `<project>/.claude` only |
+
+**Windows**
+
+```powershell
+.\install.ps1 -DryRun                                        # preview, writes nothing
+.\install.ps1                                                # install into C:\ProgramData\ClaudeConfig
+.\install.ps1 -Profile java-spring-backend,messaging-event-driven
+.\install.ps1 -LinkUserClaude                                # opt-in ~/.claude linking + agent copy
+.\link-project.ps1 -ProjectDir C:\code\my-app                # wire one project
+```
+
+**macOS/Linux** — requires `python3` (standard-library `json` only; `jq` is *not* used anywhere):
 
 ```bash
-/project-init
+./install.sh --dry-run                                       # preview, writes nothing
+./install.sh                                                 # install into ~/.claude-config
+./install.sh --profile java-spring-backend,messaging-event-driven
+./install.sh --link-user-claude                              # opt-in ~/.claude linking + agent copy
+cd ~/code/my-app && /path/to/repo/link-project.sh            # wire one project
+```
+
+After installing: start a **new Claude Code session** (skills/agents are discovered at session start), and merge the relevant blocks of `CLAUDE.md.example` into your real `CLAUDE.md` — the installers never write it for you.
+
+**Using it in an existing project:** run `/sdd-onboard` — it detects the stack, scaffolds the context docs (`PROJECT_CONTEXT.md`, `TECH_STACK.md`, `ARCHITECTURE.md`), and never modifies application code. Then `/project-init` for the constitution.
+
+**Customizing:** everything is plain markdown and JSON. Edit skills in the central dir (all links see the change immediately), edit copied agents per project (the installer detects the difference and preserves your customization unless you `--force`), add project-specific profiles to your own fork of `profiles.json`, and wire only the hooks you want in `.claude/settings.json` starting from `settings.template.json`.
+
+---
+
+## Usage examples
+
+```bash
+# Full lifecycle for a security-sensitive API change
 /spec-create "Add rate limiting to the public checkout API"
-/spec-clarify
 /spec-plan
 /spec-analyze
 /spec-implement all
@@ -257,243 +289,128 @@ The workflow can run in an orchestrated multi-model mode via `/sdd-orchestrate <
 /api-review
 /spec-close
 /pr-description
-```
 
-`spec-analyze` determines which of `security-review`, `api-review`, `database-review`, `backend-review`, `frontend-review`, and `seo-review` actually apply based on what the spec touches — the example above shows the set for a public API change; a UI-only feature would trigger a different subset.
+# Let the workflow pick the depth itself
+/sdd "Add CSV export to the admin orders list"
 
----
+# Multi-model orchestration — implementation
+/sdd-orchestrate Fix the duplicate-webhook handling in the payment service.
+Investigate the root cause before implementing.
 
-## What this is not
+# Multi-model orchestration — audit only, nothing implemented
+/sdd-orchestrate Audit webhook idempotency and deliver prioritized findings.
+Do not modify code.
 
-- **Not "write a prompt and hope."** Every non-trivial change starts from a written spec, not a conversational request executed on faith.
-- **Not fully automated development.** The engineer decides what gets built, which risks are acceptable, and which changes should not happen at all — the AI does not make that call.
-- **Not a replacement for tests or human review.** Reviews here are structured checklists executed by an agent; a human still owns the merge decision.
-- **Not one-size-fits-all ceremony.** Trivial changes explicitly skip the full workflow — see [Core philosophy](#core-philosophy).
-
----
-
-## Repository structure
-
-```
-spec-driven-development/
-├── README.md
-├── LICENSE                             # MIT
-├── CLAUDE.md.example                   # sanitized, generic project instructions — copy into your own project as CLAUDE.md
-├── settings.template.json              # Claude Code hook wiring, using ${CLAUDE_PROJECT_DIR}
-├── profiles.json                       # profile manifest — maps profiles to skills/hooks/templates/agents
-├── .gitignore
-├── docs/
-│   ├── INSTALL.md                      # step-by-step installation guide (Windows, macOS/Linux)
-│   ├── SDD-ORCHESTRATION.md            # multi-model orchestration: architecture, classification, fallback, rollback
-│   ├── ROADMAP_JAVA_SPRING_CONTEXT.md  # roadmap for Java/Spring profile + Graphify context layer
-│   └── _templates/                     # context doc templates (copied into projects by /sdd-onboard)
-│       ├── PROJECT_CONTEXT.md
-│       ├── TECH_STACK.md
-│       ├── ARCHITECTURE.md
-│       ├── TESTING.md
-│       ├── SECURITY.md
-│       ├── DEPLOYMENT.md
-│       ├── MESSAGING.md                # broker topology, delivery semantics, DLQ/retry policy
-│       └── MICROSERVICES_PATTERNS.md   # service boundaries, resilience policy, contract testing
-├── agents/                             # subagent definitions for the orchestrated workflow (copied, never linked)
-│   ├── README.md
-│   ├── deep-reasoner.md                # Opus — analysis only, read-only tools
-│   └── fast-worker.md                  # Sonnet — implements delimited tasks
-├── skills/                             # 43 skill definitions — every command in this README
-│   ├── sdd/SKILL.md
-│   ├── sdd-medium/SKILL.md
-│   ├── sdd-full/SKILL.md
-│   ├── sdd-orchestrate/SKILL.md
-│   ├── sdd-guardrails/
-│   │   ├── SKILL.md
-│   │   └── templates/source-of-truth-matrix.md
-│   ├── project-init/SKILL.md
-│   ├── spec-create/SKILL.md
-│   ├── spec-clarify/SKILL.md
-│   ├── spec-plan/SKILL.md
-│   ├── spec-analyze/SKILL.md
-│   ├── spec-implement/SKILL.md
-│   ├── spec-review/SKILL.md
-│   ├── spec-close/SKILL.md
-│   ├── spec-status/SKILL.md
-│   ├── spec-update/SKILL.md
-│   ├── spec-resume/SKILL.md
-│   ├── qa-review/SKILL.md
-│   ├── security-review/SKILL.md
-│   ├── database-review/SKILL.md
-│   ├── api-review/SKILL.md
-│   ├── backend-review/SKILL.md
-│   ├── frontend-review/SKILL.md
-│   ├── seo-review/SKILL.md
-│   ├── performance-review/SKILL.md
-│   ├── privacy-compliance-review/SKILL.md
-│   ├── refactor-review/SKILL.md
-│   ├── review-all/SKILL.md
-│   ├── architect-review/SKILL.md
-│   ├── test-engineer/SKILL.md
-│   ├── debugger/SKILL.md
-│   ├── prototype/SKILL.md
-│   ├── decision-mapping/SKILL.md
-│   ├── pr-description/SKILL.md
-│   ├── handoff/SKILL.md
-│   ├── context-manager/SKILL.md
-│   ├── graphify-context/SKILL.md
-│   ├── sdd-onboard/SKILL.md
-│   ├── java-spring-reviewer/SKILL.md
-│   ├── spring-boot-api-reviewer/SKILL.md
-│   ├── spring-security-reviewer/SKILL.md
-│   ├── java-performance-reviewer/SKILL.md
-│   ├── event-driven-reviewer/SKILL.md
-│   └── microservices-patterns-reviewer/SKILL.md
-├── hooks/                              # 11 hook families, 22 scripts (.ps1 + .sh)
-│   ├── README.md
-│   ├── git-guardrails.ps1 / .sh
-│   ├── sdd-spec-guard.ps1 / .sh
-│   ├── sdd-status-banner.ps1 / .sh
-│   ├── project-init-check.ps1 / .sh
-│   ├── ts-check.ps1 / .sh
-│   ├── eslint-fix.ps1 / .sh
-│   ├── prettier-format.ps1 / .sh
-│   ├── maven-compile.ps1 / .sh
-│   ├── graphify-stale-reminder.ps1 / .sh
-│   ├── java-build-test-guard.ps1 / .sh
-│   └── spring-config-guard.ps1 / .sh
-├── specs/
-│   ├── _templates/
-│   │   ├── CONSTITUTION.md            # draft template — see Templates section above
-│   │   ├── SPEC.md
-│   │   ├── PLAN.md
-│   │   ├── TASKS.md
-│   │   ├── DECISIONS.md
-│   │   ├── PR_DESCRIPTION.md
-│   │   └── REVIEW_REPORT_TEMPLATE.md
-│   └── features/                       # feature specs (when dogfooding the repo itself)
-└── examples/
-    └── README.md                       # placeholder — no worked example yet
+# Stack-specific reviews (java-spring-backend / messaging-event-driven profiles)
+/java-spring-reviewer specs/features/012-refund-flow
+/event-driven-reviewer specs/features/014-order-events
 ```
 
 ---
 
-## Status of this repository
+## Safety model
 
-This repository currently ships:
+The same discipline the workflow demands from code applies to the tooling itself.
 
-- [x] `README.md` — methodology, philosophy, command reference, and enforcement model.
-- [x] `skills/` — 43 published skill definitions.
-- [x] `agents/` — `deep-reasoner` (Opus) and `fast-worker` (Sonnet) subagents + multi-model orchestration (`/sdd-orchestrate`, [docs/SDD-ORCHESTRATION.md](docs/SDD-ORCHESTRATION.md)).
-- [x] `hooks/` — 11 hook families, 22 scripts.
-- [x] `hooks/README.md` — per-hook trigger, effect, and activation guide.
-- [x] `specs/_templates/` — `SPEC.md`, `PLAN.md`, `TASKS.md`, `DECISIONS.md` (verbatim), `CONSTITUTION.md` (draft), `PR_DESCRIPTION.md`, `REVIEW_REPORT_TEMPLATE.md`.
-- [x] `docs/_templates/` — `PROJECT_CONTEXT.md`, `TECH_STACK.md`, `ARCHITECTURE.md`, `TESTING.md`, `SECURITY.md`, `DEPLOYMENT.md`, `MESSAGING.md`, `MICROSERVICES_PATTERNS.md` (context doc templates for project onboarding, Java/Spring profile, and the optional messaging/microservices profile).
-- [x] `examples/README.md` — placeholder for a future worked example.
-- [x] `CLAUDE.md.example` — sanitized, generic project instructions.
-- [x] `settings.template.json` — sanitized hook wiring.
-- [x] `profiles.json` — profile manifest (core, java-spring-backend, messaging, payments, next-prisma, blockchain-crypto).
-- [x] `docs/INSTALL.md` — step-by-step installation guide (Windows, macOS/Linux).
-- [x] `LICENSE` — MIT.
-- [x] `.gitignore` — excludes local Claude Code settings, generated artifacts, and secrets.
-- [x] Graphify-aware context layer — `context-manager`, `graphify-context`, `sdd-onboard` skills + `graphify-stale-reminder` hook.
+**Installer guarantees** (all three scripts, both platforms):
 
-Not yet in this repository:
+- **Idempotent** — re-running with nothing changed is a reported no-op.
+- **Never deletes** — only creates missing files or (with `-Force`/`--force`) overwrites differing ones **after** taking a timestamped backup under `_install-backups/<timestamp>/`.
+- **Skip-on-diff** — a file that differs from the source (e.g. your customization) is reported and skipped unless you explicitly force it.
+- **`--dry-run` / `-DryRun`** — full preview mode on every script; the dry-run path never writes.
+- **Never touches `settings.local.json`** — excluded by an explicit pattern check in every copy path.
+- **Never copies `.env` or secrets** — the repo contains none, and local settings are git-ignored and install-excluded.
+- **Never writes a real `CLAUDE.md` or `settings.json`** — only the `.example`/`.template` files ship.
+- **`~/.claude` linking is opt-in**, and replacing a real directory with a link requires `--force` and produces a `<path>.bak-<timestamp>` backup first.
+- **Agents copied per-file, additively** — never a directory link over `.claude/agents`.
 
-- [ ] Graphify external tool integration — see [Graphify integration (Planned)](#graphify-integration-planned).
-- [ ] Real-world example specs in `examples/`.
-- [ ] `CONTRIBUTING.md`.
+**Hook guarantees** ([`hooks/README.md`](hooks/README.md) has the per-hook table):
 
-> **Note:** Graphify-aware skills are shipped and functional, but Graphify itself is still an optional external tool. The workflow degrades gracefully when `GRAPH_REPORT.md` is missing — no skill or hook fails because of it.
+- `git-guardrails` blocks **every `git push`** (not just `--force`) plus `reset --hard`, `clean -f`/`-fd`, `branch -D`, `checkout .`, `restore .` — committing and pushing remain deliberate human actions.
+- No hook calls the network. No hook reads or prints secret values (`spring-config-guard` reports file/line/key name only, never the matched value).
+- Reminder hooks (`graphify-stale-reminder`, `java-build-test-guard`, `spring-config-guard`) never block — exit 0, message only.
+- Only two hooks modify files at all (`eslint-fix`, `prettier-format`), both running the project's own configured formatter, and only if that config exists.
+- `.sh` hooks are dependency-free: no `jq`, no `python3` — JSON parsing goes through [`hooks/lib/claude-json.sh`](hooks/lib/claude-json.sh).
+
+**Graphify degrades gracefully** — the Graphify-aware skills and hook use `GRAPH_REPORT.md` (produced by an external, optional tool) when present, and fall back to bounded heuristic scanning when absent. Nothing fails without it.
 
 ---
+
+## What is shipped now
+
+Counted from this repository, not aspirational:
+
+| Category | Count | Detail |
+|---|---|---|
+| Skills | **43** | Every slash command referenced in this README has a `SKILL.md` in [`skills/`](skills/) |
+| Hook families | **11** (22 scripts) | Each ships as a `.ps1` + `.sh` pair; shared bash JSON helper in `hooks/lib/` |
+| SDD lifecycle templates | **7** | `specs/_templates/` |
+| Project-context templates | **8** | `docs/_templates/` |
+| Agents | **2** | `deep-reasoner` (Opus, read-only), `fast-worker` (Sonnet, bounded) |
+| Profiles | **6** | `core`, `java-spring-backend` (default), `messaging-event-driven`, `next-prisma-web`, `payments-fintech` (planned-only), `blockchain-crypto` (disabled) |
+| Docs | **3 guides** | `INSTALL.md`, `SDD-ORCHESTRATION.md`, `hooks/README.md` + per-directory READMEs |
+| Installers | **4 scripts** | `install.ps1/.sh`, `link-project.ps1/.sh` — dry-run, backups, profile-aware |
+
+This repo dogfoods its own workflow: the phases that built it are specced under [`specs/features/`](specs/features/) with their own `SPEC/PLAN/TASKS/DECISIONS` documents.
 
 ## Roadmap
 
-**Completed:**
+**Shipped**
 
-- [x] README with methodology, philosophy, command reference, and enforcement model
-- [x] 43 skills published (33 original + 3 context-layer + 4 java-spring + 2 messaging/microservices + 1 other)
-- [x] Hooks published (11 families / 22 scripts) with activation guide
-- [x] Templates published — SDD lifecycle (`specs/_templates/`) + project context (`docs/_templates/`)
-- [x] Sanitized `CLAUDE.md.example`
-- [x] Sanitized `settings.template.json`
-- [x] `profiles.json` — profile manifest
-- [x] `docs/INSTALL.md` — installation guide
-- [x] `LICENSE` — MIT
-- [x] `examples/` placeholder
-- [x] Graphify-aware context layer (skills + hook — degrades gracefully without Graphify)
-- [x] Java/Spring backend profile — 4 review skills, 2 defensive hooks, 3 context templates
-- [x] Installer `-Profile` flag consuming `profiles.json` (both `.ps1` and `.sh`)
-- [x] Messaging/event-driven + microservices-patterns profile (Phase 3) — 2 review skills
-      (`event-driven-reviewer`, `microservices-patterns-reviewer`), 2 context templates
-      (`MESSAGING.md`, `MICROSERVICES_PATTERNS.md`), shipped under the optional
-      `messaging-event-driven` profile
+- Core SDD lifecycle + guardrails + generic reviews (43 skills)
+- Enforcement hooks (11 families, cross-platform) with activation guide
+- Profile-aware installers with shipped/planned separation and integrity checks
+- Java/Spring backend profile (4 stack reviewers, 2 defensive hooks, 3 context templates)
+- Messaging/event-driven + microservices-patterns profile (2 reviewers, 2 templates)
+- Graphify-aware context layer (3 skills + 1 hook, graceful degradation)
+- Multi-model orchestration (`/sdd-orchestrate`, 2 agents, fallback policy, rollback docs)
 
-**Planned:**
+**Planned**
 
-- [ ] Graphify external tool integration (the *skills* are shipped; the *tool itself* is still external and optional)
-- [ ] Real example specs (a feature carried end-to-end through the workflow)
-- [ ] `CONTRIBUTING.md`
-- [ ] `observability-reviewer` skill + `OBSERVABILITY.md` template (deferred from Phase 3)
-- [ ] `messaging-review-reminder` / `openapi-contract-reminder` hooks (deferred from Phase 3 — no
-      new hook shipped that phase, see `specs/features/003-phase3-event-driven-microservices/DECISIONS.md` D004)
-- [ ] Defensive hooks (Phase 4 — secret-scan, sensitive-file-guard, destructive-cmd-guard)
-- [ ] Example walkthroughs (Phase 5)
+- Worked end-to-end example in [`examples/`](examples/) (a real feature carried through the whole workflow)
+- `payments-fintech` profile content (`stripe-payments-reviewer`, `payment-idempotency-reviewer`)
+- Prisma/Next.js-specific reviewers for `next-prisma-web`
+- Defensive hooks: `secret-scan`, `sensitive-file-guard`, `messaging-review-reminder`, `openapi-contract-reminder`
+- `observability-reviewer` skill + `OBSERVABILITY.md` template (deferred from Phase 3)
+- `CONTRIBUTING.md`
 
----
+**Deferred / external**
 
-## Profiles
+- Graphify itself remains an optional external tool — this repo ships the integration layer, not the tool.
 
-This workflow supports **stack profiles** declared in [`profiles.json`](profiles.json). Profiles control which skills, hooks, templates, and agents are active for a given project:
+## Design principles
 
-| Profile | Status | Build tool |
-|---|---|---|
-| `core` | Always installed | — |
-| `java-spring-backend` | **Default** | Maven (primary); Gradle detection as fallback |
-| `messaging-event-driven` | Optional — 2 review skills + 2 templates shipped (Phase 3) | — |
-| `payments-fintech` | Optional overlay | — |
-| `next-prisma-web` | Optional | — |
-| `blockchain-crypto` | Optional — **disabled by default** | — |
+- **Spec first** — no non-trivial change without a written spec and acceptance criteria.
+- **Smallest safe change** — one bounded task at a time; no speculative abstractions.
+- **Review before merge** — layered, risk-triggered reviews; a human owns the merge decision.
+- **Explicit decisions** — assumptions and trade-offs go in `DECISIONS.md`, not in chat history.
+- **Traceability** — every task maps to an acceptance criterion; every decision has a recorded why.
+- **Enforcement over convention** — if a rule matters, a hook or a hard installer error backs it.
+- **Model cost awareness** — expensive models for reasoning, cheap models for mechanics, never the reverse.
+- **Fallback over hard dependency** — Graphify optional, model aliases with a documented fallback table, `jq`-free hooks.
+- **Honest status** — shipped, planned, and disabled are three different words, enforced by the installer and used consistently in the docs.
+- **No vibe coding** — velocity comes from removing ambiguity, not from skipping steps.
 
-The installer installs `core` + the default profile (`java-spring-backend`) **only when no
-`-Profile`/`--profile` flag is passed at all.** The moment you pass any explicit profile, that
-default-profile fallback does not run — you get `core` + exactly what you asked for, nothing more.
+## Author's note
 
-> **`messaging-event-driven` is not an automatic overlay.** Its skills (`event-driven-reviewer`,
-> `microservices-patterns-reviewer`) assume a Java/Spring service underneath, but requesting
-> `--profile messaging-event-driven` on its own installs `core` + `messaging-event-driven`
-> **only** — it does **not** also pull in `java-spring-backend`. To get both, list both profiles
-> explicitly in the same invocation:
-> ```bash
-> ./install.sh --profile java-spring-backend,messaging-event-driven
-> ```
-> ```powershell
-> .\install.ps1 -Profile java-spring-backend,messaging-event-driven
-> ```
+I built this to answer a concrete question: *what does it take to use an AI coding agent on real backend systems — payments, messaging, migrations — without lowering the engineering bar?* The answer in this repo is process-as-code: workflow definitions, tool-level guardrails, and cost-aware model orchestration that are versioned, reviewable, and installable like any other artifact.
 
-### Shipped vs. planned
+As a portfolio piece, it demonstrates: AI-assisted engineering workflow design; automation guardrails with an explicit safety model (idempotent installers, backups, dry-run, hard shipped/planned separation); distributed-systems review thinking (event-driven and microservices-patterns reviewers); a production-oriented Java/Spring backend profile; multi-model delegation with cost control and documented fallbacks; and operational documentation written for someone who isn't me.
 
-Every profile in `profiles.json` declares two kinds of entries:
+## Limitations
 
-- **`skills` / `hooks` / `templates` / `agents`** — SHIPPED. These must exist on disk. If one of them is missing, the installer treats it as a manifest/repo integrity failure (profiles.json drifted from the repo) and fails loudly with `[ERROR]` — it never installs silently around the gap.
-- **`plannedSkills` / `plannedHooks` / `plannedTemplates` / `plannedAgents`** — roadmap-only. These may legitimately not exist yet (e.g. Phase 3 candidates). The installer reports each one as `[planned] ... not installed (planned for a future phase)` and never treats their absence as an error.
+Stated plainly, because they matter:
 
-The `agents` / `plannedAgents` keys are optional per profile (added in `profiles.json` 0.4.0 — only `core` ships agents today); a profile without them simply ships no agents, so older trimmed copies of the manifest keep working.
-
-The installer never falls back to "install everything" or "no filtering." An unknown profile name, an explicit request for the disabled `blockchain-crypto` profile, or a missing shipped item all abort the run with a clear `[ERROR]` before (or, for the last case, in addition to) any files are touched.
-
-```bash
-# Install default (core + java-spring-backend)
-./install.sh
-
-# Install specific profiles
-./install.sh --profile java-spring-backend --profile messaging-event-driven
-
-# PowerShell equivalent
-.\install.ps1 -Profile java-spring-backend,messaging-event-driven
-```
-
-`install.sh` resolves `profiles.json` using **`python3`** (standard library `json` only — `jq` is not required for this). If `python3` isn't available, the script fails with a clear message instead of guessing; see [`docs/INSTALL.md`](docs/INSTALL.md) for details. `install.ps1` uses PowerShell's built-in `ConvertFrom-Json`.
-
----
+- **Requires Claude Code.** The skills, hooks, and agents are Claude Code configuration; nothing here runs standalone.
+- **Model availability depends on your account.** Fable/Opus/Sonnet are aliases resolved by your Claude Code plan and version; the orchestration degrades along the documented fallback table rather than failing, but the "ideal" three-model setup is not guaranteed everywhere.
+- **Agent recognition requires install + a new session.** Agent/skill discovery happens at session start — after installing (or re-installing after `git pull`), an already-open session will not see new agents or skills. The live-discovery check has passed on the reference setup (see Phase 4's spec); re-verify per the documented procedure after any reinstall.
+- **`install.sh` requires `python3`** (stdlib only) for profile resolution. No `jq` anywhere.
+- **Windows-first origins.** The default central-dir location and the original hook wiring are Windows-shaped, but parity is shipped, not just documented: every hook has a `.sh` variant, both installers exist, and `settings.template.sh.json` provides the ready-made macOS/Linux hook wiring.
+- **Graphify is external and optional.** This repo ships the integration layer only; without the tool you get graceful degradation, not the architecture map.
+- **Some profiles are declarations, not content.** `payments-fintech` currently ships nothing; `blockchain-crypto` is disabled by design.
+- **No worked example yet.** `examples/` is a placeholder until a real feature is carried end-to-end publicly.
+- **Hook enforcement is best-effort by design.** Hooks intervene at tool-call level inside Claude Code; they are guardrails against accidental damage, not a security boundary against a determined operator.
 
 ## License
 
-MIT — see [`LICENSE`](LICENSE).
+MIT — see [`LICENSE`](LICENSE). No `CONTRIBUTING.md` yet (planned); issues and PRs are welcome in the meantime — small, scoped changes with a clear description will get the fastest review, which is only fair given what this repo preaches.

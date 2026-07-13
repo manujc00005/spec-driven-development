@@ -2,7 +2,12 @@
 
 ## Status
 
-In Review
+Done
+
+> Closed 2026-07-13. AC-017 live check **PASSED**: after the real deploy (`install.ps1` +
+> `-LinkUserClaude`), a fresh Claude Code session recognized `deep-reasoner` (model: opus),
+> `fast-worker` (model: sonnet), and `/sdd-orchestrate`. Evidence and the reproducible
+> procedure are in `TASKS.md`; closure recorded in `DECISIONS.md` D010.
 
 ## Problem
 

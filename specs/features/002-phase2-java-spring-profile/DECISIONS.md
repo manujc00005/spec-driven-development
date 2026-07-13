@@ -74,3 +74,17 @@
 **Reasoning:** Aborting immediately on the first missing item would hide how many other items are also missing and would prevent a `--dry-run` from showing the full preview in one pass. Deferring the exit while still surfacing every `[ERROR]` line balances "fail loudly" with "don't make the user run the command five times to find all the problems."
 
 **Consequences:** A run with a missing shipped item still exits non-zero and installs nothing that depends on this being a "real" install (in dry-run this is moot; in a real run, the copy loops for shipped items still individually skip anything not found, so no partial/corrupt copy of a missing item is attempted — the final non-zero exit is a signal, not a rollback mechanism).
+
+### D006 - SPEC AC-005's "skipped gracefully" is superseded by the shipped/planned integrity model
+
+**Date:** 2026-07-13
+
+**Status:** Accepted (supersedes the wording of this spec's AC-005; recorded during Phase 5 close — see `005-framework-hardening-and-cross-platform-polish/DECISIONS.md` D005)
+
+**Context:** This spec's AC-005 ("Missing skills (planned but not yet created) are skipped gracefully") described the pre-`profiles.json`-0.4.0 installer. Phase 4 introduced the shipped-vs-planned split (this file's D001) and the hard-fail on missing *shipped* items (D005). The AC's blanket "skipped gracefully" wording now contradicts the shipped-item behavior and was never reconciled.
+
+**Decision:** AC-005 is read, and closed, under the current model: *planned* items are skipped gracefully (reported as `[planned] … not installed`, never an error) — which is what the AC's parenthetical "(planned but not yet created)" actually intended — while a missing *shipped* item is a hard error per D001/D005. The AC is recorded as **met-as-superseded**, not silently reinterpreted.
+
+**Reasoning:** The honesty rule requires surfacing the contradiction rather than closing over it. The AC's intent (don't crash over roadmap-only entries) is fully preserved by the planned-item path; the stricter shipped-item behavior is a deliberate later improvement with its own recorded decisions.
+
+**Consequences:** The spec can close without editing its historical AC text. Future readers of AC-005 are pointed here for the current semantics.

@@ -2,7 +2,12 @@
 
 ## Status
 
-In Review
+Done
+
+> Closed 2026-07-13 during Phase 5 (`005-framework-hardening-and-cross-platform-polish`).
+> Every AC verified against on-disk evidence — see the Verification section in the
+> (backfilled) `TASKS.md`. One honesty note: the `.sh` executable bit required by AC-003
+> was missing from the git index until the Phase 5 fix (005/D007).
 
 ## Problem
 
