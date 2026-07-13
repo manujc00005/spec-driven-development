@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$comment": "Manifest mapping profiles to skills/hooks/templates, consumed by install.ps1 (--Profile) / install.sh (--profile). 'skills'/'hooks'/'templates' are SHIPPED — they MUST exist on disk; the installer treats a missing shipped item as a hard error (profiles.json out of sync with the repo, not a planned gap). 'plannedSkills'/'plannedHooks'/'plannedTemplates' are declared for roadmap visibility only, may legitimately not exist yet, and are reported as 'planned, not installed' without error.",
-  "version": "0.2.0",
+  "$comment": "Manifest mapping profiles to skills/hooks/templates/agents, consumed by install.ps1 (--Profile) / install.sh (--profile). 'skills'/'hooks'/'templates'/'agents' are SHIPPED — they MUST exist on disk; the installer treats a missing shipped item as a hard error (profiles.json out of sync with the repo, not a planned gap). 'plannedSkills'/'plannedHooks'/'plannedTemplates'/'plannedAgents' are declared for roadmap visibility only, may legitimately not exist yet, and are reported as 'planned, not installed' without error. 'agents'/'plannedAgents' are optional per profile — a profile without them ships no agents (backward compatible with pre-0.4.0 copies).",
+  "version": "0.4.0",
   "defaults": {
     "profile": "java-spring-backend",
     "buildTool": "maven",
@@ -41,9 +41,15 @@
         "handoff",
         "context-manager",
         "graphify-context",
-        "sdd-onboard"
+        "sdd-onboard",
+        "sdd-orchestrate"
       ],
       "plannedSkills": [],
+      "agents": [
+        "deep-reasoner",
+        "fast-worker"
+      ],
+      "plannedAgents": [],
       "hooks": [
         "git-guardrails",
         "sdd-spec-guard",
@@ -81,7 +87,6 @@
         "java-performance-reviewer"
       ],
       "plannedSkills": [
-        "contract-testing-reviewer",
         "observability-reviewer"
       ],
       "hooks": [
@@ -101,33 +106,28 @@
         "DEPLOYMENT.md"
       ],
       "plannedTemplates": [
-        "CONTRACT_TESTING.md",
         "OBSERVABILITY.md"
       ],
-      "note": "Phase 2 delivered 4 review skills, 2 defensive hooks (maven-compile shipped earlier), and 3 context templates. contract-testing-reviewer, observability-reviewer, openapi-contract-reminder, CONTRACT_TESTING.md, and OBSERVABILITY.md are Phase 3 candidates and are declared under the planned* arrays — the installer reports them as 'planned, not installed' and never errors on their absence."
+      "note": "Phase 2 delivered 4 review skills, 2 defensive hooks (maven-compile shipped earlier), and 3 context templates. Phase 3 folded contract-testing-reviewer into microservices-patterns-reviewer's Contract compatibility section (shipped under the messaging-event-driven profile, not here) instead of shipping it as a separate skill here — see specs/features/003-phase3-event-driven-microservices/DECISIONS.md D002. CONTRACT_TESTING.md was dropped from plannedTemplates for the same reason (see D006); its content lives in docs/_templates/MICROSERVICES_PATTERNS.md's Contract testing setup section. observability-reviewer and OBSERVABILITY.md remain planned, deferred to a future phase."
     },
     "messaging-event-driven": {
-      "description": "Kafka, RabbitMQ, ActiveMQ, event-driven architecture, outbox, saga, exactly-once/at-least-once semantics.",
+      "description": "Kafka, RabbitMQ, ActiveMQ, event-driven architecture, outbox, saga, exactly-once/at-least-once semantics, microservices architectural patterns and cross-service contract compatibility.",
       "default": false,
-      "skills": [],
-      "plannedSkills": [
+      "skills": [
         "event-driven-reviewer",
-        "kafka-reviewer",
-        "rabbitmq-reviewer",
-        "microservices-patterns-reviewer",
-        "outbox-pattern-reviewer",
-        "saga-orchestration-reviewer"
+        "microservices-patterns-reviewer"
       ],
+      "plannedSkills": [],
       "hooks": [],
       "plannedHooks": [
         "messaging-review-reminder"
       ],
-      "templates": [],
-      "plannedTemplates": [
+      "templates": [
         "MESSAGING.md",
         "MICROSERVICES_PATTERNS.md"
       ],
-      "note": "Designed as overlay on java-spring-backend. Nothing is shipped yet — the entire profile is planned for Phase 3. Selecting it today installs core (+ the default profile, unless overridden) and reports every declared item as 'planned, not installed'."
+      "plannedTemplates": [],
+      "note": "Phase 3 shipped 2 review skills (event-driven-reviewer, microservices-patterns-reviewer) and 2 context templates. kafka-reviewer, rabbitmq-reviewer, outbox-pattern-reviewer, and saga-orchestration-reviewer were retired as separate roadmap items — their scope is fully absorbed into event-driven-reviewer's sections (see DECISIONS D001). contract-testing-reviewer was never shipped here either — its scope is a section inside microservices-patterns-reviewer (see D002). messaging-review-reminder hook remains planned. This is an OPTIONAL profile, conceptually layered on java-spring-backend (its skills assume a Java/Spring service underneath) but NOT an automatic overlay: '--profile messaging-event-driven' installs core + messaging-event-driven ONLY. To also install java-spring-backend, list both explicitly: '--profile java-spring-backend,messaging-event-driven' (install.sh) or '-Profile java-spring-backend,messaging-event-driven' (install.ps1) — see DECISIONS D003."
     },
     "payments-fintech": {
       "description": "Payment processing, Stripe/PSP integration, idempotency, reconciliation, money/units safety, webhook signature verification.",

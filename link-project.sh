@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Links a specific project's .claude/skills and .claude/hooks to the central
-# SDD configuration directory, via symlinks.
+# SDD config directory (symlinks), and copies agents into .claude/agents.
 #
 # Same safety model as install.sh:
 #   - Never touches settings.local.json.
@@ -113,8 +113,51 @@ log "Central dir: $CENTRAL_DIR"
 [ "$DRY_RUN" -eq 1 ] && log "DRY RUN MODE  - no files will be written, moved, or linked"
 echo ""
 
+copy_agent_file_safely() {
+  # Agents are COPIED per-file, never symlinked as a directory: .claude/agents
+  # commonly contains project-authored agents that a directory link would hide.
+  # Additive only  - a same-name file that differs is skipped without --force;
+  # with --force it is backed up next to itself first.
+  local src_file="$1" dest="$2" label="$3"
+  local dest_dir
+  dest_dir="$(dirname "$dest")"
+  if [ ! -d "$dest_dir" ]; then
+    if [ "$DRY_RUN" -eq 1 ]; then log "[dry-run] would create directory $dest_dir"; else mkdir -p "$dest_dir"; fi
+  fi
+  if [ ! -e "$dest" ]; then
+    if [ "$DRY_RUN" -eq 1 ]; then log "[dry-run] would create $dest"; else cp "$src_file" "$dest"; fi
+    log "$label  (new)"
+    return
+  fi
+  if cmp -s "$src_file" "$dest"; then log "$label already up to date (no-op)"; return; fi
+  if [ "$FORCE" -ne 1 ]; then
+    skip "$label differs from the central copy  - looks like a project customization; rerun with --force to overwrite (a backup is taken first)"
+    return
+  fi
+  local backup="$dest.bak-$TIMESTAMP"
+  if [ "$DRY_RUN" -eq 1 ]; then
+    log "[dry-run] would back up $dest to $backup, then overwrite it with the central version"
+  else
+    cp "$dest" "$backup"
+    cp "$src_file" "$dest"
+    log "$label  (overwritten  - previous version backed up to $backup)"
+  fi
+}
+
 set_dir_link "$CLAUDE_DIR/skills" "skills" "skills"
 set_dir_link "$CLAUDE_DIR/hooks" "hooks" "hooks"
+
+# --- Agents: per-file copy from <central>/agents into <project>/.claude/agents ---
+if [ -d "$CENTRAL_DIR/agents" ]; then
+  for af in "$CENTRAL_DIR/agents"/*.md; do
+    [ -f "$af" ] || continue
+    fname="$(basename "$af")"
+    [ "$fname" = "README.md" ] && continue
+    copy_agent_file_safely "$af" "$CLAUDE_DIR/agents/$fname" ".claude/agents/$fname"
+  done
+else
+  skip "agents skipped  - $CENTRAL_DIR/agents does not exist in the central directory (re-run install.sh to install agents)"
+fi
 
 echo ""
 log "settings.local.json is never touched by this script  - wire hook paths in .claude/settings.json yourself,"

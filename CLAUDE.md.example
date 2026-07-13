@@ -91,6 +91,7 @@ Do not implement if:
 - `/project-init` — initialize a project's SDD structure: creates `specs/CONSTITUTION.md` by interviewing the user about stack, architecture rules, coding conventions, and review gates. Run once per project before creating any specs.
 - `/sdd` — main entry point: auto-detects complexity and guides the right workflow.
 - `/sdd-medium`, `/sdd-full` — force a specific workflow explicitly.
+- `/sdd-orchestrate` — run the SDD workflow with multi-model delegation (deep-reasoner on Opus, fast-worker on Sonnet) — see "Multi-model orchestration" below.
 - `/prototype` — explore whether an approach is viable before writing a spec.
 - `/decision-mapping` — turn a vague idea into a sequenced map of investigation tickets when too many questions remain to write a spec.
 - `/spec-create` — create a new feature specification (includes an auto-clarify pass).
@@ -171,6 +172,42 @@ For small, low-risk changes, skip SDD documents and use a direct instruction ins
 - Avoid scanning unrelated files or archived specs unless explicitly asked.
 - Prefer summaries over pasted file contents.
 - Suggest the next command instead of re-explaining the full workflow.
+
+<!-- SDD-ORCHESTRATION:START -->
+## Multi-model orchestration
+
+This project can run the SDD workflow with multi-model delegation (see
+`docs/SDD-ORCHESTRATION.md` in the SDD repo). Entry point: `/sdd-orchestrate <goal>`.
+
+Roles:
+
+- **Orchestrator (main session — Fable when available, otherwise Sonnet):** classify the
+  task, keep the main context clean, create/update SPEC/PLAN/TASKS/DECISIONS, decide and
+  review every delegation, run QA against acceptance criteria. Avoid doing extensive
+  mechanical work directly.
+- **`deep-reasoner` (Opus, read-only):** architecture, complex debugging, root cause,
+  security, concurrency, idempotency, race conditions, data consistency, delicate
+  migrations, distributed systems, risk analysis, SPEC/PLAN review, high-risk
+  implementation review. It analyzes and recommends; it never edits.
+- **`fast-worker` (Sonnet):** implement approved, well-delimited tasks; create/update
+  tests; mechanical refactors; boilerplate; docs; run verifications. It stops and returns
+  the task when it hits an undocumented architectural decision.
+
+Delegation rules:
+
+- Never use Opus for copy, formatting, boilerplate, or trivial changes.
+- Never delegate vague tasks ("implement the whole feature") — split into small tasks
+  with stable IDs, allowed files, done-criteria, and mandatory tests.
+- Never run in parallel two delegations that could modify the same files, the same
+  contract, the same migration, the same domain state, or high-conflict shared tests.
+- Delegate by objective with a bounded brief; never dump the whole conversation. Request
+  summarized, structured answers. Reuse findings; avoid redundant investigations.
+- Analysis/audit/investigation/review/design requests produce a report — no
+  implementation unless explicitly requested.
+- Fallbacks (never block on a missing model): no Fable → orchestrate on Sonnet; no Opus →
+  Sonnet analyst in a separate context + note in DECISIONS.md; no Sonnet → nearest
+  available model. Never invent model identifiers.
+<!-- SDD-ORCHESTRATION:END -->
 
 ## Project-specific extensions
 

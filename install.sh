@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 #
-# Installs this SDD workflow (skills, hooks, templates) into a central Claude
-# Code configuration directory on macOS/Linux, and optionally links your
-# per-user Claude Code home (~/.claude) to it.
+# Installs this SDD workflow (skills, hooks, templates, agents) into a central
+# Claude Code configuration directory on macOS/Linux, and optionally links your
+# per-user Claude Code home (~/.claude) to it. Agents are always COPIED
+# per-file (never symlinked as a directory), because ~/.claude/agents commonly
+# contains user-authored agents that a directory link would hide.
 #
 # Safe to run from any clone location and safe to re-run:
 #   - Never deletes anything. Only creates missing files/directories, or
@@ -42,7 +44,7 @@
 #   --force                Overwrite differing files (backs up first)
 #   --dry-run              Preview actions without writing anything
 #   --skip-link            Do not attempt any ~/.claude linking
-#   --link-user-claude     Opt-in: link ~/.claude/skills, hooks, CLAUDE.md to the central dir
+#   --link-user-claude     Opt-in: link ~/.claude/skills, hooks, CLAUDE.md to the central dir, and copy agents per-file into ~/.claude/agents
 #   -h, --help             Show this help
 #
 # Note on the central directory default: this repo's Windows install target is
@@ -64,7 +66,7 @@ LINK_USER_CLAUDE=0
 PROFILE_ARGS=()
 
 usage() {
-  sed -n '2,46p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,48p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 while [ $# -gt 0 ]; do
@@ -104,9 +106,11 @@ PROFILE_FILTERING=0
 declare -A ACTIVE_SKILLS_MAP=()
 declare -A ACTIVE_HOOKS_MAP=()
 declare -A ACTIVE_TEMPLATES_MAP=()
+declare -A ACTIVE_AGENTS_MAP=()
 declare -A PLANNED_SKILLS_MAP=()
 declare -A PLANNED_HOOKS_MAP=()
 declare -A PLANNED_TEMPLATES_MAP=()
+declare -A PLANNED_AGENTS_MAP=()
 MISSING_SHIPPED=()
 
 if [ ! -f "$PROFILES_FILE" ]; then
@@ -177,6 +181,7 @@ for p in ["core"] + requested:
 shipped_skills, planned_skills = set(), set()
 shipped_hooks, planned_hooks = set(), set()
 shipped_templates, planned_templates = set(), set()
+shipped_agents, planned_agents = set(), set()
 
 for name in active_profiles:
     pdef = profiles.get(name, {})
@@ -186,6 +191,10 @@ for name in active_profiles:
     planned_hooks.update(pdef.get("plannedHooks", []))
     shipped_templates.update(pdef.get("templates", []))
     planned_templates.update(pdef.get("plannedTemplates", []))
+    # 'agents'/'plannedAgents' are optional (profiles.json 0.4.0) — a profile
+    # without them simply ships no agents (backward compatible).
+    shipped_agents.update(pdef.get("agents", []))
+    planned_agents.update(pdef.get("plannedAgents", []))
 
 print("ACTIVE_PROFILES:" + ",".join(active_profiles))
 for s in sorted(shipped_skills):
@@ -200,6 +209,10 @@ for t in sorted(shipped_templates):
     print(f"TEMPLATE:{t}")
 for t in sorted(planned_templates):
     print(f"PLANNED_TEMPLATE:{t}")
+for a in sorted(shipped_agents):
+    print(f"AGENT:{a}")
+for a in sorted(planned_agents):
+    print(f"PLANNED_AGENT:{a}")
 PYEOF
 )"; then
   PY_EXIT=0
@@ -232,6 +245,8 @@ while IFS= read -r line; do
     PLANNED_HOOK:*) PLANNED_HOOKS_MAP["${line#PLANNED_HOOK:}"]=1 ;;
     TEMPLATE:*) ACTIVE_TEMPLATES_MAP["${line#TEMPLATE:}"]=1 ;;
     PLANNED_TEMPLATE:*) PLANNED_TEMPLATES_MAP["${line#PLANNED_TEMPLATE:}"]=1 ;;
+    AGENT:*) ACTIVE_AGENTS_MAP["${line#AGENT:}"]=1 ;;
+    PLANNED_AGENT:*) PLANNED_AGENTS_MAP["${line#PLANNED_AGENT:}"]=1 ;;
   esac
 done <<< "$PY_OUTPUT"
 
@@ -250,6 +265,9 @@ for t in "${!ACTIVE_TEMPLATES_MAP[@]}"; do
     MISSING_SHIPPED+=("template '$t' (expected specs/_templates/$t or docs/_templates/$t)")
   fi
 done
+for a in "${!ACTIVE_AGENTS_MAP[@]}"; do
+  [ -f "$REPO_ROOT/agents/$a.md" ] || MISSING_SHIPPED+=("agent '$a' (expected at agents/$a.md)")
+done
 if [ ${#MISSING_SHIPPED[@]} -gt 0 ]; then
   echo ""
   echo "[ERROR]   profiles.json declares ${#MISSING_SHIPPED[@]} SHIPPED item(s) that do not exist in the repo:"
@@ -259,11 +277,12 @@ if [ ${#MISSING_SHIPPED[@]} -gt 0 ]; then
 fi
 
 log "Active profiles: ${ACTIVE_PROFILES[*]}"
-log "Shipped  - skills: ${#ACTIVE_SKILLS_MAP[@]} | hooks: ${#ACTIVE_HOOKS_MAP[@]} | templates: ${#ACTIVE_TEMPLATES_MAP[@]}"
-log "Planned  - skills: ${#PLANNED_SKILLS_MAP[@]} | hooks: ${#PLANNED_HOOKS_MAP[@]} | templates: ${#PLANNED_TEMPLATES_MAP[@]}"
+log "Shipped  - skills: ${#ACTIVE_SKILLS_MAP[@]} | hooks: ${#ACTIVE_HOOKS_MAP[@]} | templates: ${#ACTIVE_TEMPLATES_MAP[@]} | agents: ${#ACTIVE_AGENTS_MAP[@]}"
+log "Planned  - skills: ${#PLANNED_SKILLS_MAP[@]} | hooks: ${#PLANNED_HOOKS_MAP[@]} | templates: ${#PLANNED_TEMPLATES_MAP[@]} | agents: ${#PLANNED_AGENTS_MAP[@]}"
 for s in "${!PLANNED_SKILLS_MAP[@]}"; do echo "[planned] skill '$s'  - not installed (planned for a future phase)"; done
 for h in "${!PLANNED_HOOKS_MAP[@]}"; do echo "[planned] hook '$h'  - not installed (planned for a future phase)"; done
 for t in "${!PLANNED_TEMPLATES_MAP[@]}"; do echo "[planned] template '$t'  - not installed (planned for a future phase)"; done
+for a in "${!PLANNED_AGENTS_MAP[@]}"; do echo "[planned] agent '$a'  - not installed (planned for a future phase)"; done
 
 is_excluded() {
   case "$1" in
@@ -313,6 +332,37 @@ copy_tree_safely() {
       log "$label/$rel  (overwritten  - previous version backed up to $backup)"
     fi
   done < <(find "$src_dir" -type f -print0)
+}
+
+copy_file_safely() {
+  # Single-file variant of copy_tree_safely: new -> copy; identical -> no-op;
+  # differs -> skip without --force; differs + --force -> back up to $4, then
+  # overwrite. Same excluded-pattern guard as every other copy path.
+  local src_file="$1" dest="$2" label="$3" backup="$4"
+  if is_excluded "$(basename "$dest")"; then skip "$label (excluded pattern)"; return; fi
+  local dest_dir
+  dest_dir="$(dirname "$dest")"
+  if [ ! -d "$dest_dir" ]; then
+    if [ "$DRY_RUN" -eq 1 ]; then log "[dry-run] would create directory $dest_dir"; else mkdir -p "$dest_dir"; fi
+  fi
+  if [ ! -e "$dest" ]; then
+    if [ "$DRY_RUN" -eq 1 ]; then log "[dry-run] would create $dest"; else cp "$src_file" "$dest"; fi
+    log "$label  (new)"
+    return
+  fi
+  if cmp -s "$src_file" "$dest"; then return; fi
+  if [ "$FORCE" -ne 1 ]; then
+    skip "$label differs from the existing copy  - rerun with --force to overwrite (a backup is taken first)"
+    return
+  fi
+  if [ "$DRY_RUN" -eq 1 ]; then
+    log "[dry-run] would back up $dest to $backup, then overwrite it with the repo version"
+  else
+    mkdir -p "$(dirname "$backup")"
+    cp "$dest" "$backup"
+    cp "$src_file" "$dest"
+    log "$label  (overwritten  - previous version backed up to $backup)"
+  fi
 }
 
 set_dir_link() {
@@ -473,6 +523,31 @@ else
   copy_tree_safely "$REPO_ROOT/docs/_templates" "$CENTRAL_DIR/docs/_templates" "docs/_templates" "$CENTRAL_DIR"
 fi
 
+# --- Agents (filtered by profile: each agent is a single agents/<name>.md file) ---
+if [ "$PROFILE_FILTERING" -eq 1 ]; then
+  for agent_name in "${!ACTIVE_AGENTS_MAP[@]}"; do
+    agent_file="$REPO_ROOT/agents/$agent_name.md"
+    if [ ! -f "$agent_file" ]; then
+      # Already reported under [ERROR] above (shipped item missing from disk) — don't copy.
+      continue
+    fi
+    copy_file_safely "$agent_file" "$CENTRAL_DIR/agents/$agent_name.md" "agents/$agent_name.md" "$CENTRAL_DIR/_install-backups/$TIMESTAMP/agents/$agent_name.md"
+  done
+  # Always copy agents/README.md if it exists (documentation only, not an agent)
+  if [ -f "$REPO_ROOT/agents/README.md" ] && [ ${#ACTIVE_AGENTS_MAP[@]} -gt 0 ]; then
+    dest="$CENTRAL_DIR/agents/README.md"
+    if [ ! -e "$dest" ]; then
+      if [ "$DRY_RUN" -eq 1 ]; then log "[dry-run] would create agents/README.md"; else
+        mkdir -p "$CENTRAL_DIR/agents"
+        cp "$REPO_ROOT/agents/README.md" "$dest"
+        log "agents/README.md  (new)"
+      fi
+    fi
+  fi
+else
+  copy_tree_safely "$REPO_ROOT/agents" "$CENTRAL_DIR/agents" "agents" "$CENTRAL_DIR"
+fi
+
 for root_file in CLAUDE.md.example settings.template.json; do
   src="$REPO_ROOT/$root_file"
   dst="$CENTRAL_DIR/$root_file"
@@ -521,6 +596,17 @@ else
 
   set_dir_link "$CLAUDE_HOME/skills" "skills" "skills"
   set_dir_link "$CLAUDE_HOME/hooks" "hooks" "hooks"
+
+  # Agents are COPIED per-file into $CLAUDE_HOME/agents, never symlinked as a
+  # directory: that directory commonly contains user-authored agents that a
+  # directory link would hide. Additive only  - existing files that differ are
+  # skipped without --force; with --force they are backed up next to
+  # themselves first.
+  for agent_name in "${!ACTIVE_AGENTS_MAP[@]}"; do
+    src_agent="$CENTRAL_DIR/agents/$agent_name.md"
+    if [ ! -f "$src_agent" ]; then skip "agents/$agent_name.md not present in central dir  - run the install step first"; continue; fi
+    copy_file_safely "$src_agent" "$CLAUDE_HOME/agents/$agent_name.md" "~/.claude/agents/$agent_name.md" "$CLAUDE_HOME/agents/$agent_name.md.bak-$TIMESTAMP"
+  done
 
   claude_md_target="$CENTRAL_DIR/CLAUDE.md"
   claude_md_link="$CLAUDE_HOME/CLAUDE.md"

@@ -1,8 +1,8 @@
 <#
 .SYNOPSIS
-  Installs this SDD workflow (skills, hooks, templates) into a central Claude Code
-  configuration directory on Windows, and optionally links your per-user Claude
-  Code home (~/.claude) to it.
+  Installs this SDD workflow (skills, hooks, templates, agents) into a central
+  Claude Code configuration directory on Windows, and optionally links your
+  per-user Claude Code home (~/.claude) to it.
 
 .DESCRIPTION
   This script is safe to run from any clone location and safe to re-run:
@@ -60,8 +60,11 @@
   only).
 
 .PARAMETER LinkUserClaude
-  Opt-in: also link $ClaudeHome\skills, \hooks, and \CLAUDE.md to CentralDir.
-  Off by default because it touches your personal Claude Code configuration.
+  Opt-in: also link $ClaudeHome\skills, \hooks, and \CLAUDE.md to CentralDir,
+  and COPY the shipped agent files into $ClaudeHome\agents (per-file, additive
+  - never a junction, because that directory commonly contains user-authored
+  agents). Off by default because it touches your personal Claude Code
+  configuration.
 
 .PARAMETER ClaudeHome
   Your per-user Claude Code configuration directory. Defaults to
@@ -115,9 +118,11 @@ $ProfilesFile = Join-Path $RepoRoot "profiles.json"
 $ActiveSkills = @()
 $ActiveHooks = @()
 $ActiveTemplates = @()
+$ActiveAgents = @()
 $PlannedSkills = @()
 $PlannedHooks = @()
 $PlannedTemplates = @()
+$PlannedAgents = @()
 $MissingShipped = @()
 $ProfileFiltering = $false
 
@@ -176,13 +181,19 @@ if (Test-Path $ProfilesFile) {
         if ($pDef.plannedHooks) { $PlannedHooks += @($pDef.plannedHooks) }
         if ($pDef.templates) { $ActiveTemplates += @($pDef.templates) }
         if ($pDef.plannedTemplates) { $PlannedTemplates += @($pDef.plannedTemplates) }
+        # 'agents'/'plannedAgents' are optional (added in profiles.json 0.4.0) — a
+        # profile without them simply ships no agents (backward compatible).
+        if ($pDef.agents) { $ActiveAgents += @($pDef.agents) }
+        if ($pDef.plannedAgents) { $PlannedAgents += @($pDef.plannedAgents) }
     }
     $ActiveSkills = $ActiveSkills | Select-Object -Unique
     $ActiveHooks = $ActiveHooks | Select-Object -Unique
     $ActiveTemplates = $ActiveTemplates | Select-Object -Unique
+    $ActiveAgents = $ActiveAgents | Select-Object -Unique
     $PlannedSkills = $PlannedSkills | Select-Object -Unique
     $PlannedHooks = $PlannedHooks | Select-Object -Unique
     $PlannedTemplates = $PlannedTemplates | Select-Object -Unique
+    $PlannedAgents = $PlannedAgents | Select-Object -Unique
     $ProfileFiltering = $true
 
     # --- Integrity check: every SHIPPED item must exist on disk. A missing
@@ -208,6 +219,11 @@ if (Test-Path $ProfilesFile) {
             $MissingShipped += "template '$t' (expected specs\_templates\$t or docs\_templates\$t)"
         }
     }
+    foreach ($a in $ActiveAgents) {
+        if (-not (Test-Path (Join-Path (Join-Path $RepoRoot "agents") "$a.md"))) {
+            $MissingShipped += "agent '$a' (expected at agents\$a.md)"
+        }
+    }
     if ($MissingShipped.Count -gt 0) {
         Write-Host ""
         Write-Host "[ERROR]   profiles.json declares $($MissingShipped.Count) SHIPPED item(s) that do not exist in the repo:" -ForegroundColor Red
@@ -217,11 +233,12 @@ if (Test-Path $ProfilesFile) {
     }
 
     Write-Host "[install] Active profiles: $($activeProfileNames -join ', ')" -ForegroundColor Cyan
-    Write-Host "[install] Shipped  - skills: $($ActiveSkills.Count) | hooks: $($ActiveHooks.Count) | templates: $($ActiveTemplates.Count)" -ForegroundColor Cyan
-    Write-Host "[install] Planned  - skills: $($PlannedSkills.Count) | hooks: $($PlannedHooks.Count) | templates: $($PlannedTemplates.Count)" -ForegroundColor Cyan
+    Write-Host "[install] Shipped  - skills: $($ActiveSkills.Count) | hooks: $($ActiveHooks.Count) | templates: $($ActiveTemplates.Count) | agents: $($ActiveAgents.Count)" -ForegroundColor Cyan
+    Write-Host "[install] Planned  - skills: $($PlannedSkills.Count) | hooks: $($PlannedHooks.Count) | templates: $($PlannedTemplates.Count) | agents: $($PlannedAgents.Count)" -ForegroundColor Cyan
     foreach ($s in $PlannedSkills)    { Write-Host "[planned] skill '$s'  - not installed (planned for a future phase)" -ForegroundColor DarkGray }
     foreach ($h in $PlannedHooks)     { Write-Host "[planned] hook '$h'  - not installed (planned for a future phase)" -ForegroundColor DarkGray }
     foreach ($t in $PlannedTemplates) { Write-Host "[planned] template '$t'  - not installed (planned for a future phase)" -ForegroundColor DarkGray }
+    foreach ($a in $PlannedAgents)    { Write-Host "[planned] agent '$a'  - not installed (planned for a future phase)" -ForegroundColor DarkGray }
 }
 
 # ---------------------------------------------------------------------------
@@ -283,6 +300,39 @@ function Copy-TreeSafely([string]$SourceDir, [string]$TargetDir, [string]$Label,
             Copy-Item $f.FullName -Destination $destPath -Force
             Write-Action "$Label/$rel  (overwritten  - previous version backed up to $backupPath)"
         }
+    }
+}
+
+function Copy-FileSafely([string]$SrcFile, [string]$DestPath, [string]$Label, [string]$BackupPath) {
+    # Single-file variant of Copy-TreeSafely: new -> copy; identical -> no-op;
+    # differs -> skip without -Force; differs + -Force -> back up to $BackupPath,
+    # then overwrite. Same excluded-pattern guard as every other copy path.
+    if (Test-Excluded (Split-Path $DestPath -Leaf)) { Write-Skip "$Label (excluded pattern)"; return }
+    $destDir = Split-Path $DestPath -Parent
+    if (-not (Test-Path $destDir)) {
+        if ($DryRun) { Write-Action "[dry-run] would create directory $destDir" }
+        else { New-Item -ItemType Directory -Path $destDir -Force | Out-Null }
+    }
+    if (-not (Test-Path $DestPath)) {
+        if ($DryRun) { Write-Action "[dry-run] would create $DestPath" }
+        else { Copy-Item $SrcFile -Destination $DestPath -Force }
+        Write-Action "$Label  (new)"
+        return
+    }
+    $srcHash = (Get-FileHash $SrcFile -Algorithm SHA256).Hash
+    $dstHash = (Get-FileHash $DestPath -Algorithm SHA256).Hash
+    if ($srcHash -eq $dstHash) { return }
+    if (-not $Force) {
+        Write-Skip "$Label differs from the existing copy  - rerun with -Force to overwrite (a backup is taken first)"
+        return
+    }
+    if ($DryRun) {
+        Write-Action "[dry-run] would back up $DestPath to $BackupPath, then overwrite it with the repo version"
+    } else {
+        New-Item -ItemType Directory -Path (Split-Path $BackupPath -Parent) -Force | Out-Null
+        Copy-Item $DestPath -Destination $BackupPath -Force
+        Copy-Item $SrcFile -Destination $DestPath -Force
+        Write-Action "$Label  (overwritten  - previous version backed up to $BackupPath)"
     }
 }
 
@@ -474,6 +524,35 @@ if ($ProfileFiltering) {
     Copy-TreeSafely $docsTemplatesSrc $docsTemplatesDst "docs/_templates" $CentralDir
 }
 
+# --- Agents (filtered by profile: each agent is a single agents\<name>.md file) ---
+$agentsSrc = Join-Path $RepoRoot "agents"
+$agentsDst = Join-Path $CentralDir "agents"
+if ($ProfileFiltering) {
+    foreach ($agentName in $ActiveAgents) {
+        $agentFile = Join-Path $agentsSrc "$agentName.md"
+        if (-not (Test-Path $agentFile)) {
+            # Already reported under [ERROR] above (shipped item missing from disk) — don't copy.
+            continue
+        }
+        Copy-FileSafely $agentFile (Join-Path $agentsDst "$agentName.md") "agents/$agentName.md" (Join-Path $CentralDir "_install-backups\$Timestamp\agents\$agentName.md")
+    }
+    # Always copy agents/README.md if it exists (documentation only, not an agent)
+    $agentsReadme = Join-Path $agentsSrc "README.md"
+    if ((Test-Path $agentsReadme) -and $ActiveAgents.Count -gt 0) {
+        $destReadme = Join-Path $agentsDst "README.md"
+        if (-not (Test-Path $destReadme)) {
+            if ($DryRun) { Write-Action "[dry-run] would create agents/README.md" }
+            else {
+                if (-not (Test-Path $agentsDst)) { New-Item -ItemType Directory -Path $agentsDst -Force | Out-Null }
+                Copy-Item $agentsReadme -Destination $destReadme -Force
+                Write-Action "agents/README.md  (new)"
+            }
+        }
+    }
+} else {
+    Copy-TreeSafely $agentsSrc $agentsDst "agents" $CentralDir
+}
+
 foreach ($rootFile in @("CLAUDE.md.example", "settings.template.json")) {
     $src = Join-Path $RepoRoot $rootFile
     $dst = Join-Path $CentralDir $rootFile
@@ -525,6 +604,16 @@ if ($SkipLink) {
 
     Set-DirLink (Join-Path $ClaudeHome "skills") "skills" "skills"
     Set-DirLink (Join-Path $ClaudeHome "hooks") "hooks" "hooks"
+
+    # Agents are COPIED per-file into $ClaudeHome\agents, never junctioned:
+    # that directory commonly contains user-authored agents that a directory
+    # link would hide. Additive only  - existing files that differ are skipped
+    # without -Force; with -Force they are backed up next to themselves first.
+    foreach ($agentName in $ActiveAgents) {
+        $srcAgent = Join-Path (Join-Path $CentralDir "agents") "$agentName.md"
+        if (-not (Test-Path $srcAgent)) { Write-Skip "agents/$agentName.md not present in central dir  - run the install step first"; continue }
+        Copy-FileSafely $srcAgent (Join-Path (Join-Path $ClaudeHome "agents") "$agentName.md") "~/.claude/agents/$agentName.md" (Join-Path (Join-Path $ClaudeHome "agents") "$agentName.md.bak-$Timestamp")
+    }
 
     $claudeMdLink = Join-Path $ClaudeHome "CLAUDE.md"
     $claudeMdTarget = Join-Path $CentralDir "CLAUDE.md"

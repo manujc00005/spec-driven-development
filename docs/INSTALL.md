@@ -26,11 +26,13 @@ flowchart TD
 
 The central directory is the single source of truth. Everything else — your user-level `~/.claude`, and any individual project — is a link pointing at it, never a copy. Update the central directory once (`git pull` in the clone, then re-run `install.ps1`/`install.sh`), and every linked location picks up the change immediately.
 
+**One exception: agents.** Agent definitions (`agents/*.md`, used by the multi-model orchestrated workflow — see [SDD-ORCHESTRATION.md](SDD-ORCHESTRATION.md)) are **copied file-by-file, never linked**, into `~/.claude/agents/` (by `-LinkUserClaude`/`--link-user-claude`) and `<project>/.claude/agents/` (by `link-project`). Those directories commonly contain user- or project-authored agents that a directory link would hide. Copies are additive: existing files are never touched, same-name files that differ are skipped without `-Force`/`--force` (with force, a timestamped backup is taken first). Consequence: after `git pull`, re-run the installer (and `link-project` where used) to refresh agents — they do not update through a link like skills/hooks do.
+
 ---
 
 ## Profile-aware installation
 
-Both scripts read [`profiles.json`](../profiles.json) to decide **which** skills, hooks, and templates to install. Every profile declares SHIPPED entries (`skills`/`hooks`/`templates` — must exist on disk) and PLANNED entries (`plannedSkills`/`plannedHooks`/`plannedTemplates` — roadmap-only, may not exist yet). See [Profiles](../README.md#profiles) in the main README for the full explanation.
+Both scripts read [`profiles.json`](../profiles.json) to decide **which** skills, hooks, templates, and agents to install. Every profile declares SHIPPED entries (`skills`/`hooks`/`templates`/`agents` — must exist on disk) and PLANNED entries (`plannedSkills`/`plannedHooks`/`plannedTemplates`/`plannedAgents` — roadmap-only, may not exist yet). The `agents`/`plannedAgents` keys are optional per profile (added in 0.4.0; only `core` ships agents today). See [Profiles](../README.md#profiles) in the main README for the full explanation.
 
 ```bash
 # Install default: core + java-spring-backend (the default profile in profiles.json)
@@ -47,14 +49,19 @@ Both scripts read [`profiles.json`](../profiles.json) to decide **which** skills
 .\install.ps1 -Profile java-spring-backend,messaging-event-driven   # Windows equivalent
 ```
 
-**What you'll see for planned items** — a profile like `messaging-event-driven` mostly consists of Phase 3 candidates that don't exist in the repo yet. Installing it prints one line per planned item and installs nothing for it:
+**What you'll see for planned items** — `messaging-event-driven` now ships 2 review skills
+(`event-driven-reviewer`, `microservices-patterns-reviewer`) and 2 templates (`MESSAGING.md`,
+`MICROSERVICES_PATTERNS.md`) as of Phase 3; only its hook (`messaging-review-reminder`) is still a
+planned item. Installing the profile installs the shipped skills/templates and prints one line for
+the still-planned hook:
 
 ```
-[planned] skill 'kafka-reviewer'  - not installed (planned for a future phase)
 [planned] hook 'messaging-review-reminder'  - not installed (planned for a future phase)
 ```
 
-This is expected and not an error — planned items are declared for roadmap visibility, not for installation.
+This is expected and not an error — planned items are declared for roadmap visibility, not for
+installation. Note that `--profile messaging-event-driven` on its own does **not** also install
+`java-spring-backend` — pass both explicitly (as shown above) if you want both.
 
 **What never happens** — the installer never falls back to "install everything" or "no filtering." These all abort with a clear `[ERROR]` and a non-zero exit code, before any files are written (or, for the last case, alongside the rest of the dry-run preview):
 
@@ -100,6 +107,7 @@ This step makes Claude Code, running as your Windows user, actually pick up the 
 .\install.ps1 -LinkUserClaude
 ```
 
+- Agent files (`agents/*.md`) are **copied** into `%USERPROFILE%\.claude\agents\` in this same step — per-file and additive, never a junction (see the agents exception under [Architecture](#architecture)).
 - Junctions do not require Administrator rights on Windows.
 - The `CLAUDE.md` file link **does** require Administrator rights or Developer Mode enabled (`Settings → Privacy & Security → For developers → Developer Mode`). If it fails, the script reports it and continues — everything else still gets installed/linked.
 - If `~/.claude/skills` or `~/.claude/hooks` already exist as real directories with real content, the script backs them up to `skills.bak-<timestamp>` / `hooks.bak-<timestamp>` before replacing them — and only does so with `-Force`.
@@ -112,7 +120,7 @@ cd C:\code\my-project
 C:\path\to\spec-driven-development\link-project.ps1
 ```
 
-This creates `my-project\.claude\skills` and `my-project\.claude\hooks` as Junctions to the central directory, without touching `my-project\.claude\settings.local.json` or anything else already in `.claude\`.
+This creates `my-project\.claude\skills` and `my-project\.claude\hooks` as Junctions to the central directory, and copies the shipped agent files into `my-project\.claude\agents\` (per-file, additive), without touching `my-project\.claude\settings.local.json` or anything else already in `.claude\`.
 
 ---
 
@@ -147,7 +155,7 @@ This requires `sudo` because `/usr/local/etc` is typically owned by `root`/`admi
 ./install.sh --link-user-claude
 ```
 
-Same behavior as Windows conceptually: creates symlinks (macOS/Linux don't distinguish "junction" from "symlink" the way Windows does) for `~/.claude/skills`, `~/.claude/hooks`, and `~/.claude/CLAUDE.md`. Existing real directories are backed up to `<path>.bak-<timestamp>` before being replaced, and only with `--force`.
+Same behavior as Windows conceptually: creates symlinks (macOS/Linux don't distinguish "junction" from "symlink" the way Windows does) for `~/.claude/skills`, `~/.claude/hooks`, and `~/.claude/CLAUDE.md`, and **copies** the shipped agent files into `~/.claude/agents/` (per-file, additive — never a symlinked directory). Existing real directories are backed up to `<path>.bak-<timestamp>` before being replaced, and only with `--force`.
 
 ### Link an individual project
 
@@ -193,6 +201,16 @@ Get-Item "$env:USERPROFILE\.claude\skills" -Force | Select-Object LinkType, Targ
 readlink "$HOME/.claude/skills"
 ```
 
+**Agents (both platforms)** — agents are plain copied files, not links; just check they exist:
+
+```powershell
+Get-ChildItem "$env:USERPROFILE\.claude\agents\deep-reasoner.md", "$env:USERPROFILE\.claude\agents\fast-worker.md"
+```
+
+```bash
+ls "$HOME/.claude/agents/deep-reasoner.md" "$HOME/.claude/agents/fast-worker.md"
+```
+
 ---
 
 ## Uninstalling / rolling back
@@ -201,6 +219,7 @@ readlink "$HOME/.claude/skills"
 - **Remove a link** (macOS/Linux): `rm "$HOME/.claude/skills"`.
 - **Restore from a backup**: if a script backed up a real directory to `<path>.bak-<timestamp>`, remove the link at `<path>` and rename the backup back to `<path>`.
 - **Restore an overwritten file**: copy it back from `<central-dir>/_install-backups/<timestamp>/...`.
+- **Remove the copied agents**: delete `deep-reasoner.md` / `fast-worker.md` from `~/.claude/agents/` or `<project>/.claude/agents/` — they are plain files; deleting them affects nothing else (see [SDD-ORCHESTRATION.md](SDD-ORCHESTRATION.md) for the full orchestration rollback).
 
 Nothing in this repo automatically deletes a `.bak-*` directory or an `_install-backups` snapshot — cleanup, if wanted, is a manual, explicit step.
 

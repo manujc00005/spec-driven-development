@@ -104,7 +104,7 @@ Not every change goes through the full ceremony. Trivial, low-risk changes — t
 
 ## Command lifecycle
 
-Each step below is implemented as a Claude Code skill and invoked as a slash command. **40 skills are published in [`skills/`](skills/)** — every command in this section and the next exists as a real `SKILL.md` file in this repository, not as a description of a future feature. This is the core lifecycle:
+Each step below is implemented as a Claude Code skill and invoked as a slash command. **43 skills are published in [`skills/`](skills/)** — every command in this section and the next exists as a real `SKILL.md` file in this repository, not as a description of a future feature. This is the core lifecycle:
 
 | Command | Purpose | Output |
 |---|---|---|
@@ -133,6 +133,7 @@ Beyond the core lifecycle, the following commands exist and cover situations the
 |---|---|
 | `/sdd` | Auto-detects feature complexity and drives the whole pre-implementation chain (spec → plan → analyze) in one pass |
 | `/sdd-medium`, `/sdd-full` | Force a specific workflow depth explicitly instead of relying on auto-detection |
+| `/sdd-orchestrate` | Multi-model orchestrated SDD: classifies the task, delegates deep reasoning to the `deep-reasoner` agent (Opus) and implementation to the `fast-worker` agent (Sonnet), then reviews and validates — see [docs/SDD-ORCHESTRATION.md](docs/SDD-ORCHESTRATION.md) |
 | `/sdd-guardrails` | Consistency gate: decision state machine, source-of-truth matrix, active-plan rule, naming hygiene, money/units safety, deployment coupling |
 | `/spec-status` | Overview of all specs, or a deep-dive into one feature's current state |
 | `/spec-update` | Update a spec mid-implementation and propagate the change to plan, tasks, and decisions |
@@ -153,8 +154,10 @@ Beyond the core lifecycle, the following commands exist and cover situations the
 | `/spring-boot-api-reviewer` | Spring REST API review: controller annotations, DTO validation, error semantics (RFC 7807), OpenAPI drift, pagination |
 | `/spring-security-reviewer` | Spring Security review: SecurityFilterChain, OAuth2/OIDC/Keycloak, method security, Vault/secrets, CORS, actuator exposure |
 | `/java-performance-reviewer` | JVM/Spring performance review: JPA N+1, HikariCP sizing, thread pools, `@Cacheable` misuse, allocation/GC pressure |
+| `/event-driven-reviewer` | Kafka/RabbitMQ/ActiveMQ review: delivery semantics, idempotent consumers, retry/backoff, DLQ, ordering, schema evolution, correlation IDs/tracing, outbox, saga/compensation (optional `messaging-event-driven` profile) |
+| `/microservices-patterns-reviewer` | Cross-service review: service boundaries, sync vs async, database-per-service, distributed transactions, resilience patterns, deployment coupling, API ownership, contract compatibility (optional `messaging-event-driven` profile) |
 
-All commands listed above exist and are in active use. None are aspirational — all 40 `SKILL.md` files are published in [`skills/`](skills/) (39 individual skill folders plus the guardrails template at [`skills/sdd-guardrails/templates/source-of-truth-matrix.md`](skills/sdd-guardrails/templates/source-of-truth-matrix.md)).
+All commands listed above exist and are in active use. None are aspirational — all 43 `SKILL.md` files are published in [`skills/`](skills/) (42 individual skill folders plus the guardrails template at [`skills/sdd-guardrails/templates/source-of-truth-matrix.md`](skills/sdd-guardrails/templates/source-of-truth-matrix.md)).
 
 ---
 
@@ -233,6 +236,12 @@ Once integrated, the intended use is to run discovery before `spec-plan`, `spec-
 
 ---
 
+## Multi-model orchestration
+
+The workflow can run in an orchestrated multi-model mode via `/sdd-orchestrate <goal>`: the main session (Fable when available) classifies the task and keeps its context clean, delegating deep reasoning — architecture, root cause, security, concurrency, migrations — to the **`deep-reasoner`** agent (Opus, read-only) and mechanical implementation — code, tests, refactors, verifications — to the **`fast-worker`** agent (Sonnet). Analysis/audit requests produce a report without implementing; trivial changes never touch Opus. Full documentation — architecture, task-classification levels, cost control, model fallback, install and rollback — is in [docs/SDD-ORCHESTRATION.md](docs/SDD-ORCHESTRATION.md).
+
+---
+
 ## Example workflow
 
 ```bash
@@ -271,10 +280,11 @@ spec-driven-development/
 ├── LICENSE                             # MIT
 ├── CLAUDE.md.example                   # sanitized, generic project instructions — copy into your own project as CLAUDE.md
 ├── settings.template.json              # Claude Code hook wiring, using ${CLAUDE_PROJECT_DIR}
-├── profiles.json                       # profile manifest — maps profiles to skills/hooks/templates
+├── profiles.json                       # profile manifest — maps profiles to skills/hooks/templates/agents
 ├── .gitignore
 ├── docs/
 │   ├── INSTALL.md                      # step-by-step installation guide (Windows, macOS/Linux)
+│   ├── SDD-ORCHESTRATION.md            # multi-model orchestration: architecture, classification, fallback, rollback
 │   ├── ROADMAP_JAVA_SPRING_CONTEXT.md  # roadmap for Java/Spring profile + Graphify context layer
 │   └── _templates/                     # context doc templates (copied into projects by /sdd-onboard)
 │       ├── PROJECT_CONTEXT.md
@@ -282,11 +292,18 @@ spec-driven-development/
 │       ├── ARCHITECTURE.md
 │       ├── TESTING.md
 │       ├── SECURITY.md
-│       └── DEPLOYMENT.md
-├── skills/                             # 40 skill definitions — every command in this README
+│       ├── DEPLOYMENT.md
+│       ├── MESSAGING.md                # broker topology, delivery semantics, DLQ/retry policy
+│       └── MICROSERVICES_PATTERNS.md   # service boundaries, resilience policy, contract testing
+├── agents/                             # subagent definitions for the orchestrated workflow (copied, never linked)
+│   ├── README.md
+│   ├── deep-reasoner.md                # Opus — analysis only, read-only tools
+│   └── fast-worker.md                  # Sonnet — implements delimited tasks
+├── skills/                             # 43 skill definitions — every command in this README
 │   ├── sdd/SKILL.md
 │   ├── sdd-medium/SKILL.md
 │   ├── sdd-full/SKILL.md
+│   ├── sdd-orchestrate/SKILL.md
 │   ├── sdd-guardrails/
 │   │   ├── SKILL.md
 │   │   └── templates/source-of-truth-matrix.md
@@ -325,7 +342,9 @@ spec-driven-development/
 │   ├── java-spring-reviewer/SKILL.md
 │   ├── spring-boot-api-reviewer/SKILL.md
 │   ├── spring-security-reviewer/SKILL.md
-│   └── java-performance-reviewer/SKILL.md
+│   ├── java-performance-reviewer/SKILL.md
+│   ├── event-driven-reviewer/SKILL.md
+│   └── microservices-patterns-reviewer/SKILL.md
 ├── hooks/                              # 11 hook families, 22 scripts (.ps1 + .sh)
 │   ├── README.md
 │   ├── git-guardrails.ps1 / .sh
@@ -360,11 +379,12 @@ spec-driven-development/
 This repository currently ships:
 
 - [x] `README.md` — methodology, philosophy, command reference, and enforcement model.
-- [x] `skills/` — 40 published skill definitions.
+- [x] `skills/` — 43 published skill definitions.
+- [x] `agents/` — `deep-reasoner` (Opus) and `fast-worker` (Sonnet) subagents + multi-model orchestration (`/sdd-orchestrate`, [docs/SDD-ORCHESTRATION.md](docs/SDD-ORCHESTRATION.md)).
 - [x] `hooks/` — 11 hook families, 22 scripts.
 - [x] `hooks/README.md` — per-hook trigger, effect, and activation guide.
 - [x] `specs/_templates/` — `SPEC.md`, `PLAN.md`, `TASKS.md`, `DECISIONS.md` (verbatim), `CONSTITUTION.md` (draft), `PR_DESCRIPTION.md`, `REVIEW_REPORT_TEMPLATE.md`.
-- [x] `docs/_templates/` — `PROJECT_CONTEXT.md`, `TECH_STACK.md`, `ARCHITECTURE.md`, `TESTING.md`, `SECURITY.md`, `DEPLOYMENT.md` (context doc templates for project onboarding and Java/Spring profile).
+- [x] `docs/_templates/` — `PROJECT_CONTEXT.md`, `TECH_STACK.md`, `ARCHITECTURE.md`, `TESTING.md`, `SECURITY.md`, `DEPLOYMENT.md`, `MESSAGING.md`, `MICROSERVICES_PATTERNS.md` (context doc templates for project onboarding, Java/Spring profile, and the optional messaging/microservices profile).
 - [x] `examples/README.md` — placeholder for a future worked example.
 - [x] `CLAUDE.md.example` — sanitized, generic project instructions.
 - [x] `settings.template.json` — sanitized hook wiring.
@@ -389,7 +409,7 @@ Not yet in this repository:
 **Completed:**
 
 - [x] README with methodology, philosophy, command reference, and enforcement model
-- [x] 40 skills published (33 original + 3 context-layer + 4 java-spring)
+- [x] 43 skills published (33 original + 3 context-layer + 4 java-spring + 2 messaging/microservices + 1 other)
 - [x] Hooks published (11 families / 22 scripts) with activation guide
 - [x] Templates published — SDD lifecycle (`specs/_templates/`) + project context (`docs/_templates/`)
 - [x] Sanitized `CLAUDE.md.example`
@@ -401,13 +421,19 @@ Not yet in this repository:
 - [x] Graphify-aware context layer (skills + hook — degrades gracefully without Graphify)
 - [x] Java/Spring backend profile — 4 review skills, 2 defensive hooks, 3 context templates
 - [x] Installer `-Profile` flag consuming `profiles.json` (both `.ps1` and `.sh`)
+- [x] Messaging/event-driven + microservices-patterns profile (Phase 3) — 2 review skills
+      (`event-driven-reviewer`, `microservices-patterns-reviewer`), 2 context templates
+      (`MESSAGING.md`, `MICROSERVICES_PATTERNS.md`), shipped under the optional
+      `messaging-event-driven` profile
 
 **Planned:**
 
 - [ ] Graphify external tool integration (the *skills* are shipped; the *tool itself* is still external and optional)
 - [ ] Real example specs (a feature carried end-to-end through the workflow)
 - [ ] `CONTRIBUTING.md`
-- [ ] Messaging/event-driven skills (Phase 3)
+- [ ] `observability-reviewer` skill + `OBSERVABILITY.md` template (deferred from Phase 3)
+- [ ] `messaging-review-reminder` / `openapi-contract-reminder` hooks (deferred from Phase 3 — no
+      new hook shipped that phase, see `specs/features/003-phase3-event-driven-microservices/DECISIONS.md` D004)
 - [ ] Defensive hooks (Phase 4 — secret-scan, sensitive-file-guard, destructive-cmd-guard)
 - [ ] Example walkthroughs (Phase 5)
 
@@ -415,25 +441,41 @@ Not yet in this repository:
 
 ## Profiles
 
-This workflow supports **stack profiles** declared in [`profiles.json`](profiles.json). Profiles control which skills, hooks, and templates are active for a given project:
+This workflow supports **stack profiles** declared in [`profiles.json`](profiles.json). Profiles control which skills, hooks, templates, and agents are active for a given project:
 
 | Profile | Status | Build tool |
 |---|---|---|
 | `core` | Always installed | — |
 | `java-spring-backend` | **Default** | Maven (primary); Gradle detection as fallback |
-| `messaging-event-driven` | Optional overlay | — |
+| `messaging-event-driven` | Optional — 2 review skills + 2 templates shipped (Phase 3) | — |
 | `payments-fintech` | Optional overlay | — |
 | `next-prisma-web` | Optional | — |
 | `blockchain-crypto` | Optional — **disabled by default** | — |
 
-The installer installs `core` + the default profile (`java-spring-backend`) when no `-Profile`/`--profile` flag is passed.
+The installer installs `core` + the default profile (`java-spring-backend`) **only when no
+`-Profile`/`--profile` flag is passed at all.** The moment you pass any explicit profile, that
+default-profile fallback does not run — you get `core` + exactly what you asked for, nothing more.
+
+> **`messaging-event-driven` is not an automatic overlay.** Its skills (`event-driven-reviewer`,
+> `microservices-patterns-reviewer`) assume a Java/Spring service underneath, but requesting
+> `--profile messaging-event-driven` on its own installs `core` + `messaging-event-driven`
+> **only** — it does **not** also pull in `java-spring-backend`. To get both, list both profiles
+> explicitly in the same invocation:
+> ```bash
+> ./install.sh --profile java-spring-backend,messaging-event-driven
+> ```
+> ```powershell
+> .\install.ps1 -Profile java-spring-backend,messaging-event-driven
+> ```
 
 ### Shipped vs. planned
 
 Every profile in `profiles.json` declares two kinds of entries:
 
-- **`skills` / `hooks` / `templates`** — SHIPPED. These must exist on disk. If one of them is missing, the installer treats it as a manifest/repo integrity failure (profiles.json drifted from the repo) and fails loudly with `[ERROR]` — it never installs silently around the gap.
-- **`plannedSkills` / `plannedHooks` / `plannedTemplates`** — roadmap-only. These may legitimately not exist yet (e.g. Phase 3 candidates). The installer reports each one as `[planned] ... not installed (planned for a future phase)` and never treats their absence as an error.
+- **`skills` / `hooks` / `templates` / `agents`** — SHIPPED. These must exist on disk. If one of them is missing, the installer treats it as a manifest/repo integrity failure (profiles.json drifted from the repo) and fails loudly with `[ERROR]` — it never installs silently around the gap.
+- **`plannedSkills` / `plannedHooks` / `plannedTemplates` / `plannedAgents`** — roadmap-only. These may legitimately not exist yet (e.g. Phase 3 candidates). The installer reports each one as `[planned] ... not installed (planned for a future phase)` and never treats their absence as an error.
+
+The `agents` / `plannedAgents` keys are optional per profile (added in `profiles.json` 0.4.0 — only `core` ships agents today); a profile without them simply ships no agents, so older trimmed copies of the manifest keep working.
 
 The installer never falls back to "install everything" or "no filtering." An unknown profile name, an explicit request for the disabled `blockchain-crypto` profile, or a missing shipped item all abort the run with a clear `[ERROR]` before (or, for the last case, in addition to) any files are touched.
 

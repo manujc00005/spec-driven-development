@@ -1,7 +1,9 @@
 <#
 .SYNOPSIS
   Links a specific project's .claude\skills and .claude\hooks to the central
-  SDD configuration directory, via Windows Junctions.
+  SDD configuration directory via Windows Junctions, and copies the shipped
+  agent files into .claude\agents (per-file, additive - never a junction,
+  because that directory commonly contains project-authored agents).
 
 .DESCRIPTION
   Use this when a project needs skills/hooks visible locally under its own
@@ -116,8 +118,52 @@ Write-Action "Central dir:  $CentralDir"
 if ($DryRun) { Write-Action "DRY RUN MODE  - no files will be written, moved, or linked" }
 Write-Host ""
 
+function Copy-AgentFileSafely([string]$SrcFile, [string]$DestPath, [string]$Label) {
+    # Agents are COPIED per-file, never junctioned: .claude\agents commonly
+    # contains project-authored agents that a directory link would hide.
+    # Additive only  - a same-name file that differs is skipped without -Force;
+    # with -Force it is backed up next to itself first.
+    $destDir = Split-Path $DestPath -Parent
+    if (-not (Test-Path $destDir)) {
+        if ($DryRun) { Write-Action "[dry-run] would create directory $destDir" }
+        else { New-Item -ItemType Directory -Path $destDir -Force | Out-Null }
+    }
+    if (-not (Test-Path $DestPath)) {
+        if ($DryRun) { Write-Action "[dry-run] would create $DestPath" }
+        else { Copy-Item $SrcFile -Destination $DestPath -Force }
+        Write-Action "$Label  (new)"
+        return
+    }
+    $srcHash = (Get-FileHash $SrcFile -Algorithm SHA256).Hash
+    $dstHash = (Get-FileHash $DestPath -Algorithm SHA256).Hash
+    if ($srcHash -eq $dstHash) { Write-Action "$Label already up to date (no-op)"; return }
+    if (-not $Force) {
+        Write-Skip "$Label differs from the central copy  - looks like a project customization; rerun with -Force to overwrite (a backup is taken first)"
+        return
+    }
+    $backupPath = "$DestPath.bak-$Timestamp"
+    if ($DryRun) {
+        Write-Action "[dry-run] would back up $DestPath to $backupPath, then overwrite it with the central version"
+    } else {
+        Copy-Item $DestPath -Destination $backupPath -Force
+        Copy-Item $SrcFile -Destination $DestPath -Force
+        Write-Action "$Label  (overwritten  - previous version backed up to $backupPath)"
+    }
+}
+
 Set-DirLink (Join-Path $claudeDir "skills") "skills" "skills"
 Set-DirLink (Join-Path $claudeDir "hooks") "hooks" "hooks"
+
+# --- Agents: per-file copy from <central>\agents into <project>\.claude\agents ---
+$centralAgents = Join-Path $CentralDir "agents"
+if (Test-Path $centralAgents) {
+    $agentFiles = Get-ChildItem -Path $centralAgents -File -Filter "*.md" | Where-Object { $_.Name -ne "README.md" }
+    foreach ($af in $agentFiles) {
+        Copy-AgentFileSafely $af.FullName (Join-Path (Join-Path $claudeDir "agents") $af.Name) ".claude/agents/$($af.Name)"
+    }
+} else {
+    Write-Skip "agents skipped  - $centralAgents does not exist in the central directory (re-run install.ps1 to install agents)"
+}
 
 Write-Host ""
 Write-Action "settings.local.json is never touched by this script  - wire hook paths in .claude\settings.json yourself,"
