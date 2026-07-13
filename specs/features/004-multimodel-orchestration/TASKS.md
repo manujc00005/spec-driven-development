@@ -23,3 +23,28 @@ Status legend: [ ] pending · [x] done
 
 Every AC-001…AC-024 maps to at least one task above; AC-014/AC-020 are cross-cutting
 constraints verified in T014–T016 (no destructive commands added; no commits/push).
+
+## Review outcome
+
+- `/spec-review`: **PASS** — implementation matches SPEC, no scope creep, traceability intact.
+- `/qa-review`: **PASS (structural)** — installers (dry-run, idempotence, skip-on-diff,
+  Force+backup, no `settings.local.json`/`.env` copy, no real `CLAUDE.md` write), agents
+  (deep-reasoner opus/read-only, fast-worker sonnet/delimited), `profiles.json` semantics
+  (java-spring default, blockchain disabled, core agents, backward-compat), link-project
+  additive agent copy, and CLAUDE.md.example markers all verified. Secret scan and
+  destructive-command grep clean.
+- **AC-017: PASS structural / NOT RUN live.** Frontmatter/skill format matches the agents
+  Claude Code already recognizes, but the agents have NOT been deployed to the real
+  `~/.claude/agents` and no new session has confirmed live discovery.
+
+### Pending before Done
+
+SPEC stays **In Review** until this live check passes:
+
+1. Run `install.ps1 -LinkUserClaude` (Windows) / `install.sh --link-user-claude` to deploy
+   the agents into `~/.claude/agents` and the skill via the linked `~/.claude/skills`.
+2. Open a **new** Claude Code session.
+3. Confirm `deep-reasoner`, `fast-worker`, and `/sdd-orchestrate` are recognized (agents in
+   the available-agents list; `/sdd-orchestrate` autocompletes).
+
+Only then move SPEC.md `In Review → Done` and run `/spec-close`.

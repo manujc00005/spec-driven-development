@@ -79,3 +79,22 @@ The brief allows policy via instructions; a PreToolUse hook policing Agent-tool 
 would be novel machinery with false-positive risk and was not required by any AC.
 Delegation discipline lives in the skill, the agent instructions, and the CLAUDE.md
 block. Revisit only if drift is observed in practice.
+
+## D009 — Phase 4 held at In Review pending live agent-recognition check (AC-017)
+
+**Status:** Active
+
+`/spec-review` returned PASS and `/qa-review` returned PASS on structural evidence
+(installer invariants, agent frontmatter/tools, profiles.json semantics, link-project
+additive copy, CLAUDE.md.example markers, secret scan, destructive-command grep — all
+clean). AC-017 (agents and command recognized by Claude Code) is **PASS structural /
+NOT RUN live**: the two agents were never deployed to the real `~/.claude/agents` and no
+new Claude Code session has confirmed live discovery. Per the SDD lifecycle, SPEC.md is
+therefore deliberately kept at **In Review**, not advanced to Done, until the live check
+in TASKS.md ("Pending before Done") passes. This decision records why Done was withheld
+even though every runnable verification passed, so a future session does not mistake the
+In Review status for unfinished implementation.
+
+Note on commit hygiene (informational, not a decision to act on): Phase 4 was committed
+together with Phase 3 in `c8cfa37` (message "phase 3") and pushed; the maintainer
+accepted this mixed, already-published commit rather than rewrite history. No code impact.
