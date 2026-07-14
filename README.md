@@ -1,6 +1,10 @@
-# Spec-Driven Development for Claude Code
+<div align="center">
 
-**A disciplined, enforceable workflow for AI-assisted software engineering — specs, plans, reviews, guardrails, and multi-model orchestration, without giving up engineering control.**
+# 🧭 Spec-Driven Development for Claude Code
+
+### Spec → Plan → Build → Review → Ship
+
+**A disciplined, enforceable workflow for AI-assisted software engineering —<br/>specs, plans, reviews, guardrails, and multi-model orchestration, without giving up engineering control.**
 
 ![Methodology](https://img.shields.io/badge/methodology-Spec--Driven%20Development-1f6feb)
 ![Claude Code](https://img.shields.io/badge/runtime-Claude%20Code-6b46c1)
@@ -8,7 +12,19 @@
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Status](https://img.shields.io/badge/status-active-success)
 
-> **AI accelerates execution. Engineering judgment keeps control.**
+![Skills](https://img.shields.io/badge/skills-43-0969da)
+![Hooks](https://img.shields.io/badge/hook%20families-11-bf3989)
+![Templates](https://img.shields.io/badge/templates-17-8250df)
+![Agents](https://img.shields.io/badge/agents-2-1a7f37)
+![Profiles](https://img.shields.io/badge/profiles-6-d4a72c)
+
+*AI accelerates execution. Engineering judgment keeps control.*
+
+[🚀 Quickstart](#-quickstart) · [🔄 Core workflow](#-core-workflow) · [🧠 Orchestration](#-multi-model-orchestration) · [⚙️ Installation](#️-installation) · [🛡️ Safety model](#️-safety-model)
+
+</div>
+
+---
 
 This repository turns [Claude Code](https://claude.com/claude-code) into a process-driven engineering environment: **43 skills** (slash commands), **11 hook families** (tool-call-level guardrails), **17 document templates**, **2 orchestration agents**, and a **profile-aware installer** — all versioned, reviewable, and installed from a single source of truth.
 
@@ -16,27 +32,27 @@ This repository turns [Claude Code](https://claude.com/claude-code) into a proce
 
 ## Table of contents
 
-- [What is this?](#what-is-this)
-- [Why it exists](#why-it-exists)
-- [Quickstart](#quickstart)
-- [Core workflow](#core-workflow)
-- [Multi-model orchestration](#multi-model-orchestration)
-- [Repository architecture](#repository-architecture)
-- [Profiles](#profiles)
-- [Installation](#installation)
-- [Usage examples](#usage-examples)
-- [Worked examples](#worked-examples)
-- [Safety model](#safety-model)
-- [What is shipped now](#what-is-shipped-now)
-- [Roadmap](#roadmap)
-- [Design principles](#design-principles)
-- [Author's note](#authors-note)
-- [Limitations](#limitations)
-- [License](#license)
+- [🧩 What is this?](#-what-is-this)
+- [🎯 Why it exists](#-why-it-exists)
+- [🚀 Quickstart](#-quickstart)
+- [🔄 Core workflow](#-core-workflow)
+- [🧠 Multi-model orchestration](#-multi-model-orchestration)
+- [🏗️ Repository architecture](#️-repository-architecture)
+- [🗂️ Profiles](#️-profiles)
+- [⚙️ Installation](#️-installation)
+- [💻 Usage examples](#-usage-examples)
+- [📚 Worked examples](#-worked-examples)
+- [🛡️ Safety model](#️-safety-model)
+- [📊 What is shipped now](#-what-is-shipped-now)
+- [🗺️ Roadmap](#️-roadmap)
+- [📐 Design principles](#-design-principles)
+- [✍️ Author's note](#️-authors-note)
+- [⚠️ Limitations](#️-limitations)
+- [📄 License](#-license)
 
 ---
 
-## What is this?
+## 🧩 What is this?
 
 A **Spec-Driven Development (SDD) workflow for AI-assisted software engineering**, packaged as installable Claude Code configuration. It is the reproducible sequence that sits between "having an idea" and "opening a pull request":
 
@@ -54,7 +70,7 @@ Five kinds of artifacts implement it:
 
 It is not a demo. It is the process used to build real features in real codebases, where an unreviewed change to auth, payments, or a database schema is expensive to get wrong. The AI writes a meaningful share of the code — that part isn't in question. What this repo adds is the structure around that code, and the tooling that makes the structure hard to skip.
 
-## Why it exists
+## 🎯 Why it exists
 
 AI coding without process has a failure mode every team has now seen: requirements live in chat scrollback, the model makes silent architectural decisions, plans drift from what was actually built, and review happens (if at all) as a vibe check on a diff nobody scoped. The result is ambiguity, regressions, and hidden debt — produced faster than ever.
 
@@ -65,11 +81,11 @@ This workflow addresses that directly:
 - **A consistency gate before tasks are marked done** — spec, plan, tasks, and decisions must agree.
 - **Reviews scoped to what the change actually touches** — a schema change gets a database review; a UI-only change doesn't.
 - **Decisions written down** — every non-obvious choice lands in `DECISIONS.md` with its reasoning, instead of living only in a conversation that will be compacted away.
-- **Enforcement in tooling, not just prose** — hooks intervene at tool-call level (see [Safety model](#safety-model)).
+- **Enforcement in tooling, not just prose** — hooks intervene at tool-call level (see [Safety model](#️-safety-model)).
 
 The engineer decides what gets built, what risk is acceptable, and which changes should not happen. The AI executes the process — it does not own it.
 
-## Quickstart
+## 🚀 Quickstart
 
 ```bash
 git clone https://github.com/manujc00005/spec-driven-development.git
@@ -99,29 +115,62 @@ Full walkthrough, per-project linking, and verification steps: [`docs/INSTALL.md
 
 ---
 
-## Core workflow
+## 🔄 Core workflow
 
 ```mermaid
 flowchart TD
-    A[User request] --> B[Discovery]
-    B --> C[SPEC.md]
-    C --> D[Clarify]
-    D --> E[PLAN.md + TASKS.md]
-    E --> F[Analyze consistency]
-    F -- Ready --> G[Implement task by task]
-    F -- Not ready --> D
-    G --> H[Spec review + QA review]
-    H --> I{Risk-based reviews}
-    I --> R1[Security]
-    I --> R2[Database]
-    I --> R3[API]
-    I --> R4[Performance / Frontend / SEO / Privacy ...]
-    R1 --> J[Close]
+    A(["💡 User request"]) --> C
+
+    subgraph P1["📝 &nbsp;1 · SPECIFY"]
+        direction TB
+        C["SPEC.md<br/><i>/spec-create</i>"] --> D["Clarify<br/><i>/spec-clarify</i>"]
+    end
+
+    subgraph P2["🗺️ &nbsp;2 · PLAN"]
+        direction TB
+        E["PLAN.md + TASKS.md<br/><i>/spec-plan</i>"] --> F{"Consistency gate<br/><i>/spec-analyze</i>"}
+    end
+
+    subgraph P3["⚙️ &nbsp;3 · BUILD"]
+        G["Implement task by task<br/><i>/spec-implement</i>"]
+    end
+
+    subgraph P4["🛡️ &nbsp;4 · REVIEW"]
+        direction TB
+        H["Spec review + QA review<br/><i>/spec-review · /qa-review</i>"] --> I{"What does the<br/>change touch?"}
+        I --> R1["🔐 Security"]
+        I --> R2["🗄️ Database"]
+        I --> R3["🔌 API"]
+        I --> R4["⚡ Performance · 🎨 Frontend<br/>🌐 SEO · 🔏 Privacy"]
+    end
+
+    subgraph P5["🚀 &nbsp;5 · SHIP"]
+        direction TB
+        J["Close feature<br/><i>/spec-close</i>"] --> K(["Pull request<br/><i>/pr-description</i>"])
+    end
+
+    D --> E
+    F -->|"✅ Ready"| G
+    F -.->|"❌ Not ready"| D
+    G --> H
+    R1 --> J
     R2 --> J
     R3 --> J
     R4 --> J
-    H --> J
-    J --> K[PR description]
+
+    classDef entry fill:#f1f5f9,stroke:#64748b,color:#0f172a
+    classDef spec fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+    classDef plan fill:#fef3c7,stroke:#d97706,color:#78350f
+    classDef build fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef review fill:#ffe4e6,stroke:#e11d48,color:#881337
+    classDef ship fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
+
+    class A entry
+    class C,D spec
+    class E,F plan
+    class G build
+    class H,I,R1,R2,R3,R4 review
+    class J,K ship
 ```
 
 Each step is a real skill invoked as a slash command. The core lifecycle:
@@ -140,12 +189,28 @@ Each step is a real skill invoked as a slash command. The core lifecycle:
 | `/spec-close` | Resolve open questions, confirm acceptance-criteria coverage, close the feature | Implementation summary |
 | `/pr-description` | Generate the pull request description from the diff and the spec | PR text |
 
-Specialized reviews are triggered by what the spec declares, not run blindly: `/security-review`, `/database-review`, `/api-review`, `/backend-review`, `/frontend-review`, `/performance-review`, `/seo-review`, `/privacy-compliance-review`. Supporting commands cover the rest of the lifecycle: `/sdd-guardrails` (consistency gate), `/spec-status`, `/spec-update`, `/spec-resume`, `/review-all`, `/architect-review`, `/test-engineer`, `/debugger`, `/prototype`, `/decision-mapping`, `/refactor-review`, `/handoff`, `/context-manager`, `/graphify-context`, `/sdd-onboard`, plus the stack-specific reviewers listed under [Profiles](#profiles). Every command in this README exists as a `SKILL.md` file in [`skills/`](skills/) — all 43 of them; none are aspirational.
+Specialized reviews are triggered by what the spec declares, not run blindly: `/security-review`, `/database-review`, `/api-review`, `/backend-review`, `/frontend-review`, `/performance-review`, `/seo-review`, `/privacy-compliance-review`. Supporting commands cover the rest of the lifecycle: `/sdd-guardrails` (consistency gate), `/spec-status`, `/spec-update`, `/spec-resume`, `/review-all`, `/architect-review`, `/test-engineer`, `/debugger`, `/prototype`, `/decision-mapping`, `/refactor-review`, `/handoff`, `/context-manager`, `/graphify-context`, `/sdd-onboard`, plus the stack-specific reviewers listed under [Profiles](#️-profiles). Every command in this README exists as a `SKILL.md` file in [`skills/`](skills/) — all 43 of them; none are aspirational.
 
 ### Spec status lifecycle
 
-```
-Draft → Ready → In Progress → In Review → Done | Archived
+```mermaid
+stateDiagram-v2
+    direction LR
+    state "📝 Draft" as Draft
+    state "✅ Ready" as Ready
+    state "🔨 In Progress" as InProgress
+    state "🔍 In Review" as InReview
+    state "🏁 Done" as Done
+    state "🗃️ Archived" as Archived
+
+    [*] --> Draft : /spec-create
+    Draft --> Ready : /spec-plan + /spec-analyze
+    Ready --> InProgress : /spec-implement
+    InProgress --> InReview : all tasks done + /spec-review
+    InReview --> Done : reviews pass + /spec-close
+    Done --> [*] : PR
+    Draft --> Archived : abandoned
+    InReview --> Archived : superseded
 ```
 
 Implementation cannot start against a `Draft` spec, and a feature cannot close from anything other than `In Review`. These checks live in the skills themselves (`spec-implement` and `spec-close` refuse to proceed on a wrong status), not in convention.
@@ -154,9 +219,35 @@ Not every change goes through the full ceremony: typo fixes, small styling tweak
 
 ---
 
-## Multi-model orchestration
+## 🧠 Multi-model orchestration
 
 The workflow can run in an orchestrated multi-model mode via **`/sdd-orchestrate <goal>`**, which splits work across models by what each is actually good (and priced) for:
+
+```mermaid
+flowchart TD
+    U(["🎯 /sdd-orchestrate goal"]) --> O["🧠 Orchestrator — main session<br/>classifies the task, keeps context clean"]
+
+    O -->|"trivial"| T["✏️ Direct edit<br/>no subagents, no Opus cost"]
+    O -->|"analysis · architecture<br/>high-risk review"| DR["🔬 deep-reasoner<br/><b>Opus</b> — read-only<br/>Read · Grep · Glob"]
+    O -->|"bounded<br/>implementation"| FW["⚡ fast-worker<br/><b>Sonnet</b> — edits code<br/>one scoped task at a time"]
+
+    DR -->|"findings +<br/>recommendations"| V
+    FW -->|"diff + report"| V
+    T --> V
+
+    V["✅ Orchestrator reviews every result<br/>validates against acceptance criteria"]
+    V --> S(["📄 SPEC · PLAN · TASKS · DECISIONS kept in sync"])
+
+    classDef main fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
+    classDef opus fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+    classDef sonnet fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef cheap fill:#f1f5f9,stroke:#64748b,color:#0f172a
+
+    class U,O,V,S main
+    class DR opus
+    class FW sonnet
+    class T cheap
+```
 
 | Role | Model | Responsibility |
 |---|---|---|
@@ -176,7 +267,7 @@ Full documentation — architecture, task classification, cost control, fallback
 
 ---
 
-## Repository architecture
+## 🏗️ Repository architecture
 
 ```
 spec-driven-development/
@@ -209,6 +300,32 @@ spec-driven-development/
 
 How content flows at install time:
 
+```mermaid
+flowchart LR
+    R["📦 This repository<br/>skills · hooks · templates · agents"]
+    C["🏛️ Central config dir<br/>Windows: ProgramData/ClaudeConfig<br/>macOS/Linux: ~/.claude-config"]
+    U["👤 ~/.claude<br/>skills + hooks"]
+    P1["📁 project-a/.claude"]
+    P2["📁 project-b/.claude"]
+    AG["🤖 .claude/agents<br/>copied per-file, never linked"]
+
+    R -->|"install.ps1 / install.sh<br/>profile-filtered copy"| C
+    C -.->|"link (opt-in)"| U
+    C -.->|"link-project"| P1
+    C -.->|"link-project"| P2
+    R -->|"copy"| AG
+
+    classDef repo fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+    classDef central fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
+    classDef consumer fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef agents fill:#fef3c7,stroke:#d97706,color:#78350f
+
+    class R repo
+    class C central
+    class U,P1,P2 consumer
+    class AG agents
+```
+
 - The **central config directory** (Windows: `C:\ProgramData\ClaudeConfig`; macOS/Linux: `~/.claude-config` by default) receives a profile-filtered copy of skills, hooks, templates, and agents.
 - `~/.claude/skills` and `~/.claude/hooks` (and per-project `.claude/skills|hooks`) are **linked** (junction/symlink) to the central dir — update the central dir once, every consumer sees it.
 - **Agents are the deliberate exception: copied per-file, never linked**, because `.claude/agents` directories commonly contain user-authored agents that a directory link would hide. Consequence: re-run the installer after `git pull` to refresh agents.
@@ -216,7 +333,7 @@ How content flows at install time:
 
 ---
 
-## Profiles
+## 🗂️ Profiles
 
 Profiles control which skills, hooks, templates, and agents get installed, declared in [`profiles.json`](profiles.json):
 
@@ -238,7 +355,7 @@ Rules the installers enforce:
 
 ---
 
-## Installation
+## ⚙️ Installation
 
 Three concerns, three scripts — full guide in [`docs/INSTALL.md`](docs/INSTALL.md):
 
@@ -276,7 +393,7 @@ After installing: start a **new Claude Code session** (skills/agents are discove
 
 ---
 
-## Usage examples
+## 💻 Usage examples
 
 ```bash
 # Full lifecycle for a security-sensitive API change
@@ -309,7 +426,7 @@ Do not modify code.
 
 ---
 
-## Worked examples
+## 📚 Worked examples
 
 This repository includes professional worked examples demonstrating the SDD framework on real engineering problems:
 
@@ -317,7 +434,7 @@ This repository includes professional worked examples demonstrating the SDD fram
 
 ---
 
-## Safety model
+## 🛡️ Safety model
 
 The same discipline the workflow demands from code applies to the tooling itself.
 
@@ -341,11 +458,31 @@ The same discipline the workflow demands from code applies to the tooling itself
 - Only two hooks modify files at all (`eslint-fix`, `prettier-format`), both running the project's own configured formatter, and only if that config exists.
 - `.sh` hooks are dependency-free: no `jq`, no `python3` — JSON parsing goes through [`hooks/lib/claude-json.sh`](hooks/lib/claude-json.sh).
 
-**Graphify degrades gracefully** — the Graphify-aware skills and hook use `GRAPH_REPORT.md` (produced by an external, optional tool) when present, and fall back to bounded heuristic scanning when absent. Nothing fails without it.
+**Graphify degrades gracefully** — the Graphify-aware skills and hook use `GRAPH_REPORT.md` (produced by an external, optional tool) when present, and fall back to bounded heuristic scanning when absent. Nothing fails without it:
+
+```mermaid
+flowchart LR
+    SK["🕸️ Graphify-aware layer<br/>/graphify-context · reviews · stale-reminder hook"] --> Q{"GRAPH_REPORT.md?"}
+    Q -->|"✅ present + fresh"| USE["Graph-accelerated impact analysis<br/>before planning and review"]
+    Q -->|"⚠️ stale"| WARN["Staleness warning —<br/>still usable, never blocks"]
+    Q -->|"❌ absent"| FB["Bounded heuristic scan<br/>graceful degradation, nothing fails"]
+
+    classDef layer fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
+    classDef gate fill:#f1f5f9,stroke:#64748b,color:#0f172a
+    classDef ok fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef warn fill:#fef3c7,stroke:#d97706,color:#78350f
+    classDef fb fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+
+    class SK layer
+    class Q gate
+    class USE ok
+    class WARN warn
+    class FB fb
+```
 
 ---
 
-## What is shipped now
+## 📊 What is shipped now
 
 Counted from this repository, not aspirational:
 
@@ -362,7 +499,7 @@ Counted from this repository, not aspirational:
 
 This repo dogfoods its own workflow: the phases that built it are specced under [`specs/features/`](specs/features/) with their own `SPEC/PLAN/TASKS/DECISIONS` documents.
 
-## Roadmap
+## 🗺️ Roadmap
 
 **Shipped**
 
@@ -387,7 +524,7 @@ This repo dogfoods its own workflow: the phases that built it are specced under 
 
 - Graphify itself remains an optional external tool — this repo ships the integration layer, not the tool.
 
-## Design principles
+## 📐 Design principles
 
 - **Spec first** — no non-trivial change without a written spec and acceptance criteria.
 - **Smallest safe change** — one bounded task at a time; no speculative abstractions.
@@ -400,13 +537,13 @@ This repo dogfoods its own workflow: the phases that built it are specced under 
 - **Honest status** — shipped, planned, and disabled are three different words, enforced by the installer and used consistently in the docs.
 - **No vibe coding** — velocity comes from removing ambiguity, not from skipping steps.
 
-## Author's note
+## ✍️ Author's note
 
 I built this to answer a concrete question: *what does it take to use an AI coding agent on real backend systems — payments, messaging, migrations — without lowering the engineering bar?* The answer in this repo is process-as-code: workflow definitions, tool-level guardrails, and cost-aware model orchestration that are versioned, reviewable, and installable like any other artifact.
 
 As a portfolio piece, it demonstrates: AI-assisted engineering workflow design; automation guardrails with an explicit safety model (idempotent installers, backups, dry-run, hard shipped/planned separation); distributed-systems review thinking (event-driven and microservices-patterns reviewers); a production-oriented Java/Spring backend profile; multi-model delegation with cost control and documented fallbacks; and operational documentation written for someone who isn't me.
 
-## Limitations
+## ⚠️ Limitations
 
 Stated plainly, because they matter:
 
@@ -420,6 +557,6 @@ Stated plainly, because they matter:
 - **One worked example so far.** The [payment webhook idempotency example](examples/002-payment-webhook-idempotency/) demonstrates the workflow artifacts end-to-end, but it is educational — a pattern walkthrough, not a complete production system.
 - **Hook enforcement is best-effort by design.** Hooks intervene at tool-call level inside Claude Code; they are guardrails against accidental damage, not a security boundary against a determined operator.
 
-## License
+## 📄 License
 
 MIT — see [`LICENSE`](LICENSE). No `CONTRIBUTING.md` yet (planned); issues and PRs are welcome in the meantime — small, scoped changes with a clear description will get the fastest review, which is only fair given what this repo preaches.
