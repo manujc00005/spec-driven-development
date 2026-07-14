@@ -10,7 +10,7 @@
 
 > **AI accelerates execution. Engineering judgment keeps control.**
 
-This repository turns [Claude Code](https://claude.com/claude-code) into a process-driven engineering environment: **43 skills** (slash commands), **11 hook families** (tool-call-level guardrails), **15 document templates**, **2 orchestration agents**, and a **profile-aware installer** — all versioned, reviewable, and installed from a single source of truth.
+This repository turns [Claude Code](https://claude.com/claude-code) into a process-driven engineering environment: **43 skills** (slash commands), **11 hook families** (tool-call-level guardrails), **17 document templates**, **2 orchestration agents**, and a **profile-aware installer** — all versioned, reviewable, and installed from a single source of truth.
 
 ---
 
@@ -197,14 +197,14 @@ spec-driven-development/
 │   ├── INSTALL.md                 # step-by-step install guide (Windows, macOS/Linux)
 │   ├── SDD-ORCHESTRATION.md       # multi-model orchestration reference
 │   ├── ROADMAP_JAVA_SPRING_CONTEXT.md  # original phase-planning document (historical)
-│   └── _templates/                # 8 project-context doc templates (PROJECT_CONTEXT, TECH_STACK,
+│   └── _templates/                # 10 project-context doc templates (PROJECT_CONTEXT, TECH_STACK,
 │                                  #   ARCHITECTURE, TESTING, SECURITY, DEPLOYMENT, MESSAGING,
-│                                  #   MICROSERVICES_PATTERNS)
+│                                  #   MICROSERVICES_PATTERNS, GRAPHIFY, PROJECT_GRAPH)
 ├── specs/
 │   ├── _templates/                # 7 SDD lifecycle templates (SPEC, PLAN, TASKS, DECISIONS,
 │   │                              #   CONSTITUTION, PR_DESCRIPTION, REVIEW_REPORT_TEMPLATE)
 │   └── features/                  # this repo's own features, built with its own workflow (dogfooding)
-└── examples/                      # placeholder — worked end-to-end example planned
+└── examples/                      # worked end-to-end examples (payment webhook idempotency)
 ```
 
 How content flows at install time:
@@ -222,7 +222,7 @@ Profiles control which skills, hooks, templates, and agents get installed, decla
 
 | Profile | Status | What it adds |
 |---|---|---|
-| `core` | Always installed | Full SDD lifecycle, guardrails, generic reviews, orchestration (31 skills, 5 hooks, 10 templates, 2 agents) |
+| `core` | Always installed | Full SDD lifecycle, guardrails, generic reviews, orchestration (31 skills, 5 hooks, 12 templates, 2 agents) |
 | `java-spring-backend` | **Default** | 7 review skills (JPA/transactions, Spring REST, Spring Security, JVM performance, database, API, backend), 3 hooks, 6 context templates. Maven primary, Gradle fallback |
 | `messaging-event-driven` | Optional | `event-driven-reviewer` (Kafka/RabbitMQ/ActiveMQ, outbox, saga, DLQ) + `microservices-patterns-reviewer` (boundaries, resilience, contracts), 2 templates |
 | `next-prisma-web` | Optional | Frontend/SEO/privacy/database reviews + `ts-check`/`eslint-fix`/`prettier-format` hooks (Prisma-specific items still planned) |
@@ -354,7 +354,7 @@ Counted from this repository, not aspirational:
 | Skills | **43** | Every slash command referenced in this README has a `SKILL.md` in [`skills/`](skills/) |
 | Hook families | **11** (22 scripts) | Each ships as a `.ps1` + `.sh` pair; shared bash JSON helper in `hooks/lib/` |
 | SDD lifecycle templates | **7** | `specs/_templates/` |
-| Project-context templates | **8** | `docs/_templates/` |
+| Project-context templates | **10** | `docs/_templates/` |
 | Agents | **2** | `deep-reasoner` (Opus, read-only), `fast-worker` (Sonnet, bounded) |
 | Profiles | **6** | `core`, `java-spring-backend` (default), `messaging-event-driven`, `next-prisma-web`, `payments-fintech` (planned-only), `blockchain-crypto` (disabled) |
 | Docs | **3 guides** | `INSTALL.md`, `SDD-ORCHESTRATION.md`, `hooks/README.md` + per-directory READMEs |
@@ -369,10 +369,11 @@ This repo dogfoods its own workflow: the phases that built it are specced under 
 - Core SDD lifecycle + guardrails + generic reviews (43 skills)
 - Enforcement hooks (11 families, cross-platform) with activation guide
 - Profile-aware installers with shipped/planned separation and integrity checks
-- Java/Spring backend profile (4 stack reviewers, 2 defensive hooks, 3 context templates)
+- Java/Spring backend profile (7 review skills, 3 hooks, 6 context templates)
 - Messaging/event-driven + microservices-patterns profile (2 reviewers, 2 templates)
 - Graphify-aware context layer (3 skills + 1 hook, graceful degradation)
 - Multi-model orchestration (`/sdd-orchestrate`, 2 agents, fallback policy, rollback docs)
+- Adaptive project onboarding (`/sdd-onboard`) with optional Graphify setup templates (`GRAPHIFY.md`, `PROJECT_GRAPH.md`)
 - Worked example: Payment Webhook Idempotency ([`examples/002-payment-webhook-idempotency/`](examples/002-payment-webhook-idempotency/)) — Java/Spring webhook receiver with constraint-based idempotency, full spec/plan/tasks/decisions, 14 tests, database migration, and review artifacts
 
 **Planned**
@@ -416,7 +417,7 @@ Stated plainly, because they matter:
 - **Windows-first origins.** The default central-dir location and the original hook wiring are Windows-shaped, but parity is shipped, not just documented: every hook has a `.sh` variant, both installers exist, and `settings.template.sh.json` provides the ready-made macOS/Linux hook wiring.
 - **Graphify is external and optional.** This repo ships the integration layer only; without the tool you get graceful degradation, not the architecture map.
 - **Some profiles are declarations, not content.** `payments-fintech` currently ships nothing; `blockchain-crypto` is disabled by design.
-- **No worked example yet.** `examples/` is a placeholder until a real feature is carried end-to-end publicly.
+- **One worked example so far.** The [payment webhook idempotency example](examples/002-payment-webhook-idempotency/) demonstrates the workflow artifacts end-to-end, but it is educational — a pattern walkthrough, not a complete production system.
 - **Hook enforcement is best-effort by design.** Hooks intervene at tool-call level inside Claude Code; they are guardrails against accidental damage, not a security boundary against a determined operator.
 
 ## License

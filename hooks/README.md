@@ -47,7 +47,7 @@ Every hook is defensive about scope — they exit immediately (exit code `0`, no
      "hooks": [
        {
          "type": "command",
-         "command": "powershell -NoProfile -File ${CLAUDE_PROJECT_DIR}/hooks/sdd-spec-guard.ps1",
+         "command": "powershell -NoProfile -File ${CLAUDE_PROJECT_DIR}/.claude/hooks/sdd-spec-guard.ps1",
          "timeout": 5,
          "statusMessage": "Spec guard check..."
        }
@@ -55,7 +55,7 @@ Every hook is defensive about scope — they exit immediately (exit code `0`, no
    }
    ```
 
-   On macOS/Linux, replace the `command` with `bash ${CLAUDE_PROJECT_DIR}/hooks/sdd-spec-guard.sh`.
+   On macOS/Linux, replace the `command` with `bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/sdd-spec-guard.sh`.
 
 ## Cross-platform coverage
 
@@ -67,8 +67,8 @@ Two ready-to-copy templates ship at the repo root, wiring the **same hook set** 
 
 | Platform | Template | Command style |
 |---|---|---|
-| Windows | [`settings.template.json`](../settings.template.json) | `powershell -NoProfile -File ${CLAUDE_PROJECT_DIR}/hooks/<name>.ps1` |
-| macOS/Linux | [`settings.template.sh.json`](../settings.template.sh.json) | `bash ${CLAUDE_PROJECT_DIR}/hooks/<name>.sh` |
+| Windows | [`settings.template.json`](../settings.template.json) | `powershell -NoProfile -File ${CLAUDE_PROJECT_DIR}/.claude/hooks/<name>.ps1` |
+| macOS/Linux | [`settings.template.sh.json`](../settings.template.sh.json) | `bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/<name>.sh` |
 
 macOS/Linux notes:
 

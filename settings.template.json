@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell -NoProfile -File ${CLAUDE_PROJECT_DIR}/hooks/git-guardrails.ps1",
+            "command": "powershell -NoProfile -File ${CLAUDE_PROJECT_DIR}/.claude/hooks/git-guardrails.ps1",
             "timeout": 5,
             "statusMessage": "Git guardrails check..."
           }
@@ -19,25 +19,25 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell -NoProfile -File ${CLAUDE_PROJECT_DIR}/hooks/ts-check.ps1",
+            "command": "powershell -NoProfile -File ${CLAUDE_PROJECT_DIR}/.claude/hooks/ts-check.ps1",
             "timeout": 30,
             "statusMessage": "TypeScript check..."
           },
           {
             "type": "command",
-            "command": "powershell -NoProfile -File ${CLAUDE_PROJECT_DIR}/hooks/eslint-fix.ps1",
+            "command": "powershell -NoProfile -File ${CLAUDE_PROJECT_DIR}/.claude/hooks/eslint-fix.ps1",
             "timeout": 30,
             "statusMessage": "ESLint fix..."
           },
           {
             "type": "command",
-            "command": "powershell -NoProfile -File ${CLAUDE_PROJECT_DIR}/hooks/java-build-test-guard.ps1",
+            "command": "powershell -NoProfile -File ${CLAUDE_PROJECT_DIR}/.claude/hooks/java-build-test-guard.ps1",
             "timeout": 60,
             "statusMessage": "Java build guard..."
           },
           {
             "type": "command",
-            "command": "powershell -NoProfile -File ${CLAUDE_PROJECT_DIR}/hooks/prettier-format.ps1",
+            "command": "powershell -NoProfile -File ${CLAUDE_PROJECT_DIR}/.claude/hooks/prettier-format.ps1",
             "timeout": 15,
             "statusMessage": "Prettier format..."
           }
@@ -49,7 +49,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell -NoProfile -File ${CLAUDE_PROJECT_DIR}/hooks/sdd-status-banner.ps1",
+            "command": "powershell -NoProfile -File ${CLAUDE_PROJECT_DIR}/.claude/hooks/sdd-status-banner.ps1",
             "timeout": 5,
             "statusMessage": "SDD status..."
           }
@@ -61,7 +61,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell -NoProfile -File ${CLAUDE_PROJECT_DIR}/hooks/project-init-check.ps1",
+            "command": "powershell -NoProfile -File ${CLAUDE_PROJECT_DIR}/.claude/hooks/project-init-check.ps1",
             "timeout": 5
           }
         ]
