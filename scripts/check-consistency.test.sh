@@ -1,0 +1,126 @@
+#!/usr/bin/env bash
+#
+# Self-test for scripts/check-consistency.sh: copies the repo to a temp dir
+# per case, injects one drift mutation, and asserts the checker's exit code
+# and output. See specs/features/007-ci-consistency-check/TASKS.md T007.
+#
+# Usage: scripts/check-consistency.test.sh
+
+set -uo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CHECKER="$REPO_ROOT/scripts/check-consistency.sh"
+TMP_BASE="$(mktemp -d)"
+trap 'rm -rf "$TMP_BASE"' EXIT
+
+PASS=0
+FAIL=0
+
+fresh_copy() {
+  local case_name="$1"
+  local dst="$TMP_BASE/$case_name"
+  cp -r "$REPO_ROOT" "$dst"
+  rm -rf "$dst/.git"
+  echo "$dst"
+}
+
+assert_case() {
+  local name="$1" expect_exit="$2" expect_grep="$3" dir="$4"
+  local out actual_exit
+  out="$("$CHECKER" "$dir" 2>&1)"
+  actual_exit=$?
+  if [ "$actual_exit" -ne "$expect_exit" ]; then
+    echo "[FAIL] $name: expected exit $expect_exit, got $actual_exit"
+    echo "       output: $out"
+    FAIL=$((FAIL + 1))
+    return
+  fi
+  if [ -n "$expect_grep" ] && ! grep -qF "$expect_grep" <<< "$out"; then
+    echo "[FAIL] $name: expected output to contain '$expect_grep'"
+    echo "       output: $out"
+    FAIL=$((FAIL + 1))
+    return
+  fi
+  echo "[PASS] $name"
+  PASS=$((PASS + 1))
+}
+
+# --- control case: unmodified copy must pass clean ---
+dir="$(fresh_copy clean)"
+assert_case "clean-repo" 0 "Consistency check passed" "$dir"
+
+# --- FR-001..004: missing shipped item per category ---
+dir="$(fresh_copy missing-shipped-skill)"
+rm -rf "$dir/skills/sdd"
+assert_case "missing-shipped-skill" 1 "[shipped-skill] sdd" "$dir"
+
+dir="$(fresh_copy missing-shipped-hook)"
+rm -f "$dir/hooks/maven-compile.ps1"
+assert_case "missing-shipped-hook-variant" 1 "[shipped-hook] maven-compile" "$dir"
+
+dir="$(fresh_copy missing-shipped-template)"
+rm -f "$dir/specs/_templates/SPEC.md"
+assert_case "missing-shipped-template" 1 "[shipped-template] SPEC.md" "$dir"
+
+dir="$(fresh_copy missing-shipped-agent)"
+rm -f "$dir/agents/deep-reasoner.md"
+assert_case "missing-shipped-agent" 1 "[shipped-agent] deep-reasoner" "$dir"
+
+# --- FR-005: orphans per category ---
+dir="$(fresh_copy orphan-skill)"
+mkdir -p "$dir/skills/zzz-orphan-test"
+echo "# orphan" > "$dir/skills/zzz-orphan-test/SKILL.md"
+assert_case "orphan-skill" 1 "[orphan-skill] zzz-orphan-test" "$dir"
+
+dir="$(fresh_copy orphan-hook)"
+echo "# orphan" > "$dir/hooks/zzz-orphan-test.sh"
+echo "# orphan" > "$dir/hooks/zzz-orphan-test.ps1"
+assert_case "orphan-hook" 1 "[orphan-hook] zzz-orphan-test" "$dir"
+
+dir="$(fresh_copy orphan-template)"
+echo "# orphan" > "$dir/specs/_templates/ZZZ_ORPHAN.md"
+assert_case "orphan-template" 1 "[orphan-template] ZZZ_ORPHAN.md" "$dir"
+
+dir="$(fresh_copy orphan-agent)"
+echo "# orphan" > "$dir/agents/zzz-orphan.md"
+assert_case "orphan-agent" 1 "[orphan-agent] zzz-orphan" "$dir"
+
+# --- FR-006: planned item exists on disk (must be promoted in profiles.json) ---
+dir="$(fresh_copy planned-drift)"
+echo "# planned" > "$dir/hooks/messaging-review-reminder.sh"
+echo "# planned" > "$dir/hooks/messaging-review-reminder.ps1"
+assert_case "planned-drift" 1 "[planned-drift] hook 'messaging-review-reminder'" "$dir"
+
+# --- FR-009: hook family missing one variant (unshipped, so also an orphan) ---
+dir="$(fresh_copy hook-parity)"
+echo "# parity" > "$dir/hooks/zzz-parity-test.sh"
+assert_case "hook-parity" 1 "[hook-parity] zzz-parity-test" "$dir"
+
+# --- FR-007: settings wiring references a nonexistent hook ---
+dir="$(fresh_copy settings-wiring-bad-path)"
+sed -i 's/git-guardrails\.ps1/nonexistent-hook.ps1/' "$dir/settings.template.json"
+assert_case "settings-wiring-bad-path" 1 "[settings-wiring] settings.template.json:nonexistent-hook.ps1" "$dir"
+
+# --- FR-007: forbidden hook pair wired together ---
+dir="$(fresh_copy settings-wiring-forbidden-pair)"
+sed -i 's#\(bash \${CLAUDE_PROJECT_DIR}/.claude/hooks/\)java-build-test-guard\.sh#\1maven-compile.sh", "timeout": 60, "statusMessage": "Maven compile..." }, { "type": "command", "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/java-build-test-guard.sh#' "$dir/settings.template.sh.json"
+assert_case "settings-wiring-forbidden-pair" 1 "wires both 'maven-compile' and 'java-build-test-guard'" "$dir"
+
+# --- FR-008: wrong README count ---
+dir="$(fresh_copy readme-wrong-count)"
+sed -i 's/<!-- count:skills-total -->43<!-- \/count -->/<!-- count:skills-total -->44<!-- \/count -->/' "$dir/README.md"
+assert_case "readme-wrong-count" 1 "readme-count] skills-total" "$dir"
+
+# --- FR-008: missing required README marker ---
+dir="$(fresh_copy readme-missing-marker)"
+sed -i 's/<!-- count:agents-total -->2<!-- \/count -->/2/g' "$dir/README.md"
+assert_case "readme-missing-marker" 1 "required count marker missing" "$dir"
+
+# --- FR-011: corrupt profiles.json ---
+dir="$(fresh_copy corrupt-json)"
+echo "{not valid json" > "$dir/profiles.json"
+assert_case "corrupt-json" 1 "not valid JSON" "$dir"
+
+echo ""
+echo "$PASS passed, $FAIL failed."
+[ "$FAIL" -eq 0 ]

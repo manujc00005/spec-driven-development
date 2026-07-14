@@ -26,7 +26,7 @@
 
 ---
 
-This repository turns [Claude Code](https://claude.com/claude-code) into a process-driven engineering environment: **43 skills** (slash commands), **11 hook families** (tool-call-level guardrails), **17 document templates**, **2 orchestration agents**, and a **profile-aware installer** — all versioned, reviewable, and installed from a single source of truth.
+This repository turns [Claude Code](https://claude.com/claude-code) into a process-driven engineering environment: **<!-- count:skills-total -->43<!-- /count --> skills** (slash commands), **<!-- count:hook-families-total -->11<!-- /count --> hook families** (tool-call-level guardrails), **<!-- count:templates-total -->17<!-- /count --> document templates**, **<!-- count:agents-total -->2<!-- /count --> orchestration agents**, and a **profile-aware installer** — all versioned, reviewable, and installed from a single source of truth.
 
 ---
 
@@ -339,9 +339,9 @@ Profiles control which skills, hooks, templates, and agents get installed, decla
 
 | Profile | Status | What it adds |
 |---|---|---|
-| `core` | Always installed | Full SDD lifecycle, guardrails, generic reviews, orchestration (31 skills, 5 hooks, 12 templates, 2 agents) |
-| `java-spring-backend` | **Default** | 7 review skills (JPA/transactions, Spring REST, Spring Security, JVM performance, database, API, backend), 3 hooks, 6 context templates. Maven primary, Gradle fallback |
-| `messaging-event-driven` | Optional | `event-driven-reviewer` (Kafka/RabbitMQ/ActiveMQ, outbox, saga, DLQ) + `microservices-patterns-reviewer` (boundaries, resilience, contracts), 2 templates |
+| `core` | Always installed | Full SDD lifecycle, guardrails, generic reviews, orchestration (<!-- count:core-skills -->31<!-- /count --> skills, <!-- count:core-hooks -->5<!-- /count --> hooks, <!-- count:core-templates -->12<!-- /count --> templates, <!-- count:core-agents -->2<!-- /count --> agents) |
+| `java-spring-backend` | **Default** | <!-- count:java-spring-backend-skills -->7<!-- /count --> review skills (JPA/transactions, Spring REST, Spring Security, JVM performance, database, API, backend), <!-- count:java-spring-backend-hooks -->3<!-- /count --> hooks, <!-- count:java-spring-backend-templates -->6<!-- /count --> context templates. Maven primary, Gradle fallback |
+| `messaging-event-driven` | Optional | `event-driven-reviewer` (Kafka/RabbitMQ/ActiveMQ, outbox, saga, DLQ) + `microservices-patterns-reviewer` (boundaries, resilience, contracts), <!-- count:messaging-event-driven-templates -->2<!-- /count --> templates |
 | `next-prisma-web` | Optional | Frontend/SEO/privacy/database reviews + `ts-check`/`eslint-fix`/`prettier-format` hooks (Prisma-specific items still planned) |
 | `payments-fintech` | Optional overlay | **Nothing shipped yet** — Stripe/idempotency reviewers are planned entries only |
 | `blockchain-crypto` | **Disabled** | Placeholder. The installer refuses to install it — requesting it explicitly is a hard error by design |
@@ -458,6 +458,8 @@ The same discipline the workflow demands from code applies to the tooling itself
 - Only two hooks modify files at all (`eslint-fix`, `prettier-format`), both running the project's own configured formatter, and only if that config exists.
 - `.sh` hooks are dependency-free: no `jq`, no `python3` — JSON parsing goes through [`hooks/lib/claude-json.sh`](hooks/lib/claude-json.sh).
 
+**Continuous integration** — [`scripts/check-consistency.sh`](scripts/check-consistency.sh) runs on every push and pull request ([`.github/workflows/consistency.yml`](.github/workflows/consistency.yml)) and fails the build if `profiles.json`, the on-disk skills/hooks/templates/agents, the settings-template hook wiring, or the count claims in this README (marked with `<!-- count:key -->N<!-- /count -->` comments) drift apart. Run it locally with `bash scripts/check-consistency.sh`.
+
 **Graphify degrades gracefully** — the Graphify-aware skills and hook use `GRAPH_REPORT.md` (produced by an external, optional tool) when present, and fall back to bounded heuristic scanning when absent. Nothing fails without it:
 
 ```mermaid
@@ -488,12 +490,12 @@ Counted from this repository, not aspirational:
 
 | Category | Count | Detail |
 |---|---|---|
-| Skills | **43** | Every slash command referenced in this README has a `SKILL.md` in [`skills/`](skills/) |
-| Hook families | **11** (22 scripts) | Each ships as a `.ps1` + `.sh` pair; shared bash JSON helper in `hooks/lib/` |
-| SDD lifecycle templates | **7** | `specs/_templates/` |
-| Project-context templates | **10** | `docs/_templates/` |
-| Agents | **2** | `deep-reasoner` (Opus, read-only), `fast-worker` (Sonnet, bounded) |
-| Profiles | **6** | `core`, `java-spring-backend` (default), `messaging-event-driven`, `next-prisma-web`, `payments-fintech` (planned-only), `blockchain-crypto` (disabled) |
+| Skills | **<!-- count:skills-total -->43<!-- /count -->** | Every slash command referenced in this README has a `SKILL.md` in [`skills/`](skills/) |
+| Hook families | **<!-- count:hook-families-total -->11<!-- /count -->** (<!-- count:hook-scripts-total -->22<!-- /count --> scripts) | Each ships as a `.ps1` + `.sh` pair; shared bash JSON helper in `hooks/lib/` |
+| SDD lifecycle templates | **<!-- count:specs-templates-total -->7<!-- /count -->** | `specs/_templates/` |
+| Project-context templates | **<!-- count:docs-templates-total -->10<!-- /count -->** | `docs/_templates/` |
+| Agents | **<!-- count:agents-total -->2<!-- /count -->** | `deep-reasoner` (Opus, read-only), `fast-worker` (Sonnet, bounded) |
+| Profiles | **<!-- count:profiles-total -->6<!-- /count -->** | `core`, `java-spring-backend` (default), `messaging-event-driven`, `next-prisma-web`, `payments-fintech` (planned-only), `blockchain-crypto` (disabled) |
 | Docs | **3 guides** | `INSTALL.md`, `SDD-ORCHESTRATION.md`, `hooks/README.md` + per-directory READMEs |
 | Installers | **4 scripts** | `install.ps1/.sh`, `link-project.ps1/.sh` — dry-run, backups, profile-aware |
 

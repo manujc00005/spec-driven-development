@@ -1,0 +1,22 @@
+name: Consistency check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run consistency checker
+        run: bash scripts/check-consistency.sh
+
+      - name: Run consistency checker self-test
+        run: bash scripts/check-consistency.test.sh
