@@ -57,3 +57,39 @@
 **Reasoning:** Creating a constitution is its own scoped piece of work (and arguably a backlog candidate); bundling it here would violate scope control.
 
 **Consequences:** Future features keep relying on distributed conventions until a constitution is written deliberately.
+
+### D005 - Auto-fix only for README count markers
+
+**Date:** 2026-07-14
+
+**Status:** Accepted
+
+**Context:** Many drift classes detected by the checker could theoretically be auto-fixed (e.g., missing `.ps1` for a hook, or promoting a planned item to shipped in `profiles.json`). FR-012 adds a `--fix` flag, but scoping it narrowly reduces risk and decision-making burden.
+
+**Decision:** The `--fix` flag auto-corrects only README count markers (updating the number between `<!-- count:<key> -->` markers). All other violations (orphans, missing shipped artifacts, planned items with files, incomplete hook pairs, settings wiring errors) are reported but not auto-fixed; if any non-auto-fixable violations exist, the script exits 1 and does not modify README.
+
+**Reasoning:** README count updates are deterministic (read computed value, overwrite marker) and low-risk (one file, reversible by git). Deciding whether an orphan should be deleted or added to profiles, whether a .ps1 should be created with what template, or whether a planned item is ready to ship requires human judgment and potentially affects profiles.json (repo manifest). `--fix` is a convenience for the maintainer's local workflow, not a substitute for careful review.
+
+**Consequences:** The maintainer still reviews and approves all non-cosmetic changes manually. The `--fix` flag saves time on README maintenance during development but does not change merge review requirements.
+
+### D006 - Spec updated: add auto-fix for README count markers
+
+**Date:** 2026-07-14
+
+**Status:** Accepted
+
+**Context:**
+
+After the initial spec was created (FR-001 through FR-011), stakeholder feedback requested a `--fix` mode to auto-correct safe violations, reducing maintainer friction during local development.
+
+**Decision:**
+
+Added FR-012 (auto-fix capability) and AC-010 (acceptance criteria for --fix) to SPEC.md. The implementation scope remains read-only for non-fixable violations; only README count markers (deterministic, low-risk) are auto-corrected. Updated PLAN.md and TASKS.md to reflect the new requirement. D005 documents the design rationale for limiting auto-fix to README counts.
+
+**Reasoning:**
+
+The `--fix` flag provides genuine value (saves maintainer time on repetitive marker updates) without introducing risk (marker updates are deterministic and reversible). Scoping to README counts avoids complex decision-making around artifacts (delete or add to profiles?) while still delivering the core benefit.
+
+**Consequences:**
+
+T005 and T006 marked `[NEEDS REVIEW]` and now cover AC-010. Test strategy in PLAN.md updated to include --fix test scenarios. Implementation is incomplete until T005/T006 are re-implemented to support the `--fix` flag and write capabilities.

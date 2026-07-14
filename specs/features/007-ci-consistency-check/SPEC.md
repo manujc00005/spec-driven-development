@@ -2,7 +2,7 @@
 
 ## Status
 
-In Progress
+Done
 
 ## Problem
 
@@ -36,7 +36,7 @@ A single consistency checker script, run locally and in GitHub Actions on every 
 
 ## Desired behavior
 
-`scripts/check-consistency.sh` exits 0 when everything is aligned, and exits 1 printing one line per violation (category, item, expected vs found) when anything drifts. A GitHub Actions workflow runs it on every push and pull request to `main`.
+`scripts/check-consistency.sh` exits 0 when everything is aligned, and exits 1 printing one line per violation (category, item, expected vs found) when anything drifts. With `--fix` flag, the script auto-corrects safe violations (README counts) and reports them with `[FIXED]` prefix, while non-auto-fixable violations still cause exit 1 and block changes. A GitHub Actions workflow runs it (without `--fix`) on every push and pull request to `main`.
 
 ## Functional requirements
 
@@ -51,6 +51,7 @@ A single consistency checker script, run locally and in GitHub Actions on every 
 - FR-009 (hook parity): Every hook family on disk must have both the `.sh` and the `.ps1` variant, whether or not it is referenced by a profile.
 - FR-010 (CI): A GitHub Actions workflow at `.github/workflows/consistency.yml` runs the checker on `push` and `pull_request` targeting `main`, on `ubuntu-latest`, and fails the build when the checker exits non-zero.
 - FR-011 (sanity): `profiles.json` must parse as valid JSON; a profile with `"disabled": true` must have empty shipped arrays.
+- FR-012 (auto-fix): When invoked with `--fix` flag, the script auto-corrects safe violations: (a) updates README count markers to match computed values; (b) reports non-auto-fixable violations (orphans, missing artifacts, planned drift, hook pairs, wiring) as before and exits 1. With `--fix`, fixable violations are corrected and reported with `[FIXED]` prefix; non-fixable violations prevent the script from writing changes and cause exit 1.
 
 ## Non-functional requirements
 
@@ -61,7 +62,7 @@ A single consistency checker script, run locally and in GitHub Actions on every 
 
 ## API / Interface changes
 
-- New command: `scripts/check-consistency.sh` (exit 0 = consistent, exit 1 = drift, exit 2 = usage/internal error).
+- New command: `scripts/check-consistency.sh [--fix]` (exit 0 = consistent, exit 1 = drift or uncorrectable violations, exit 2 = usage/internal error). Without `--fix`, reports violations. With `--fix`, auto-corrects safe violations (README counts) and reports non-auto-fixable violations; if any non-fixable violations exist, no changes are written.
 - New CI workflow: `.github/workflows/consistency.yml`.
 - `README.md` gains invisible HTML marker comments around count claims and a short "CI" section documenting the check.
 
@@ -90,7 +91,8 @@ None.
 - AC-006: Changing a marked README count to a wrong number makes the script exit 1 showing expected vs found. (FR-008)
 - AC-007: Deleting one variant of an unshipped hook pair makes the script exit 1. (FR-009)
 - AC-008: The GitHub Actions workflow runs the script on push and PR to `main` and reports failure when the script fails. (FR-010)
-- AC-009: Corrupting `profiles.json` (invalid JSON) makes the script exit 1 with a parse error message, not a stack trace. (FR-011)
+- AC-009: Corrupting `profiles.json` (invalid JSON) makes the script exit 1 with a parse error message, not a stack trace.
+- AC-010: Running with `--fix` flag auto-corrects README count markers to match computed values and reports `[FIXED] readme key — updated from N to M`. All non-auto-fixable violations (orphans, missing shipped, planned drift, hook pairs, wiring) are still detected and reported; if any exist, the script exits 1 without modifying README. (FR-011)
 
 ## Test scenarios
 

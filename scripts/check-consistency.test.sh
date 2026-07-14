@@ -45,6 +45,36 @@ assert_case() {
   PASS=$((PASS + 1))
 }
 
+assert_case_fix() {
+  local name="$1" expect_exit="$2" expect_grep="$3" dir="$4" check_marker="$5"
+  local out actual_exit marker_line
+  out="$("$CHECKER" --fix "$dir" 2>&1)"
+  actual_exit=$?
+  if [ "$actual_exit" -ne "$expect_exit" ]; then
+    echo "[FAIL] $name: expected exit $expect_exit, got $actual_exit"
+    echo "       output: $out"
+    FAIL=$((FAIL + 1))
+    return
+  fi
+  if [ -n "$expect_grep" ] && ! grep -qF "$expect_grep" <<< "$out"; then
+    echo "[FAIL] $name: expected output to contain '$expect_grep'"
+    echo "       output: $out"
+    FAIL=$((FAIL + 1))
+    return
+  fi
+  # If check_marker is specified, verify it was actually written to README.md
+  if [ -n "$check_marker" ]; then
+    marker_line="<!-- count:${check_marker} -->"
+    if ! grep -qF "$marker_line" "$dir/README.md"; then
+      echo "[FAIL] $name: marker '$check_marker' not found in README.md after fix"
+      FAIL=$((FAIL + 1))
+      return
+    fi
+  fi
+  echo "[PASS] $name"
+  PASS=$((PASS + 1))
+}
+
 # --- control case: unmodified copy must pass clean ---
 dir="$(fresh_copy clean)"
 assert_case "clean-repo" 0 "Consistency check passed" "$dir"
@@ -58,6 +88,11 @@ dir="$(fresh_copy missing-shipped-hook)"
 rm -f "$dir/hooks/maven-compile.ps1"
 assert_case "missing-shipped-hook-variant" 1 "[shipped-hook] maven-compile" "$dir"
 
+# --- FR-001..004 / FR-009: shipped hook missing one variant (specific test for AC-002/FR-002) ---
+dir="$(fresh_copy shipped-hook-missing-sh)"
+rm -f "$dir/hooks/git-guardrails.sh"
+assert_case "shipped-hook-missing-sh-variant" 1 "[shipped-hook] git-guardrails" "$dir"
+
 dir="$(fresh_copy missing-shipped-template)"
 rm -f "$dir/specs/_templates/SPEC.md"
 assert_case "missing-shipped-template" 1 "[shipped-template] SPEC.md" "$dir"
@@ -66,11 +101,23 @@ dir="$(fresh_copy missing-shipped-agent)"
 rm -f "$dir/agents/deep-reasoner.md"
 assert_case "missing-shipped-agent" 1 "[shipped-agent] deep-reasoner" "$dir"
 
+# --- FR-001 edge case: skill directory exists but no SKILL.md counts as missing ---
+dir="$(fresh_copy shipped-skill-dir-no-skillmd)"
+mkdir -p "$dir/skills/sdd-test-empty"  # Create directory but no SKILL.md inside
+assert_case "shipped-skill-missing-skillmd" 1 "[shipped-skill] sdd-test-empty" "$dir"
+
 # --- FR-005: orphans per category ---
 dir="$(fresh_copy orphan-skill)"
 mkdir -p "$dir/skills/zzz-orphan-test"
 echo "# orphan" > "$dir/skills/zzz-orphan-test/SKILL.md"
 assert_case "orphan-skill" 1 "[orphan-skill] zzz-orphan-test" "$dir"
+
+# --- FR-001 edge case: skill dir without SKILL.md but NOT in profiles.json should not be orphan ---
+dir="$(fresh_copy skill-dir-without-skillmd-not-shipped)"
+mkdir -p "$dir/skills/zzz-empty-dir"
+# Don't add to profiles.json, and don't create SKILL.md
+# Should NOT report orphan (because directory without SKILL.md doesn't count as existing)
+assert_case "skill-empty-dir-not-shipped" 0 "Consistency check passed" "$dir"
 
 dir="$(fresh_copy orphan-hook)"
 echo "# orphan" > "$dir/hooks/zzz-orphan-test.sh"
@@ -116,10 +163,47 @@ dir="$(fresh_copy readme-missing-marker)"
 sed -i 's/<!-- count:agents-total -->2<!-- \/count -->/2/g' "$dir/README.md"
 assert_case "readme-missing-marker" 1 "required count marker missing" "$dir"
 
+# --- FR-008 edge case: stale marker (key in README with no matching computed value) ---
+dir="$(fresh_copy readme-stale-marker)"
+# Append a marker with a key that doesn't exist in computed values
+echo "<!-- count:fake-unknown-key -->9<!-- /count -->" >> "$dir/README.md"
+assert_case "readme-stale-marker-key" 1 "not a recognized computed count" "$dir"
+
 # --- FR-011: corrupt profiles.json ---
 dir="$(fresh_copy corrupt-json)"
 echo "{not valid json" > "$dir/profiles.json"
 assert_case "corrupt-json" 1 "not valid JSON" "$dir"
+
+# --- FR-012 / AC-010: --fix with wrong README count should auto-correct ---
+dir="$(fresh_copy fix-readme-marker)"
+sed -i 's/<!-- count:skills-total -->43<!-- \/count -->/<!-- count:skills-total -->44<!-- \/count -->/' "$dir/README.md"
+sed -i 's/<!-- count:hook-families-total -->12<!-- \/count -->/<!-- count:hook-families-total -->99<!-- \/count -->/' "$dir/README.md"
+assert_case_fix "fix-readme-marker" 0 "[FIXED] readme" "$dir" "skills-total"
+# Verify BOTH markers were actually updated with correct values
+skills_marker=$(grep "<!-- count:skills-total -->" "$dir/README.md" | grep -oE "[0-9]+")
+hooks_marker=$(grep "<!-- count:hook-families-total -->" "$dir/README.md" | grep -oE "[0-9]+")
+if [ "$skills_marker" != "43" ]; then
+  echo "[FAIL] fix-readme-marker: skills-total marker not updated correctly (expected 43, got $skills_marker)"
+  FAIL=$((FAIL + 1))
+fi
+if [ "$hooks_marker" != "12" ]; then
+  echo "[FAIL] fix-readme-marker: hook-families-total marker not updated correctly (expected 12, got $hooks_marker)"
+  FAIL=$((FAIL + 1))
+fi
+
+# --- FR-012 / AC-010: --fix with non-auto-fixable violations blocks changes ---
+dir="$(fresh_copy fix-blocked-by-orphan)"
+mkdir -p "$dir/skills/zzz-orphan-test"
+echo "# orphan" > "$dir/skills/zzz-orphan-test/SKILL.md"
+# Also make README have wrong count to test that it WON'T be fixed
+sed -i 's/<!-- count:skills-total -->43<!-- \/count -->/<!-- count:skills-total -->44<!-- \/count -->/' "$dir/README.md"
+assert_case_fix "fix-blocked-by-orphan" 1 "[orphan-skill] zzz-orphan-test" "$dir" ""
+# Verify the README marker was NOT updated (should still be wrong 44)
+actual_marker=$(grep "<!-- count:skills-total -->" "$dir/README.md" | grep -oE "[0-9]+")
+if [ "$actual_marker" != "44" ]; then
+  echo "[FAIL] fix-blocked-by-orphan: README was incorrectly modified (expected 44, got $actual_marker)"
+  FAIL=$((FAIL + 1))
+fi
 
 echo ""
 echo "$PASS passed, $FAIL failed."

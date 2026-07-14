@@ -8,32 +8,46 @@
 # Exit codes: 0 = consistent, 1 = drift found (or profiles.json invalid),
 # 2 = internal error (python3 missing).
 #
-# Usage: scripts/check-consistency.sh [repo_root]
+# Usage: scripts/check-consistency.sh [--fix] [repo_root]
 #   repo_root defaults to the repo containing this script. An explicit
 #   argument lets the test harness (check-consistency.test.sh) point the
 #   checker at a mutated temp copy of the repo.
+#   With --fix, auto-corrects safe violations (README count markers) and
+#   reports them with [FIXED] prefix. Non-auto-fixable violations block changes
+#   and cause exit 1.
 #
 # See specs/features/007-ci-consistency-check/SPEC.md for the full list of
-# drift classes this script enforces (FR-001..FR-011).
+# drift classes this script enforces (FR-001..FR-011) and FR-012 for --fix.
 
 set -uo pipefail
 
 DEFAULT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-REPO_ROOT="${1:-$DEFAULT_ROOT}"
+FIX_MODE=false
+REPO_ROOT="$DEFAULT_ROOT"
+
+# Parse --fix flag and optional repo_root argument
+if [[ ${1:-} == "--fix" ]]; then
+  FIX_MODE=true
+  REPO_ROOT="${2:-$DEFAULT_ROOT}"
+else
+  REPO_ROOT="${1:-$DEFAULT_ROOT}"
+fi
 
 if ! command -v python3 >/dev/null 2>&1; then
   echo "[ERROR] python3 is required to run this checker (see install.sh for the same dependency)."
   exit 2
 fi
 
-python3 - "$REPO_ROOT" <<'PYEOF'
+python3 - "$REPO_ROOT" "$FIX_MODE" <<'PYEOF'
 import json
 import os
 import re
 import sys
 
 repo_root = sys.argv[1]
+fix_mode = sys.argv[2].lower() == "true"
 errors = []
+fixed_markers = []
 
 
 def err(category, item, message):
@@ -286,6 +300,9 @@ REQUIRED_MARKERS = {
 readme_path = os.path.join(repo_root, "README.md")
 MARKER_RE = re.compile(r"<!-- count:([a-zA-Z0-9_-]+) -->(\d+)<!-- /count -->")
 
+readme_text = None
+found_markers = {}  # {key: (old_value, line_no)}
+
 if not os.path.isfile(readme_path):
     err("readme-count", "README.md", "file not found")
 else:
@@ -297,6 +314,7 @@ else:
         key, value = m.group(1), int(m.group(2))
         line_no = readme_text.count("\n", 0, m.start()) + 1
         seen_keys.add(key)
+        found_markers[key] = (value, line_no)
         if key not in computed:
             err("readme-count", f"{key} (line {line_no})", f"marker present but '{key}' is not a recognized computed count (stale marker?)")
             continue
@@ -307,6 +325,34 @@ else:
     for key in sorted(REQUIRED_MARKERS - seen_keys):
         err("readme-count", key, "required count marker missing from README.md")
 
+    # If --fix mode and no non-auto-fixable violations, update markers in README.
+    if fix_mode and readme_text:
+        non_readme_errors = [e for e in errors if not e.startswith("[readme-count]")]
+
+        if not non_readme_errors:
+            # Safe to fix: no orphans, no wiring issues, etc.
+            # Update markers to computed values.
+            updated_readme = readme_text
+            for key, (old_value, _) in sorted(found_markers.items()):
+                if key in computed:
+                    new_value = computed[key]
+                    if old_value != new_value:
+                        pattern = f"<!-- count:{key} -->\\d+<!-- /count -->"
+                        replacement = f"<!-- count:{key} -->{new_value}<!-- /count -->"
+                        updated_readme = re.sub(pattern, replacement, updated_readme)
+                        fixed_markers.append(f"[FIXED] readme {key} — updated from {old_value} to {new_value}")
+                        # Remove readme-count error for this key from errors list.
+                        errors = [e for e in errors if f"[readme-count] {key}" not in e]
+
+            # Write the updated README.md if any markers were fixed.
+            if fixed_markers:
+                try:
+                    with open(readme_path, "w", encoding="utf-8") as f:
+                        f.write(updated_readme)
+                except Exception as e:
+                    print(f"[ERROR] Failed to write README.md: {e}")
+                    sys.exit(1)
+
 
 # ---------------------------------------------------------------------------
 # Report
@@ -314,11 +360,19 @@ else:
 for e in sorted(errors):
     print(e)
 
+for e in sorted(fixed_markers):
+    print(e)
+
 if errors:
     print(f"\n{len(errors)} error(s) found.")
     sys.exit(1)
 
-print("Consistency check passed: profiles.json, disk artifacts, settings wiring, and README counts are aligned.")
+if fixed_markers:
+    print(f"\n{len(fixed_markers)} marker(s) fixed in README.md.")
+
+if not errors and not fixed_markers:
+    print("Consistency check passed: profiles.json, disk artifacts, settings wiring, and README counts are aligned.")
+
 sys.exit(0)
 PYEOF
 exit $?
