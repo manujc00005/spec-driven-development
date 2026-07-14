@@ -68,7 +68,9 @@
         "REVIEW_REPORT_TEMPLATE.md",
         "PROJECT_CONTEXT.md",
         "TECH_STACK.md",
-        "ARCHITECTURE.md"
+        "ARCHITECTURE.md",
+        "GRAPHIFY.md",
+        "PROJECT_GRAPH.md"
       ],
       "plannedTemplates": []
     },

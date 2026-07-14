@@ -59,6 +59,18 @@ Review, validation against acceptance criteria, final synthesis
    and NOT executed validations, pending risks. Never declare success with unresolved
    failures.
 
+## Optional: Architecture Context with Graphify
+
+Projects may optionally use **Graphify** (external tool) to generate dependency graphs for architecture context:
+
+- **When:** Before `/spec-plan` or `/spec-analyze` on medium/large features (optional accelerator).
+- **What:** If `.graphify/GRAPH_REPORT.md` exists, SDD skills use it to understand module interdependencies and impact.
+- **Graceful degradation:** If Graphify is absent, SDD continues with heuristic analysis. Workflows are unaffected.
+- **Setup:** Run `graphify detect . --scope committed && graphify update .` externally (not auto-installed).
+- **Reference:** See `docs/_templates/GRAPHIFY.md` for optional Graphify integration guide.
+
+Graphify is a productivity accelerator, not a requirement. SDD works fully without it.
+
 ## Cost control
 
 - Fable coordinates/decomposes/synthesizes; Opus only for hard reasoning and high-risk
