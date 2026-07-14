@@ -25,6 +25,7 @@ This repository turns [Claude Code](https://claude.com/claude-code) into a proce
 - [Profiles](#profiles)
 - [Installation](#installation)
 - [Usage examples](#usage-examples)
+- [Worked examples](#worked-examples)
 - [Safety model](#safety-model)
 - [What is shipped now](#what-is-shipped-now)
 - [Roadmap](#roadmap)
@@ -308,6 +309,14 @@ Do not modify code.
 
 ---
 
+## Worked examples
+
+This repository includes professional worked examples demonstrating the SDD framework on real engineering problems:
+
+- **[Payment Webhook Idempotency](examples/002-payment-webhook-idempotency/)** — SDD applied to a Java/Spring webhook receiver pattern: constraint-based idempotency (UNIQUE constraint, not locks), HMAC signature verification, proper HTTP status codes for retry control (200, 202, 400, 401), and security-first design (verify before process). Includes complete SPEC, PLAN, TASKS, DECISIONS, 14 test cases, database migration, and review artifacts. Educational example showing the pattern, not a complete production system.
+
+---
+
 ## Safety model
 
 The same discipline the workflow demands from code applies to the tooling itself.
@@ -364,10 +373,9 @@ This repo dogfoods its own workflow: the phases that built it are specced under 
 - Messaging/event-driven + microservices-patterns profile (2 reviewers, 2 templates)
 - Graphify-aware context layer (3 skills + 1 hook, graceful degradation)
 - Multi-model orchestration (`/sdd-orchestrate`, 2 agents, fallback policy, rollback docs)
+- Worked example: Payment Webhook Idempotency ([`examples/002-payment-webhook-idempotency/`](examples/002-payment-webhook-idempotency/)) — Java/Spring webhook receiver with constraint-based idempotency, full spec/plan/tasks/decisions, 14 tests, database migration, and review artifacts
 
 **Planned**
-
-- Worked end-to-end example in [`examples/`](examples/) (a real feature carried through the whole workflow)
 - `payments-fintech` profile content (`stripe-payments-reviewer`, `payment-idempotency-reviewer`)
 - Prisma/Next.js-specific reviewers for `next-prisma-web`
 - Defensive hooks: `secret-scan`, `sensitive-file-guard`, `messaging-review-reminder`, `openapi-contract-reminder`
