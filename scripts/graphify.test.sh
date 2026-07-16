@@ -60,6 +60,15 @@ run_hook() {
   HOOK_SECS=$((end - start))
 }
 
+# Same, but with a minimal PATH that masks any real graphify CLI installed on
+# this machine — for the "no CLI" cases (stub removed is not enough when a
+# global @sentropic/graphify exists, e.g. under an nvm bin dir).
+run_hook_nocli() {
+  local dir="$1"; shift
+  HOOK_OUT="$(cd "$dir" && env PATH="$dir/stubbin:/usr/bin:/bin" "$@" bash "$HOOK" 2>&1)"
+  HOOK_EXIT=$?
+}
+
 assert_eq() {
   local name="$1" expected="$2" actual="$3"
   if [ "$expected" = "$actual" ]; then
@@ -126,10 +135,6 @@ wait_for_invocation() {
   return 1
 }
 
-if command -v graphify >/dev/null 2>&1; then
-  echo "[warn] a real graphify CLI is on PATH — the no-CLI cases below are unreliable on this machine"
-fi
-
 # --- Hook: canonical path detection (AC-001) ---
 
 # Fresh report in .graphify/ → silent, exit 0. Tracer case for the path fix.
@@ -144,7 +149,7 @@ assert_empty "fresh canonical report: silent" "$HOOK_OUT"
 # Absent report, no CLI → reminder, exit 0.
 sandbox="$(make_sandbox absent-no-cli)"
 rm "$sandbox/stubbin/graphify"
-run_hook "$sandbox"
+run_hook_nocli "$sandbox"
 assert_eq "absent report, no CLI: exit 0" 0 "$HOOK_EXIT"
 assert_contains "absent report, no CLI: reminder" "GRAPH_REPORT.md not found" "$HOOK_OUT"
 
@@ -154,7 +159,7 @@ rm "$sandbox/stubbin/graphify"
 mkdir -p "$sandbox/.graphify"
 touch "$sandbox/.graphify/GRAPH_REPORT.md"
 backdate_days 9 "$sandbox/.graphify/GRAPH_REPORT.md"
-run_hook "$sandbox"
+run_hook_nocli "$sandbox"
 assert_eq "stale report, no CLI: exit 0" 0 "$HOOK_EXIT"
 assert_contains "stale report, no CLI: warning" "days older than the newest source file" "$HOOK_OUT"
 
@@ -173,7 +178,7 @@ sandbox="$(make_sandbox legacy-stale)"
 rm "$sandbox/stubbin/graphify"
 touch "$sandbox/GRAPH_REPORT.md"
 backdate_days 9 "$sandbox/GRAPH_REPORT.md"
-run_hook "$sandbox"
+run_hook_nocli "$sandbox"
 assert_eq "legacy root stale: exit 0" 0 "$HOOK_EXIT"
 assert_contains "legacy root stale: warning" "days older than the newest source file" "$HOOK_OUT"
 
@@ -326,7 +331,8 @@ assert_file_exists "scope fallback: report generated" "$sandbox/.graphify/GRAPH_
 # No CLI, npm present, no --yes, closed stdin → declines install gracefully, exit 0.
 sandbox="$(make_sandbox setup-decline)"
 rm "$sandbox/stubbin/graphify"
-SETUP_OUT="$(cd "$sandbox" && bash "$SETUP" --project-dir "$sandbox" --central-dir "$TMP_BASE/no-central" < /dev/null 2>&1)"
+printf '#!/usr/bin/env bash\nexit 0\n' > "$sandbox/stubbin/npm" && chmod +x "$sandbox/stubbin/npm"
+SETUP_OUT="$(cd "$sandbox" && env PATH="$sandbox/stubbin:/usr/bin:/bin" bash "$SETUP" --project-dir "$sandbox" --central-dir "$TMP_BASE/no-central" < /dev/null 2>&1)"
 SETUP_EXIT=$?
 assert_eq "setup non-interactive decline: exit 0" 0 "$SETUP_EXIT"
 assert_contains "setup non-interactive decline: skip message" "Skipped install" "$SETUP_OUT"
