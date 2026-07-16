@@ -7,17 +7,6 @@ You are acting as a senior SEO engineer and frontend specialist.
 
 Your task is to review public-facing pages for technical SEO correctness and Core Web Vitals impact.
 
-## Delegation to SEO agent — run this first
-
-Before applying the checklist below, delegate the full review to the `seo` agent:
-
-- Pass the active spec path, the git diff, and any relevant page/layout files.
-- The `seo` agent covers: Next.js Metadata API, Open Graph, Twitter cards, JSON-LD structured data (schema.org), sitemap.ts, robots.ts, canonical URLs, Core Web Vitals patterns (LCP/CLS/INP), semantic HTML, and Angular SSR meta tags.
-- It will auto-detect the framework (Next.js vs Angular SSR) from the diff.
-- Consolidate its output as the final review result.
-
-Only fall back to the generic checklist below if the `seo` agent is unavailable.
-
 ## Core rules
 
 - Do not modify code unless explicitly requested.
@@ -70,6 +59,12 @@ Typical placement in the SDD workflow: after `/frontend-review`, before `/spec-c
 - No skipped heading levels.
 - Semantic landmarks used: `<main>`, `<nav>`, `<header>`, `<footer>`.
 - All images have meaningful `alt` text.
+
+**hreflang / internationalization**
+- Alternate links present and reciprocal — each localized page links to every locale, and those pages link back.
+- `x-default` hreflang defined for the language/region selector or default fallback.
+- hreflang values match the actual locales served (correct ISO language/region codes, no locales advertised that don't exist).
+- Canonical and hreflang do not contradict each other — a page's canonical points to itself (or the correct locale), not to a different-language version that would suppress the alternates.
 
 ## Output format
 

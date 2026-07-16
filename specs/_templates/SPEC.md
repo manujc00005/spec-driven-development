@@ -76,3 +76,7 @@ Describe tables, entities, migrations, indexes, schemas, or persistence changes.
 ## Open questions
 
 -
+
+## Contracted services
+
+Read `specs/SERVICES.md`. If present, list declared services. If absent: "Contracted services not declared → all billable add-ons treated as NOT contracted (conservative default). Run `/project-init` to declare them."
