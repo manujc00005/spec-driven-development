@@ -24,6 +24,17 @@ fresh_copy() {
   echo "$dst"
 }
 
+# Portable in-place sed: GNU (-i) vs BSD/macOS (-i '') — GNU sed accepts
+# --version, BSD sed does not.
+sed_inplace() {
+  local expr="$1" file="$2"
+  if sed --version >/dev/null 2>&1; then
+    sed -i "$expr" "$file"
+  else
+    sed -i '' "$expr" "$file"
+  fi
+}
+
 assert_case() {
   local name="$1" expect_exit="$2" expect_grep="$3" dir="$4"
   local out actual_exit
@@ -104,6 +115,13 @@ assert_case "missing-shipped-agent" 1 "[shipped-agent] deep-reasoner" "$dir"
 # --- FR-001 edge case: skill directory exists but no SKILL.md counts as missing ---
 dir="$(fresh_copy shipped-skill-dir-no-skillmd)"
 mkdir -p "$dir/skills/sdd-test-empty"  # Create directory but no SKILL.md inside
+python3 - "$dir/profiles.json" <<'PYMUT'
+import json, sys
+path = sys.argv[1]
+data = json.load(open(path))
+data["profiles"]["core"]["skills"].append("sdd-test-empty")
+json.dump(data, open(path, "w"), indent=2)
+PYMUT
 assert_case "shipped-skill-missing-skillmd" 1 "[shipped-skill] sdd-test-empty" "$dir"
 
 # --- FR-005: orphans per category ---
@@ -145,22 +163,22 @@ assert_case "hook-parity" 1 "[hook-parity] zzz-parity-test" "$dir"
 
 # --- FR-007: settings wiring references a nonexistent hook ---
 dir="$(fresh_copy settings-wiring-bad-path)"
-sed -i 's/git-guardrails\.ps1/nonexistent-hook.ps1/' "$dir/settings.template.json"
+sed_inplace 's/git-guardrails\.ps1/nonexistent-hook.ps1/' "$dir/settings.template.json"
 assert_case "settings-wiring-bad-path" 1 "[settings-wiring] settings.template.json:nonexistent-hook.ps1" "$dir"
 
 # --- FR-007: forbidden hook pair wired together ---
 dir="$(fresh_copy settings-wiring-forbidden-pair)"
-sed -i 's#\(bash \${CLAUDE_PROJECT_DIR}/.claude/hooks/\)java-build-test-guard\.sh#\1maven-compile.sh", "timeout": 60, "statusMessage": "Maven compile..." }, { "type": "command", "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/java-build-test-guard.sh#' "$dir/settings.template.sh.json"
+sed_inplace 's#\(bash \${CLAUDE_PROJECT_DIR}/.claude/hooks/\)java-build-test-guard\.sh#\1maven-compile.sh", "timeout": 60, "statusMessage": "Maven compile..." }, { "type": "command", "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/java-build-test-guard.sh#' "$dir/settings.template.sh.json"
 assert_case "settings-wiring-forbidden-pair" 1 "wires both 'maven-compile' and 'java-build-test-guard'" "$dir"
 
 # --- FR-008: wrong README count ---
 dir="$(fresh_copy readme-wrong-count)"
-sed -i 's/<!-- count:skills-total -->43<!-- \/count -->/<!-- count:skills-total -->44<!-- \/count -->/' "$dir/README.md"
+sed_inplace 's/<!-- count:skills-total -->43<!-- \/count -->/<!-- count:skills-total -->44<!-- \/count -->/' "$dir/README.md"
 assert_case "readme-wrong-count" 1 "readme-count] skills-total" "$dir"
 
 # --- FR-008: missing required README marker ---
 dir="$(fresh_copy readme-missing-marker)"
-sed -i 's/<!-- count:agents-total -->2<!-- \/count -->/2/g' "$dir/README.md"
+sed_inplace 's/<!-- count:agents-total -->2<!-- \/count -->/2/g' "$dir/README.md"
 assert_case "readme-missing-marker" 1 "required count marker missing" "$dir"
 
 # --- FR-008 edge case: stale marker (key in README with no matching computed value) ---
@@ -176,18 +194,18 @@ assert_case "corrupt-json" 1 "not valid JSON" "$dir"
 
 # --- FR-012 / AC-010: --fix with wrong README count should auto-correct ---
 dir="$(fresh_copy fix-readme-marker)"
-sed -i 's/<!-- count:skills-total -->43<!-- \/count -->/<!-- count:skills-total -->44<!-- \/count -->/' "$dir/README.md"
-sed -i 's/<!-- count:hook-families-total -->12<!-- \/count -->/<!-- count:hook-families-total -->99<!-- \/count -->/' "$dir/README.md"
+sed_inplace 's/<!-- count:skills-total -->43<!-- \/count -->/<!-- count:skills-total -->44<!-- \/count -->/' "$dir/README.md"
+sed_inplace 's/<!-- count:hook-families-total -->11<!-- \/count -->/<!-- count:hook-families-total -->99<!-- \/count -->/' "$dir/README.md"
 assert_case_fix "fix-readme-marker" 0 "[FIXED] readme" "$dir" "skills-total"
 # Verify BOTH markers were actually updated with correct values
-skills_marker=$(grep "<!-- count:skills-total -->" "$dir/README.md" | grep -oE "[0-9]+")
-hooks_marker=$(grep "<!-- count:hook-families-total -->" "$dir/README.md" | grep -oE "[0-9]+")
+skills_marker=$(grep -oE "<!-- count:skills-total -->[0-9]+" "$dir/README.md" | head -1 | grep -oE "[0-9]+")
+hooks_marker=$(grep -oE "<!-- count:hook-families-total -->[0-9]+" "$dir/README.md" | head -1 | grep -oE "[0-9]+")
 if [ "$skills_marker" != "43" ]; then
   echo "[FAIL] fix-readme-marker: skills-total marker not updated correctly (expected 43, got $skills_marker)"
   FAIL=$((FAIL + 1))
 fi
-if [ "$hooks_marker" != "12" ]; then
-  echo "[FAIL] fix-readme-marker: hook-families-total marker not updated correctly (expected 12, got $hooks_marker)"
+if [ "$hooks_marker" != "11" ]; then
+  echo "[FAIL] fix-readme-marker: hook-families-total marker not updated correctly (expected 11, got $hooks_marker)"
   FAIL=$((FAIL + 1))
 fi
 
@@ -196,10 +214,10 @@ dir="$(fresh_copy fix-blocked-by-orphan)"
 mkdir -p "$dir/skills/zzz-orphan-test"
 echo "# orphan" > "$dir/skills/zzz-orphan-test/SKILL.md"
 # Also make README have wrong count to test that it WON'T be fixed
-sed -i 's/<!-- count:skills-total -->43<!-- \/count -->/<!-- count:skills-total -->44<!-- \/count -->/' "$dir/README.md"
+sed_inplace 's/<!-- count:skills-total -->43<!-- \/count -->/<!-- count:skills-total -->44<!-- \/count -->/' "$dir/README.md"
 assert_case_fix "fix-blocked-by-orphan" 1 "[orphan-skill] zzz-orphan-test" "$dir" ""
 # Verify the README marker was NOT updated (should still be wrong 44)
-actual_marker=$(grep "<!-- count:skills-total -->" "$dir/README.md" | grep -oE "[0-9]+")
+actual_marker=$(grep -oE "<!-- count:skills-total -->[0-9]+" "$dir/README.md" | head -1 | grep -oE "[0-9]+")
 if [ "$actual_marker" != "44" ]; then
   echo "[FAIL] fix-blocked-by-orphan: README was incorrectly modified (expected 44, got $actual_marker)"
   FAIL=$((FAIL + 1))
