@@ -553,7 +553,7 @@ if ($ProfileFiltering) {
     Copy-TreeSafely $agentsSrc $agentsDst "agents" $CentralDir
 }
 
-foreach ($rootFile in @("CLAUDE.md.example", "settings.template.json")) {
+foreach ($rootFile in @("CLAUDE.md.example", "settings.template.json", "settings.template.sh.json")) {
     $src = Join-Path $RepoRoot $rootFile
     $dst = Join-Path $CentralDir $rootFile
     if (-not (Test-Path $src)) { continue }

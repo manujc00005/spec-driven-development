@@ -553,7 +553,7 @@ else
   copy_tree_safely "$REPO_ROOT/agents" "$CENTRAL_DIR/agents" "agents" "$CENTRAL_DIR"
 fi
 
-for root_file in CLAUDE.md.example settings.template.json; do
+for root_file in CLAUDE.md.example settings.template.json settings.template.sh.json; do
   src="$REPO_ROOT/$root_file"
   dst="$CENTRAL_DIR/$root_file"
   [ -f "$src" ] || continue
@@ -585,6 +585,10 @@ done
 echo ""
 log "NOTE: CLAUDE.md.example is never installed as CLAUDE.md. If $CENTRAL_DIR has no"
 log "CLAUDE.md yet, copy CLAUDE.md.example to CLAUDE.md yourself and edit it there."
+echo ""
+log "NOTE: hooks do not run until they are wired into a project's .claude/settings.json."
+log "After linking a project (link-project.sh), run scripts/wire-hooks.sh --project-dir <path>"
+log "to merge the shipped hook wiring there (explicit, additive, backup first)."
 echo ""
 
 if [ "$SKIP_LINK" -eq 1 ]; then

@@ -2,15 +2,34 @@
 
 This repository can be cloned into any folder. The scripts at the repo root turn that clone into a **central, machine-wide SDD configuration** that Claude Code reads from — and, optionally, link that central configuration into your per-user Claude Code home and into individual projects.
 
-Three concerns, three scripts:
+Four concerns, four scripts:
 
 | Concern | Script | What it touches |
 |---|---|---|
 | Install repo content into a central config directory | `install.ps1` (Windows) / `install.sh` (macOS/Linux) | The central directory only, by default |
 | Link your per-user Claude Code home to that central directory | same scripts, `-LinkUserClaude` / `--link-user-claude` | `~/.claude` — opt-in, off by default |
 | Link one specific project to the central directory | `link-project.ps1` / `link-project.sh` | `<project>/.claude` only |
+| Wire the shipped hooks into a project's settings | `scripts/wire-hooks.ps1` / `scripts/wire-hooks.sh` | `<project>/.claude/settings.json` only — explicit opt-in |
 
-All three scripts are **idempotent** and **safe to re-run**: an already-correct install or link is detected and reported as a no-op, nothing is deleted, and any overwrite requires `-Force`/`--force` and is preceded by an automatic timestamped backup.
+All scripts are **idempotent** and **safe to re-run**: an already-correct install or link is detected and reported as a no-op, nothing is deleted, and any overwrite requires `-Force`/`--force` and is preceded by an automatic timestamped backup.
+
+---
+
+## Wiring hooks into a project
+
+Linking a project (`link-project`) makes the hook **scripts** available at `<project>/.claude/hooks/`, but Claude Code only executes hooks that are registered in the project's `.claude/settings.json`. That registration is deliberately not part of the installers (they never write `settings.json` or `CLAUDE.md`); it is its own explicit step:
+
+```bash
+# macOS/Linux — merges the "hooks" key from settings.template.sh.json
+/path/to/spec-driven-development/scripts/wire-hooks.sh --project-dir /path/to/my-project
+```
+
+```powershell
+# Windows — merges from settings.template.json
+C:\path\to\spec-driven-development\scripts\wire-hooks.ps1 -ProjectDir C:\path\to\my-project
+```
+
+The merge is **additive and idempotent**: existing keys and hand-added hooks are preserved, shipped entries are deduplicated by command string, a timestamped backup of `settings.json` is taken before any write, and `settings.local.json` is never touched. `--dry-run` / `-DryRun` previews the result. Without this step (or a manual merge from the settings templates), hooks like `project-init-check` and `git-guardrails` never run.
 
 ---
 

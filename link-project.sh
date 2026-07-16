@@ -160,7 +160,8 @@ else
 fi
 
 echo ""
-log "settings.local.json is never touched by this script  - wire hook paths in .claude/settings.json yourself,"
-log 'e.g. using "${CLAUDE_PROJECT_DIR}/.claude/hooks/git-guardrails.sh" (see settings.template.json).'
+log "settings.local.json is never touched by this script  - hooks do not run until wired into"
+log ".claude/settings.json. Run scripts/wire-hooks.sh --project-dir $PROJECT_DIR to merge the shipped"
+log "wiring (explicit, additive, backup first), or wire paths yourself from settings.template.sh.json."
 echo ""
 log "Done."

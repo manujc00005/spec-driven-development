@@ -166,7 +166,8 @@ if (Test-Path $centralAgents) {
 }
 
 Write-Host ""
-Write-Action "settings.local.json is never touched by this script  - wire hook paths in .claude\settings.json yourself,"
-Write-Action "e.g. using `${env:CLAUDE_PROJECT_DIR}\.claude\hooks\git-guardrails.ps1` (see settings.template.json)."
+Write-Action "settings.local.json is never touched by this script  - hooks do not run until wired into"
+Write-Action ".claude\settings.json. Run scripts\wire-hooks.ps1 -ProjectDir $ProjectDir to merge the shipped"
+Write-Action "wiring (explicit, additive, backup first), or wire paths yourself from settings.template.json."
 Write-Host ""
 Write-Action "Done."
