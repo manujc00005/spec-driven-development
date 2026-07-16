@@ -172,6 +172,11 @@ For small, low-risk changes, skip SDD documents and use a direct instruction ins
 - Avoid scanning unrelated files or archived specs unless explicitly asked.
 - Prefer summaries over pasted file contents.
 - Suggest the next command instead of re-explaining the full workflow.
+- **Graph-first:** if `.graphify/GRAPH_REPORT.md` exists (legacy fallback: root
+  `GRAPH_REPORT.md`), derive impact and reading lists from it — preferring
+  `graphify review-context <file>` / `graphify affected-flows <file>` when the
+  CLI is available — before any repo-wide Glob/Grep/Read sweep. The graph bounds
+  what to read; the code remains the source of truth.
 
 <!-- SDD-ORCHESTRATION:START -->
 ## Multi-model orchestration

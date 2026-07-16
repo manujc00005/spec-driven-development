@@ -21,27 +21,40 @@ it does not replace reading the actual code, running tests, or applying engineer
 
 ## Prerequisites
 
-- `GRAPH_REPORT.md` at project root (produced by an external Graphify run).
-- If this file does not exist, the skill **degrades gracefully** (see below).
+- The Graphify report, resolved in this order:
+  1. `.graphify/GRAPH_REPORT.md` (canonical — where the Graphify CLI writes it).
+  2. `GRAPH_REPORT.md` at project root (legacy fallback). If both exist, `.graphify/` wins.
+- If neither exists, the skill **degrades gracefully** (see below). The
+  `graphify-stale-reminder` hook auto-refreshes the graph in the background when
+  the CLI is installed, so a missing report may simply mean "wait a moment".
 
 ## Inputs
 
 1. **Active spec** — what is changing (domains, endpoints, entities, events).
-2. **GRAPH_REPORT.md** — module/dependency graph (if available).
+2. **Graphify report** — module/dependency graph (resolved as above, if available).
 3. **`docs/ARCHITECTURE.md`** — for cross-referencing boundaries (if available).
 
 ## Behavior
 
-### When GRAPH_REPORT.md exists
+**Graph-first doctrine (token saving):** when the report exists, derive the impact
+set from the graph BEFORE any repo-wide Glob/Grep/Read sweep. Heuristic scanning
+is the fallback, never the default.
+
+### When the Graphify report exists
 
 1. **Check freshness:**
-   - Compare `GRAPH_REPORT.md` mtime against the most recently modified source file.
+   - Compare the report's mtime against the most recently modified source file.
    - If the graph is older than the newest source by more than 7 days, mark it **stale** and warn.
    - If stale: still use it for broad orientation, but flag that fine-grained edges may be outdated.
 2. **Extract impacted subgraph:**
    - From the spec's declared changes, identify entry-point nodes in the graph.
    - Walk direct and transitive dependencies (max depth 3 unless the spec is cross-cutting).
    - Produce a focused list: impacted modules + their relationships.
+   - If the `graphify` CLI is on PATH, prefer its read-only queries over manual
+     report parsing — they are cheaper than loading the full report into context:
+     - `graphify review-context <file>` — what to read before touching a file.
+     - `graphify affected-flows <file>` — which flows a change ripples into.
+     - `graphify tree <node>` / `graphify path <a> <b>` — dependency walks.
 3. **Cross-reference with ARCHITECTURE.md:**
    - Check if impacted modules cross a declared boundary (e.g., bounded context, service).
    - If they do, flag it: "This change crosses a service boundary — review communication pattern."
@@ -50,9 +63,9 @@ it does not replace reading the actual code, running tests, or applying engineer
    - Recommended reading list (feed into `context-manager`).
    - Staleness warning if applicable.
 
-### When GRAPH_REPORT.md does NOT exist (graceful degradation)
+### When the Graphify report does NOT exist (graceful degradation)
 
-1. Print: `"GRAPH_REPORT.md not found. Graphify is not installed or has not been run. Falling back to heuristic impact analysis based on ARCHITECTURE.md and project structure."`
+1. Print: `"Graphify report not found (.graphify/GRAPH_REPORT.md or legacy root GRAPH_REPORT.md). Graphify is not installed or has not been run — scripts/setup-graphify.sh adopts it in one step. Falling back to heuristic impact analysis based on ARCHITECTURE.md and project structure."`
 2. If `docs/ARCHITECTURE.md` exists, use its module map + dependency flow for coarse impact analysis.
 3. If neither exists, report: `"No architecture map available. Impact analysis will require broader file scanning. Consider running Graphify or filling in docs/ARCHITECTURE.md."`
 4. **Never fail. Never block. Always produce a best-effort answer.**
@@ -62,7 +75,7 @@ it does not replace reading the actual code, running tests, or applying engineer
 ```markdown
 ## Impact Analysis
 
-**Source:** GRAPH_REPORT.md (fresh / stale — generated YYYY-MM-DD)
+**Source:** .graphify/GRAPH_REPORT.md (fresh / stale — generated YYYY-MM-DD)
 **Spec:** NNN-feature-name
 
 ### Impacted modules
@@ -90,8 +103,10 @@ it does not replace reading the actual code, running tests, or applying engineer
 
 ## What this skill does NOT do
 
-- Does not **run** Graphify (the user runs it externally).
-- Does not **generate** GRAPH_REPORT.md.
+- Does not **generate** the graph (`graphify detect`/`update` run externally: the
+  user via `scripts/setup-graphify.sh`, or the stale-reminder hook in the
+  background). Read-only queries (`tree`, `path`, `review-context`,
+  `affected-flows`) are allowed.
 - Does not replace reading files — it identifies *which* files matter.
 - Does not block any workflow when absent.
 - Is never the source of truth — the code is.

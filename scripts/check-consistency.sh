@@ -270,6 +270,51 @@ check_settings_wiring("settings.template.sh.json")
 
 
 # ---------------------------------------------------------------------------
+# Feature 010: Graphify integration consistency (canonical report path,
+# SessionStart wiring, setup-graphify references)
+# ---------------------------------------------------------------------------
+def file_text(rel):
+    path = os.path.join(repo_root, rel)
+    if not os.path.isfile(path):
+        return None
+    with open(path, encoding="utf-8") as f:
+        return f.read()
+
+
+def assert_contains(rel, needle, why):
+    text = file_text(rel)
+    if text is None:
+        err("graphify", rel, "file not found")
+    elif needle not in text:
+        err("graphify", rel, f"must mention '{needle}' — {why}")
+
+
+CANONICAL = ".graphify/GRAPH_REPORT.md"
+for rel in (
+    "hooks/graphify-stale-reminder.sh",
+    "hooks/graphify-stale-reminder.ps1",
+    "skills/graphify-context/SKILL.md",
+    "skills/context-manager/SKILL.md",
+):
+    assert_contains(rel, CANONICAL, "consumers must resolve the canonical Graphify path (spec 010 FR-001/FR-002)")
+
+for rel in ("settings.template.json", "settings.template.sh.json"):
+    assert_contains(rel, "graphify-stale-reminder", "the Graphify hook must be wired on SessionStart (spec 010 FR-004)")
+
+for rel in (
+    "docs/INSTALL.md",
+    "docs/_templates/GRAPHIFY.md",
+    "skills/project-init/SKILL.md",
+    "skills/sdd-onboard/SKILL.md",
+):
+    assert_contains(rel, "setup-graphify", "adoption must point at the setup script (spec 010 FR-008/FR-009)")
+
+for rel in ("scripts/setup-graphify.sh", "scripts/setup-graphify.ps1"):
+    if file_text(rel) is None:
+        err("graphify", rel, "setup script missing (spec 010 FR-007)")
+
+
+# ---------------------------------------------------------------------------
 # FR-008: README.md count markers
 # ---------------------------------------------------------------------------
 computed = {

@@ -30,7 +30,18 @@ If Graphify is not installed, SDD continues to work normally with heuristic anal
 
 ## Installation
 
-Install from the official Graphify documentation:
+**One-step adoption (recommended):** from the SDD framework checkout, run
+
+```bash
+scripts/setup-graphify.sh --project-dir <your project>   # add --yes for non-interactive
+# Windows: scripts/setup-graphify.ps1 -ProjectDir <your project> [-Yes]
+```
+
+The script installs `@sentropic/graphify` (after confirmation), runs the detect
+and update commands below, gitignores `.graphify/`, and scaffolds this file plus
+`docs/PROJECT_GRAPH.md` into the project. It is idempotent — safe to re-run.
+
+**Manual alternative:**
 
 ```bash
 npm install -g @sentropic/graphify
@@ -45,6 +56,20 @@ graphify update . --no-description --no-label
 ```
 
 This generates `.graphify/graph.json` and `.graphify/GRAPH_REPORT.md`.
+
+> **Scope values vary by version.** `--scope committed` worked historically, but
+> 0.17.x documents `auto` / `tracked` / `all` (where `auto` = committed files +
+> `.graphify/memory/*`). If `committed` is rejected, use `--scope auto` — the
+> `setup-graphify` script already tries both automatically.
+
+## Automatic freshness
+
+The `graphify-stale-reminder` hook (wired on `SessionStart` by the SDD settings
+templates) keeps the graph fresh: when `.graphify/GRAPH_REPORT.md` is missing or
+more than 7 days older than the newest source file and the `graphify` CLI is on
+PATH, it re-runs `graphify update . --no-description --no-label` in a detached
+background process guarded by `.graphify/.update.lock`. It never blocks the
+session. Set `SDD_GRAPHIFY_AUTO=0` to disable auto-refresh (reminder-only).
 
 ## Common Commands
 
@@ -202,6 +227,17 @@ It will narrow the reading list to the most impacted modules.
 If Graphify is absent, it falls back to heuristic analysis (still works fine).
 
 ## Troubleshooting
+
+### False coupling between routes with the same basename (known bug, 0.17.1)
+
+**Symptom:** the report shows a coupling that does not exist in the code between
+two files whose paths end in the same basename (e.g. `payments/checkout` and
+`bonos/checkout` both mapped to a single `checkout_route_post` node).
+
+**Cause:** Graphify 0.17.1 derives node IDs from the basename, colliding equal
+basenames across directories. Re-check against the actual code (the graph is an
+accelerator, never a source of truth) and verify whether versions newer than
+0.17.1 fix the collision before trusting such edges.
 
 ### Graph is stale (older than code changes)
 

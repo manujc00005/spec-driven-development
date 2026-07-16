@@ -64,6 +64,12 @@
             "type": "command",
             "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/project-init-check.sh",
             "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/graphify-stale-reminder.sh",
+            "timeout": 5,
+            "statusMessage": "Graphify freshness check..."
           }
         ]
       }

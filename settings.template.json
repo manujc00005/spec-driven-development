@@ -63,6 +63,12 @@
             "type": "command",
             "command": "powershell -NoProfile -File ${CLAUDE_PROJECT_DIR}/.claude/hooks/project-init-check.ps1",
             "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -File ${CLAUDE_PROJECT_DIR}/.claude/hooks/graphify-stale-reminder.ps1",
+            "timeout": 5,
+            "statusMessage": "Graphify freshness check..."
           }
         ]
       }

@@ -80,10 +80,14 @@ If the project has Graphify installed, optionally detect and scaffold architectu
 
 - Check if `.graphify/graph.json` or `.graphify/GRAPH_REPORT.md` exists.
 - If found: optionally scaffold `docs/PROJECT_GRAPH.md` from `docs/_templates/PROJECT_GRAPH.md`.
-- If not found: skip silently. (Graphify is optional, not required.)
-- Never execute Graphify commands. Never install Graphify. Never auto-generate the graph.
+- If not found: offer adoption (recommended default) — "Graphify is not set up. It
+  accelerates impact analysis and cuts token usage on every plan/review. Adopt it
+  by running `scripts/setup-graphify.sh --project-dir <this project>` from the SDD
+  checkout?". If the user declines, skip silently.
+- Never install Graphify or generate the graph from within this skill — adoption
+  always goes through `setup-graphify`, which asks before installing anything.
 
-Report to user: "Graphify detected. Scaffolded `docs/PROJECT_GRAPH.md`" or "(Graphify not installed — optional)".
+Report to user: "Graphify detected. Scaffolded `docs/PROJECT_GRAPH.md`", or "Graphify adoption offered — run scripts/setup-graphify.sh (optional)".
 
 **Note:** This is a convenience detection only. Projects work fully without Graphify.
 

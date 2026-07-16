@@ -259,19 +259,18 @@ Nothing in this repo automatically deletes a `.bak-*` directory or an `_install-
 
 ## Graphify (optional)
 
-This workflow includes **Graphify-aware skills** (`/context-manager`, `/graphify-context`, `/sdd-onboard`) and a **`graphify-stale-reminder`** hook. These are designed to use a `GRAPH_REPORT.md` file (an architecture/dependency map) to speed up impact analysis and reduce token waste on large codebases.
+This workflow includes **Graphify-aware skills** (`/context-manager`, `/graphify-context`, `/sdd-onboard`) and a **`graphify-stale-reminder`** hook. These use the Graphify report — an architecture/dependency map at **`.graphify/GRAPH_REPORT.md`** (with a legacy fallback to `GRAPH_REPORT.md` at project root) — to speed up impact analysis and reduce token waste on large codebases.
 
-**Graphify is not installed by this repo.** It is an external tool that the user runs independently to produce `GRAPH_REPORT.md` in a project's root.
+**Graphify is not installed by this repo automatically.** It is an external npm tool (`@sentropic/graphify`). The one-step adopter `scripts/setup-graphify.sh` (or `setup-graphify.ps1`) installs it after confirmation, generates `.graphify/`, gitignores the raw output, and scaffolds `docs/GRAPHIFY.md` + `docs/PROJECT_GRAPH.md`.
 
 **What happens without Graphify:**
 
-- All Graphify-aware skills **work without it** — they detect the absence of `GRAPH_REPORT.md` and fall back to heuristic scanning or bounded file reads.
-- The `graphify-stale-reminder` hook prints a one-line suggestion if the file is missing; it never blocks.
+- All Graphify-aware skills **work without it** — they detect the absence of the report and fall back to heuristic scanning or bounded file reads.
+- The `graphify-stale-reminder` hook prints a one-line suggestion if the report is missing; it never blocks.
 - No skill, hook, or workflow step **requires** Graphify to function.
 
 **To take advantage of Graphify:**
 
-1. Install and run Graphify externally against your project (follow Graphify's own documentation).
-2. Ensure it outputs `GRAPH_REPORT.md` at your project root.
-3. The skills and hook will automatically detect it and use it for impact analysis.
-4. Re-run Graphify periodically — the hook warns if the map is >7 days stale relative to source changes.
+1. Run `scripts/setup-graphify.sh --project-dir <your project>` from this repo's checkout (add `--yes` for non-interactive install).
+2. The skills and hook automatically detect `.graphify/GRAPH_REPORT.md` and use it for impact analysis and graph-first context (fewer tokens per plan/review).
+3. Freshness is automatic: the `graphify-stale-reminder` hook (wired on `SessionStart` by both settings templates) refreshes the graph in a detached background run when it is missing or >7 days stale and the CLI is installed. Set `SDD_GRAPHIFY_AUTO=0` to disable auto-refresh (reminder-only).

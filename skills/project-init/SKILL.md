@@ -54,20 +54,39 @@ Ask the following questions. Wait for answers before proceeding. Group related q
 - Are there CI/CD checks that must pass? (type check, lint, build, tests)
 - Any patterns that are explicitly forbidden in this project?
 
+**Round 4 — Contracted services:**
+- Which services has the client contracted? Default: `web` only. Options (canonical names, matching the agency's Services and Packages catalog): `web`, `seo`, `geo`, `aeo`, `ai-visibility`, `cro`, `analytics`, `crm-integration`, `ai-chatbot`, `ai-follow-up-automation`, `ai-commercial-proposals`, `technical-support`, `growth-strategy`.
+- This declaration gates all billable-service behavior downstream (skills installed, review recommendations, implementation boundaries) — see the Billing boundary section in `specs/_templates/CONSTITUTION.md`.
+
 ### Step 3 — Generate the specs/ support files
 
 Using the answers:
 
-1. Generate `specs/CONSTITUTION.md` filling in all sections. Do not leave any `TODO:` markers — replace all placeholders with project-specific content based on the interview.
-2. Fill `specs/CLAUDE-SDD.md`: project context, stack and module map from Round 1-2; the domain review triggers from Round 2-3 answers (which paths make `/database-review`, `/security-review`, `/api-review` mandatory; keep the GDPR section only if Round 1 said the project handles regulated personal data); the non-negotiable rules and verification commands from Round 3. No `TODO:` markers may remain.
-3. Fill the `TODO:` rows of `specs/SDD-GUARDRAILS.md` (Source of Truth Matrix schema path, provider contracts, project-specific gate limitations). Leave the generic rules untouched.
-4. Fill `specs/README.md` header (project name, one-line description). The feature index starts empty.
+1. Generate `specs/CONSTITUTION.md` filling in all sections, including the Billing boundary section (rule, boundary table, `UPSELLS.md` instruction — carried over from the template as-is). Do not leave any `TODO:` markers — replace all placeholders with project-specific content based on the interview.
+2. Generate `specs/SERVICES.md` from the installed template (`specs/_templates/SERVICES.md`), marking each of the 13 canonical services as contracted (yes, with today's date) or not contracted (no) per the Round 4 answers.
+3. Fill `specs/CLAUDE-SDD.md`: project context, stack and module map from Round 1-2; the domain review triggers from Round 2-3 answers (which paths make `/database-review`, `/security-review`, `/api-review` mandatory; keep the GDPR section only if Round 1 said the project handles regulated personal data); the non-negotiable rules and verification commands from Round 3. No `TODO:` markers may remain.
+4. Fill the `TODO:` rows of `specs/SDD-GUARDRAILS.md` (Source of Truth Matrix schema path, provider contracts, project-specific gate limitations). Leave the generic rules untouched.
+5. Fill `specs/README.md` header (project name, one-line description). The feature index starts empty.
 
 If the user did not answer a question, use a sensible default and note it as a default in the file with a comment `# default — update if needed`.
 
 ### Step 4 — Confirm and finalize
 
 Show a summary of the key rules written. Ask the user to confirm or correct any section before saving.
+
+### Step 5 — Graphify adoption (recommended default)
+
+Recommend adopting Graphify so the project starts with a dependency graph from day
+one: it accelerates impact analysis and cuts token usage on every plan/review.
+
+- Offer (default yes): run `scripts/setup-graphify.sh --project-dir <this project>`
+  (or `setup-graphify.ps1` on Windows) from the SDD checkout. The script installs
+  `@sentropic/graphify` only after its own confirmation, generates `.graphify/`,
+  gitignores it, and scaffolds `docs/GRAPHIFY.md` + `docs/PROJECT_GRAPH.md`.
+- If the user declines: note that everything works without it and they can adopt
+  later with the same script.
+- Never run npm installs directly from this skill — adoption always goes through
+  `setup-graphify`.
 
 ## Output
 
@@ -78,6 +97,7 @@ After saving:
 
 ## Created
 - specs/CONSTITUTION.md — N rules defined
+- specs/SERVICES.md — contracted services declaration
 - specs/README.md — folder guide and feature index
 - specs/SDD-GUARDRAILS.md — Consistency Gate instance
 - specs/CLAUDE-SDD.md — domain review triggers
@@ -88,11 +108,13 @@ After saving:
 - Mandatory reviews: [list]
 - Forbidden patterns: [list]
 - GDPR: [yes/no]
+- Contracted services: [list]
 
 ## Next steps
 - Run `/spec-create` to create your first feature spec.
 - To activate the hook guardrails in this project, run link-project and then
   scripts/wire-hooks.sh (or wire-hooks.ps1 on Windows) from the SDD repo.
+- To adopt Graphify (recommended), run scripts/setup-graphify.sh from the SDD repo.
 ```
 
 ## Context economy

@@ -588,6 +588,10 @@ Write-Host ""
 Write-Action "NOTE: CLAUDE.md.example is never installed as CLAUDE.md. If $CentralDir has no"
 Write-Action "CLAUDE.md yet, copy CLAUDE.md.example to CLAUDE.md yourself and edit it there."
 Write-Host ""
+Write-Action "OPTIONAL: to adopt Graphify (dependency-graph accelerator) in a project, run"
+Write-Action "scripts/setup-graphify.ps1 -ProjectDir <path> - it installs the CLI after"
+Write-Action "confirmation, generates .graphify/, and scaffolds the curated docs."
+Write-Host ""
 
 if ($SkipLink) {
     Write-Action "Skipping ~/.claude linking (-SkipLink)."

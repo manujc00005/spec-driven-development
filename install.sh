@@ -590,6 +590,10 @@ log "NOTE: hooks do not run until they are wired into a project's .claude/settin
 log "After linking a project (link-project.sh), run scripts/wire-hooks.sh --project-dir <path>"
 log "to merge the shipped hook wiring there (explicit, additive, backup first)."
 echo ""
+log "OPTIONAL: to adopt Graphify (dependency-graph accelerator) in a project, run"
+log "scripts/setup-graphify.sh --project-dir <path> — it installs the CLI after"
+log "confirmation, generates .graphify/, and scaffolds the curated docs."
+echo ""
 
 if [ "$SKIP_LINK" -eq 1 ]; then
   log "Skipping ~/.claude linking (--skip-link)."

@@ -64,10 +64,12 @@ Review, validation against acceptance criteria, final synthesis
 Projects may optionally use **Graphify** (external tool) to generate dependency graphs for architecture context:
 
 - **When:** Before `/spec-plan` or `/spec-analyze` on medium/large features (optional accelerator).
-- **What:** If `.graphify/GRAPH_REPORT.md` exists, SDD skills use it to understand module interdependencies and impact.
+- **What:** If `.graphify/GRAPH_REPORT.md` exists (legacy fallback: root `GRAPH_REPORT.md`), SDD skills use it to understand module interdependencies and impact.
+- **Graph-first (token saving):** when the report exists, `context-manager` and `graphify-context` derive the bounded reading list from the graph — preferring `graphify review-context` / `affected-flows` CLI queries when available — before any repo-wide scan. Heuristic scanning is the fallback, not the default.
 - **Graceful degradation:** If Graphify is absent, SDD continues with heuristic analysis. Workflows are unaffected.
-- **Setup:** Run `graphify detect . --scope committed && graphify update .` externally (not auto-installed).
-- **Reference:** See `docs/_templates/GRAPHIFY.md` for optional Graphify integration guide.
+- **Setup:** Run `scripts/setup-graphify.sh --project-dir <project>` from the SDD checkout (installs the CLI after confirmation, generates `.graphify/`, scaffolds curated docs).
+- **Freshness:** the `graphify-stale-reminder` hook auto-refreshes the graph in the background on `SessionStart` when it is missing/stale and the CLI is installed (`SDD_GRAPHIFY_AUTO=0` disables).
+- **Reference:** See `docs/_templates/GRAPHIFY.md` for the full integration guide.
 
 Graphify is a productivity accelerator, not a requirement. SDD works fully without it.
 
