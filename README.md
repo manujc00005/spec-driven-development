@@ -14,9 +14,9 @@
 
 ![Skills](https://img.shields.io/badge/skills-43-0969da)
 ![Hooks](https://img.shields.io/badge/hook%20families-12-bf3989)
-![Templates](https://img.shields.io/badge/templates-17-8250df)
+![Templates](https://img.shields.io/badge/templates-22-8250df)
 ![Agents](https://img.shields.io/badge/agents-2-1a7f37)
-![Profiles](https://img.shields.io/badge/profiles-6-d4a72c)
+![Profiles](https://img.shields.io/badge/profiles-7-d4a72c)
 
 *AI accelerates execution. Engineering judgment keeps control.*
 
@@ -26,7 +26,7 @@
 
 ---
 
-This repository turns [Claude Code](https://claude.com/claude-code) into a process-driven engineering environment: **<!-- count:skills-total -->43<!-- /count --> skills** (slash commands), **<!-- count:hook-families-total -->12<!-- /count --> hook families** (tool-call-level guardrails), **<!-- count:templates-total -->20<!-- /count --> document templates**, **<!-- count:agents-total -->2<!-- /count --> orchestration agents**, and a **profile-aware installer** — all versioned, reviewable, and installed from a single source of truth.
+This repository turns [Claude Code](https://claude.com/claude-code) into a process-driven engineering environment: **<!-- count:skills-total -->43<!-- /count --> skills** (slash commands), **<!-- count:hook-families-total -->12<!-- /count --> hook families** (tool-call-level guardrails), **<!-- count:templates-total -->22<!-- /count --> document templates**, **<!-- count:agents-total -->2<!-- /count --> orchestration agents**, and a **profile-aware installer** — all versioned, reviewable, and installed from a single source of truth.
 
 ---
 
@@ -339,10 +339,11 @@ Profiles control which skills, hooks, templates, and agents get installed, decla
 
 | Profile | Status | What it adds |
 |---|---|---|
-| `core` | Always installed | Full SDD lifecycle, guardrails, generic reviews, orchestration (<!-- count:core-skills -->31<!-- /count --> skills, <!-- count:core-hooks -->6<!-- /count --> hooks, <!-- count:core-templates -->15<!-- /count --> templates, <!-- count:core-agents -->2<!-- /count --> agents) |
+| `core` | Always installed | Full SDD lifecycle, guardrails, generic reviews, orchestration (<!-- count:core-skills -->31<!-- /count --> skills, <!-- count:core-hooks -->6<!-- /count --> hooks, <!-- count:core-templates -->17<!-- /count --> templates, <!-- count:core-agents -->2<!-- /count --> agents) |
 | `java-spring-backend` | **Default** | <!-- count:java-spring-backend-skills -->7<!-- /count --> review skills (JPA/transactions, Spring REST, Spring Security, JVM performance, database, API, backend), <!-- count:java-spring-backend-hooks -->3<!-- /count --> hooks, <!-- count:java-spring-backend-templates -->6<!-- /count --> context templates. Maven primary, Gradle fallback |
 | `messaging-event-driven` | Optional | `event-driven-reviewer` (Kafka/RabbitMQ/ActiveMQ, outbox, saga, DLQ) + `microservices-patterns-reviewer` (boundaries, resilience, contracts), <!-- count:messaging-event-driven-templates -->2<!-- /count --> templates |
-| `next-prisma-web` | Optional | Frontend/SEO/privacy/database reviews + `ts-check`/`eslint-fix`/`prettier-format` hooks (Prisma-specific items still planned) |
+| `next-prisma-web` | Optional | Frontend/privacy/database reviews + `ts-check`/`eslint-fix`/`prettier-format` hooks (Prisma-specific items still planned) |
+| `seo-geo-addon` | Optional overlay, billable | `seo-review` (technical on-page SEO + hreflang) — `aeo-review`/`geo-review`/`ai-visibility-review` planned. Install only when SEO/GEO/AEO/AI-visibility is a contracted service |
 | `payments-fintech` | Optional overlay | **Nothing shipped yet** — Stripe/idempotency reviewers are planned entries only |
 | `blockchain-crypto` | **Disabled** | Placeholder. The installer refuses to install it — requesting it explicitly is a hard error by design |
 
@@ -352,6 +353,7 @@ Rules the installers enforce:
 - **Profiles combine explicitly.** `messaging-event-driven` assumes a Java/Spring service underneath but is *not* an automatic overlay — to get both: `--profile java-spring-backend,messaging-event-driven`.
 - **Shipped vs. planned is a hard distinction.** `skills`/`hooks`/`templates`/`agents` entries must exist on disk — a missing one is a manifest-integrity error (exit 1), never a silent skip. `planned*` entries are roadmap-only, reported as `[planned] … not installed`, never an error.
 - **No guessing.** Unknown profile name, explicitly requested disabled profile, or unparsable `profiles.json` → clear `[ERROR]`, non-zero exit, no fallback to "install everything".
+- **Billable scope is explicit.** `seo-geo-addon` (and any future paid add-on) is never bundled into a base profile — it installs only via `--profile next-prisma-web,seo-geo-addon`, matching a client actually having contracted the service in `specs/SERVICES.md`. See the Billing boundary section in `specs/_templates/CONSTITUTION.md`.
 
 ---
 
@@ -492,10 +494,10 @@ Counted from this repository, not aspirational:
 |---|---|---|
 | Skills | **<!-- count:skills-total -->43<!-- /count -->** | Every slash command referenced in this README has a `SKILL.md` in [`skills/`](skills/) |
 | Hook families | **<!-- count:hook-families-total -->12<!-- /count -->** (<!-- count:hook-scripts-total -->24<!-- /count --> scripts) | Each ships as a `.ps1` + `.sh` pair; shared bash JSON helper in `hooks/lib/` |
-| SDD lifecycle templates | **<!-- count:specs-templates-total -->10<!-- /count -->** | `specs/_templates/` |
+| SDD lifecycle templates | **<!-- count:specs-templates-total -->12<!-- /count -->** | `specs/_templates/` |
 | Project-context templates | **<!-- count:docs-templates-total -->10<!-- /count -->** | `docs/_templates/` |
 | Agents | **<!-- count:agents-total -->2<!-- /count -->** | `deep-reasoner` (Opus, read-only), `fast-worker` (Sonnet, bounded) |
-| Profiles | **<!-- count:profiles-total -->6<!-- /count -->** | `core`, `java-spring-backend` (default), `messaging-event-driven`, `next-prisma-web`, `payments-fintech` (planned-only), `blockchain-crypto` (disabled) |
+| Profiles | **<!-- count:profiles-total -->7<!-- /count -->** | `core`, `java-spring-backend` (default), `messaging-event-driven`, `next-prisma-web`, `seo-geo-addon` (billable overlay), `payments-fintech` (planned-only), `blockchain-crypto` (disabled) |
 | Docs | **3 guides** | `INSTALL.md`, `SDD-ORCHESTRATION.md`, `hooks/README.md` + per-directory READMEs |
 | Installers | **4 scripts** | `install.ps1/.sh`, `link-project.ps1/.sh` — dry-run, backups, profile-aware |
 

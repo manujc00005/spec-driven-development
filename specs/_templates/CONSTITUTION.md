@@ -37,6 +37,26 @@ TODO with project-specific content instead of leaving a generic placeholder.
 - **Required CI/CD checks:** TODO: e.g. type check, lint, build, tests
 - **Explicitly forbidden patterns:** TODO
 
+## Billing boundary
+
+- **Rule:** never implement SEO/GEO/AEO/advanced-analytics work unless the corresponding service is declared contracted in `specs/SERVICES.md`. If the file is missing, treat no billable add-on as contracted (conservative default) and suggest running `/project-init`.
+- **When work is detected but not contracted:** log an entry to `specs/UPSELLS.md` (date, opportunity, evidence, related spec, status) instead of implementing it.
+- **Baseline quality vs. billable service:**
+
+| Included in web baseline | Billable (requires contracted service) |
+|---|---|
+| Unique title/description per page | JSON-LD / schema.org |
+| Semantic HTML | Sitemap/robots strategy |
+| Alt text | OG/Twitter optimization |
+| Responsive | hreflang |
+| Accessibility | Strategic canonicals |
+| Reasonable performance | Keyword research |
+| | llms.txt |
+| | GEO entity work |
+| | Ranking-oriented CWV optimization |
+
+This table is owner-editable — adjust it per project during `/project-init` if the commercial boundary differs.
+
 ## Notes
 
 Run `/project-init` to populate this file through an interview instead of filling in the TODOs by hand.

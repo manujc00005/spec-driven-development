@@ -23,12 +23,20 @@ Before starting the review, detect which framework is in use by inspecting the f
 - Imports from `react`, `next/navigation`, `next/image`, `next/link`
 
 **Once detected:**
-- If **Angular** → delegate the full review to the `angular` agent. Pass the active spec path and diff context. Do not apply Next.js/React rules.
-- If **Next.js / React** → delegate the full review to the `nextjs-react` agent. Pass the active spec path and diff context. Do not apply Angular rules. If the feature touches public-facing pages (landing pages, marketing pages, pages without auth), also recommend running `/seo-review <path>` after this review.
-- If **both detected** (mixed repo) → run both agents on their respective files.
+- If **Angular** → delegate the full review to the `angular` agent. Pass the active spec path and diff context. Do not apply Next.js/React rules. If the feature touches public-facing pages (landing pages, marketing pages, pages without auth), apply the SEO recommendation gate below.
+- If **Next.js / React** → delegate the full review to the `nextjs-react` agent. Pass the active spec path and diff context. Do not apply Angular rules. If the feature touches public-facing pages (landing pages, marketing pages, pages without auth), apply the SEO recommendation gate below.
+- If **both detected** (mixed repo) → run both agents on their respective files; the SEO recommendation gate applies to public pages in either framework.
 - If **neither detected** → proceed with the generic checklist below.
 
 The delegated agent will produce its own structured output. Consolidate and return it as the final review.
+
+### SEO recommendation gate
+
+Read `specs/SERVICES.md` before recommending SEO work:
+
+- **An SEO-family service (`seo`, `geo`, `aeo`, `ai-visibility`) is contracted** → recommend running `/seo-review <path>` after this review.
+- **`specs/SERVICES.md` exists but no SEO-family service is contracted** → do not recommend `/seo-review` and do not implement any SEO changes. Instead, append an entry to `specs/UPSELLS.md` (date, opportunity, evidence, related spec, status: open).
+- **`specs/SERVICES.md` is missing** → conservative default: treat as not contracted (same as above), and note that running `/project-init` would let the client declare SEO/GEO/AEO/AI-visibility services explicitly.
 
 ## Core rules
 

@@ -33,6 +33,7 @@ This skill always sets status to **Draft**.
 - Ask for clarification only if the missing information blocks the spec.
 - If something is uncertain but not blocking, write it as an assumption.
 - Add unresolved doubts to `Open questions`.
+- Read `specs/SERVICES.md` before finalizing the spec and stamp its declared services into the `Contracted services` section (conservative-default note if the file is absent).
 
 ## Folder naming
 
@@ -143,6 +144,10 @@ Describe tables, entities, migrations, indexes, schemas, or persistence changes.
 ## Open questions
 
 - 
+
+## Contracted services
+
+Read `specs/SERVICES.md`. If it exists, list the services marked contracted. If it does not exist, write: "Contracted services not declared → all billable add-ons treated as NOT contracted (conservative default). Run `/project-init` to declare them."
 
 ## Auto-clarify pass
 

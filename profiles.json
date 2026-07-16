@@ -65,6 +65,8 @@
         "TASKS.md",
         "DECISIONS.md",
         "CONSTITUTION.md",
+        "SERVICES.md",
+        "UPSELLS.md",
         "SPECS-README.md",
         "SDD-GUARDRAILS.md",
         "CLAUDE-SDD.md",
@@ -156,7 +158,6 @@
       "default": false,
       "skills": [
         "frontend-review",
-        "seo-review",
         "privacy-compliance-review",
         "database-review"
       ],
@@ -178,7 +179,24 @@
         "ARCHITECTURE.md"
       ],
       "plannedTemplates": [],
-      "note": "Optional profile. The 4 shipped skills and 3 hooks are generic/stack-agnostic already present in the repo. prisma-migration-reviewer, nextjs-server-actions-reviewer, and prisma-migration-guard are planned."
+      "note": "Optional profile. The 3 shipped skills and 3 hooks are generic/stack-agnostic already present in the repo. seo-review moved out to the seo-geo-addon overlay profile (SEO/GEO/AEO are separately billed services — see specs/features/008-billable-service-scope). prisma-migration-reviewer, nextjs-server-actions-reviewer, and prisma-migration-guard are planned."
+    },
+    "seo-geo-addon": {
+      "description": "Technical SEO, GEO (generative engine optimization), AEO (answer engine optimization), and AI-visibility review. Billable add-on — install only when the client has contracted seo/geo/aeo/ai-visibility.",
+      "default": false,
+      "skills": [
+        "seo-review"
+      ],
+      "plannedSkills": [
+        "aeo-review",
+        "geo-review",
+        "ai-visibility-review"
+      ],
+      "hooks": [],
+      "plannedHooks": [],
+      "templates": [],
+      "plannedTemplates": [],
+      "note": "Overlay profile, not an automatic addition to next-prisma-web. Currently ships seo-review only (technical on-page SEO + hreflang); GEO, AEO, and AI-visibility are declared as plannedSkills so the profile honestly reflects that they are three separate future reviewers, not covered by seo-review today (see specs/features/008-billable-service-scope DECISIONS D006). Install alongside the web profile with the client's contracted services declared in specs/SERVICES.md: '--profile next-prisma-web,seo-geo-addon' (install.sh) or '-Profile next-prisma-web,seo-geo-addon' (install.ps1)."
     },
     "blockchain-crypto": {
       "description": "On-chain/wallet/transaction reviews. DISABLED BY DEFAULT.",
