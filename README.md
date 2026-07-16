@@ -13,7 +13,7 @@
 ![Status](https://img.shields.io/badge/status-active-success)
 
 ![Skills](https://img.shields.io/badge/skills-43-0969da)
-![Hooks](https://img.shields.io/badge/hook%20families-11-bf3989)
+![Hooks](https://img.shields.io/badge/hook%20families-12-bf3989)
 ![Templates](https://img.shields.io/badge/templates-17-8250df)
 ![Agents](https://img.shields.io/badge/agents-2-1a7f37)
 ![Profiles](https://img.shields.io/badge/profiles-6-d4a72c)
@@ -26,7 +26,7 @@
 
 ---
 
-This repository turns [Claude Code](https://claude.com/claude-code) into a process-driven engineering environment: **<!-- count:skills-total -->43<!-- /count --> skills** (slash commands), **<!-- count:hook-families-total -->11<!-- /count --> hook families** (tool-call-level guardrails), **<!-- count:templates-total -->20<!-- /count --> document templates**, **<!-- count:agents-total -->2<!-- /count --> orchestration agents**, and a **profile-aware installer** — all versioned, reviewable, and installed from a single source of truth.
+This repository turns [Claude Code](https://claude.com/claude-code) into a process-driven engineering environment: **<!-- count:skills-total -->43<!-- /count --> skills** (slash commands), **<!-- count:hook-families-total -->12<!-- /count --> hook families** (tool-call-level guardrails), **<!-- count:templates-total -->20<!-- /count --> document templates**, **<!-- count:agents-total -->2<!-- /count --> orchestration agents**, and a **profile-aware installer** — all versioned, reviewable, and installed from a single source of truth.
 
 ---
 
@@ -339,7 +339,7 @@ Profiles control which skills, hooks, templates, and agents get installed, decla
 
 | Profile | Status | What it adds |
 |---|---|---|
-| `core` | Always installed | Full SDD lifecycle, guardrails, generic reviews, orchestration (<!-- count:core-skills -->31<!-- /count --> skills, <!-- count:core-hooks -->5<!-- /count --> hooks, <!-- count:core-templates -->15<!-- /count --> templates, <!-- count:core-agents -->2<!-- /count --> agents) |
+| `core` | Always installed | Full SDD lifecycle, guardrails, generic reviews, orchestration (<!-- count:core-skills -->31<!-- /count --> skills, <!-- count:core-hooks -->6<!-- /count --> hooks, <!-- count:core-templates -->15<!-- /count --> templates, <!-- count:core-agents -->2<!-- /count --> agents) |
 | `java-spring-backend` | **Default** | <!-- count:java-spring-backend-skills -->7<!-- /count --> review skills (JPA/transactions, Spring REST, Spring Security, JVM performance, database, API, backend), <!-- count:java-spring-backend-hooks -->3<!-- /count --> hooks, <!-- count:java-spring-backend-templates -->6<!-- /count --> context templates. Maven primary, Gradle fallback |
 | `messaging-event-driven` | Optional | `event-driven-reviewer` (Kafka/RabbitMQ/ActiveMQ, outbox, saga, DLQ) + `microservices-patterns-reviewer` (boundaries, resilience, contracts), <!-- count:messaging-event-driven-templates -->2<!-- /count --> templates |
 | `next-prisma-web` | Optional | Frontend/SEO/privacy/database reviews + `ts-check`/`eslint-fix`/`prettier-format` hooks (Prisma-specific items still planned) |
@@ -491,7 +491,7 @@ Counted from this repository, not aspirational:
 | Category | Count | Detail |
 |---|---|---|
 | Skills | **<!-- count:skills-total -->43<!-- /count -->** | Every slash command referenced in this README has a `SKILL.md` in [`skills/`](skills/) |
-| Hook families | **<!-- count:hook-families-total -->11<!-- /count -->** (<!-- count:hook-scripts-total -->22<!-- /count --> scripts) | Each ships as a `.ps1` + `.sh` pair; shared bash JSON helper in `hooks/lib/` |
+| Hook families | **<!-- count:hook-families-total -->12<!-- /count -->** (<!-- count:hook-scripts-total -->24<!-- /count --> scripts) | Each ships as a `.ps1` + `.sh` pair; shared bash JSON helper in `hooks/lib/` |
 | SDD lifecycle templates | **<!-- count:specs-templates-total -->10<!-- /count -->** | `specs/_templates/` |
 | Project-context templates | **<!-- count:docs-templates-total -->10<!-- /count -->** | `docs/_templates/` |
 | Agents | **<!-- count:agents-total -->2<!-- /count -->** | `deep-reasoner` (Opus, read-only), `fast-worker` (Sonnet, bounded) |

@@ -55,7 +55,8 @@
         "sdd-spec-guard",
         "sdd-status-banner",
         "project-init-check",
-        "graphify-stale-reminder"
+        "graphify-stale-reminder",
+        "graphify-scan-reminder"
       ],
       "plannedHooks": [],
       "templates": [

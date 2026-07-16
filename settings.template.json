@@ -11,6 +11,17 @@
             "statusMessage": "Git guardrails check..."
           }
         ]
+      },
+      {
+        "matcher": "Grep|Glob",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -File ${CLAUDE_PROJECT_DIR}/.claude/hooks/graphify-scan-reminder.ps1",
+            "timeout": 5,
+            "statusMessage": "Graphify graph-first nudge..."
+          }
+        ]
       }
     ],
     "PostToolUse": [

@@ -232,6 +232,54 @@ assert_contains "expired lock: refresh message" "refreshing in background" "$HOO
 wait_for_invocation "$sandbox" || true
 assert_file_exists "expired lock: stub invoked" "$sandbox/invocations.log"
 
+# --- graphify-scan-reminder.sh (spec 011: AC-001..003) ---
+
+NUDGE="$REPO_ROOT/hooks/graphify-scan-reminder.sh"
+
+# Runs the nudge hook inside a sandbox with empty stdin (PreToolUse pipes JSON).
+run_nudge() {
+  local dir="$1"; shift
+  NUDGE_OUT="$(cd "$dir" && env "$@" bash "$NUDGE" < /dev/null 2>&1)"
+  NUDGE_EXIT=$?
+}
+
+# No report → silent.
+sandbox="$(make_sandbox nudge-no-report)"
+run_nudge "$sandbox"
+assert_eq "nudge without report: exit 0" 0 "$NUDGE_EXIT"
+assert_empty "nudge without report: silent" "$NUDGE_OUT"
+
+# Report present → nudge once, then throttled within TTL.
+sandbox="$(make_sandbox nudge-report)"
+mkdir -p "$sandbox/.graphify"
+touch "$sandbox/.graphify/GRAPH_REPORT.md"
+run_nudge "$sandbox"
+assert_eq "nudge with report: exit 0" 0 "$NUDGE_EXIT"
+assert_contains "nudge with report: message" "graph-first" "$NUDGE_OUT"
+assert_file_exists "nudge with report: marker created" "$sandbox/.graphify/.scan-nudge"
+run_nudge "$sandbox"
+assert_eq "nudge throttled: exit 0" 0 "$NUDGE_EXIT"
+assert_empty "nudge throttled: silent within TTL" "$NUDGE_OUT"
+
+# Expired marker (>30 min) → nudges again.
+backdate_days 1 "$sandbox/.graphify/.scan-nudge"
+run_nudge "$sandbox"
+assert_contains "nudge after TTL: message again" "graph-first" "$NUDGE_OUT"
+
+# Legacy root report → nudge fires too.
+sandbox="$(make_sandbox nudge-legacy)"
+touch "$sandbox/GRAPH_REPORT.md"
+run_nudge "$sandbox"
+assert_contains "nudge legacy root: message" "graph-first" "$NUDGE_OUT"
+
+# Opt-out → silent even with report.
+sandbox="$(make_sandbox nudge-optout)"
+mkdir -p "$sandbox/.graphify"
+touch "$sandbox/.graphify/GRAPH_REPORT.md"
+run_nudge "$sandbox" SDD_GRAPHIFY_NUDGE=0
+assert_eq "nudge opt-out: exit 0" 0 "$NUDGE_EXIT"
+assert_empty "nudge opt-out: silent" "$NUDGE_OUT"
+
 # --- setup-graphify.sh (AC-006, AC-007) ---
 
 # Runs the setup script inside a sandbox with the stub CLI on PATH and a

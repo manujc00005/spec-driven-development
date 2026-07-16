@@ -195,7 +195,7 @@ assert_case "corrupt-json" 1 "not valid JSON" "$dir"
 # --- FR-012 / AC-010: --fix with wrong README count should auto-correct ---
 dir="$(fresh_copy fix-readme-marker)"
 sed_inplace 's/<!-- count:skills-total -->43<!-- \/count -->/<!-- count:skills-total -->44<!-- \/count -->/' "$dir/README.md"
-sed_inplace 's/<!-- count:hook-families-total -->11<!-- \/count -->/<!-- count:hook-families-total -->99<!-- \/count -->/' "$dir/README.md"
+sed_inplace 's/<!-- count:hook-families-total -->12<!-- \/count -->/<!-- count:hook-families-total -->99<!-- \/count -->/' "$dir/README.md"
 assert_case_fix "fix-readme-marker" 0 "[FIXED] readme" "$dir" "skills-total"
 # Verify BOTH markers were actually updated with correct values
 skills_marker=$(grep -oE "<!-- count:skills-total -->[0-9]+" "$dir/README.md" | head -1 | grep -oE "[0-9]+")
@@ -204,8 +204,8 @@ if [ "$skills_marker" != "43" ]; then
   echo "[FAIL] fix-readme-marker: skills-total marker not updated correctly (expected 43, got $skills_marker)"
   FAIL=$((FAIL + 1))
 fi
-if [ "$hooks_marker" != "11" ]; then
-  echo "[FAIL] fix-readme-marker: hook-families-total marker not updated correctly (expected 11, got $hooks_marker)"
+if [ "$hooks_marker" != "12" ]; then
+  echo "[FAIL] fix-readme-marker: hook-families-total marker not updated correctly (expected 12, got $hooks_marker)"
   FAIL=$((FAIL + 1))
 fi
 
