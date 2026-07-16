@@ -1,12 +1,16 @@
 # setup-graphify.ps1 — Adopts Graphify in an SDD project (Windows counterpart
 # of setup-graphify.sh): installs the external @sentropic/graphify CLI (with
 # confirmation), generates the dependency graph under .graphify/, gitignores
-# the raw output, and scaffolds the curated docs from templates.
+# the raw output, scaffolds the curated docs from templates, and wires the
+# Graphify hooks (freshness reminder + graph-first nudge) into the project's
+# .claude/settings.json so the whole loop runs with no manual steps.
 #
 # Safety model (same spirit as wire-hooks.ps1):
-#   - Idempotent: re-running refreshes the graph but never duplicates
-#     .gitignore entries or overwrites existing docs.
+#   - Idempotent: re-running refreshes the graph and the copied hook scripts but
+#     never duplicates .gitignore entries, overwrites curated docs, or
+#     double-wires a hook already present in settings.json.
 #   - Degrades gracefully: missing npm is a message, not a failure (exit 0).
+#   - Never touches settings.local.json; backs settings.json up before writing.
 #   - Installs software only after explicit confirmation (or -Yes).
 #
 # Usage: ./setup-graphify.ps1 [-ProjectDir <path>] [-CentralDir <path>] [-Yes]
@@ -126,6 +130,124 @@ foreach ($doc in @("GRAPHIFY.md", "PROJECT_GRAPH.md")) {
     }
 }
 
+# --- 5. Wire the Graphify hooks (scripts + settings.json) -------------------
+# Copies the two Graphify hook scripts into <project>/.claude/hooks/ and merges
+# their entries into <project>/.claude/settings.json so the freshness reminder
+# (SessionStart) and the graph-first nudge (PreToolUse Grep|Glob) run
+# automatically. Repo copies win over the central dir so the scripts stay in
+# lockstep with this setup script (the central dir can lag a feature behind).
+function Get-HookSource($name) {
+    $repo = Join-Path $RepoRoot "hooks/$name"
+    $central = Join-Path $CentralDir "hooks/$name"
+    if (Test-Path $repo) { return $repo }
+    if (Test-Path $central) { return $central }
+    return $null
+}
+
+$HooksDest = Join-Path $ProjectDir ".claude/hooks"
+New-Item -ItemType Directory -Path $HooksDest -Force | Out-Null
+$copiedHooks = @()
+foreach ($hook in @("graphify-stale-reminder.ps1", "graphify-scan-reminder.ps1")) {
+    $src = Get-HookSource $hook
+    if ($src) {
+        Copy-Item $src (Join-Path $HooksDest $hook) -Force
+        Log "Installed hook .claude/hooks/$hook (refreshed to current version)."
+        $copiedHooks += $hook
+    } else {
+        Warn "Hook $hook not found in repo or central dir - skipped (won't be wired)."
+    }
+}
+
+if ($copiedHooks.Count -eq 0) {
+    Warn "No Graphify hooks were available to wire."
+} else {
+    $settingsPath = Join-Path $ProjectDir ".claude/settings.json"
+
+    # Additive, idempotent merge (matches wire-hooks.ps1 semantics): only append
+    # a hook whose command string is not already present in its event. Backs up
+    # an existing settings.json before writing. Never targets settings.local.json.
+    $template = @{ hooks = @{} }
+    if ($copiedHooks -contains "graphify-stale-reminder.ps1") {
+        $template.hooks["SessionStart"] = @(@{ hooks = @(@{
+            type = "command"
+            command = 'powershell -NoProfile -File ${CLAUDE_PROJECT_DIR}/.claude/hooks/graphify-stale-reminder.ps1'
+            timeout = 5
+            statusMessage = "Graphify freshness check..."
+        }) })
+    }
+    if ($copiedHooks -contains "graphify-scan-reminder.ps1") {
+        $template.hooks["PreToolUse"] = @(@{
+            matcher = "Grep|Glob"
+            hooks = @(@{
+                type = "command"
+                command = 'powershell -NoProfile -File ${CLAUDE_PROJECT_DIR}/.claude/hooks/graphify-scan-reminder.ps1'
+                timeout = 5
+                statusMessage = "Graphify graph-first nudge..."
+            })
+        })
+    }
+
+    if (Test-Path $settingsPath) {
+        try {
+            $settings = Get-Content $settingsPath -Raw | ConvertFrom-Json
+        } catch {
+            Warn "hook wiring skipped: target settings.json is not valid JSON."
+            $settings = $null
+        }
+    } else {
+        $settings = [PSCustomObject]@{}
+    }
+
+    if ($null -ne $settings) {
+        if (-not $settings.PSObject.Properties["hooks"]) {
+            $settings | Add-Member -MemberType NoteProperty -Name hooks -Value ([PSCustomObject]@{})
+        }
+        $added = @()
+        foreach ($event in $template.hooks.Keys) {
+            $existingGroups = @()
+            if ($settings.hooks.PSObject.Properties[$event]) {
+                $existingGroups = @($settings.hooks.$event)
+            }
+            $existingCmds = @()
+            foreach ($g in $existingGroups) {
+                foreach ($h in @($g.hooks)) { if ($h.command) { $existingCmds += $h.command } }
+            }
+            $newGroups = @()
+            foreach ($group in $template.hooks[$event]) {
+                $newHooks = @($group.hooks | Where-Object { $existingCmds -notcontains $_.command })
+                if ($newHooks.Count -eq 0) { continue }
+                $ng = @{}
+                foreach ($k in $group.Keys) { if ($k -ne "hooks") { $ng[$k] = $group[$k] } }
+                $ng["hooks"] = $newHooks
+                $newGroups += [PSCustomObject]$ng
+                foreach ($h in $newHooks) { $added += $h.command }
+            }
+            if ($newGroups.Count -gt 0) {
+                $merged = @($existingGroups + $newGroups)
+                if ($settings.hooks.PSObject.Properties[$event]) {
+                    $settings.hooks.$event = $merged
+                } else {
+                    $settings.hooks | Add-Member -MemberType NoteProperty -Name $event -Value $merged
+                }
+            }
+        }
+
+        if ($added.Count -eq 0) {
+            Log "Graphify hooks already wired in .claude/settings.json - no changes."
+        } else {
+            if (Test-Path $settingsPath) {
+                $ts = Get-Date -Format "yyyyMMdd-HHmmss"
+                Copy-Item $settingsPath "$settingsPath.bak-$ts"
+                Log "backup: $settingsPath.bak-$ts"
+            }
+            $settings | ConvertTo-Json -Depth 20 | Set-Content -Path $settingsPath -Encoding UTF8
+            foreach ($cmd in $added) { Log "wired:  $cmd" }
+        }
+    }
+}
+
 Log "Done. Curate docs/PROJECT_GRAPH.md with god nodes/communities worth versioning."
-Log "The graphify-stale-reminder hook keeps the graph fresh (SDD_GRAPHIFY_AUTO=0 disables)."
+Log "Graphify hooks are wired: stale-reminder keeps the graph fresh on SessionStart"
+Log "(SDD_GRAPHIFY_AUTO=0 disables auto-refresh), scan-reminder nudges graph-first"
+Log "on Grep/Glob (SDD_GRAPHIFY_NUDGE=0 opts out)."
 exit 0

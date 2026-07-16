@@ -311,6 +311,42 @@ assert_eq "setup second run: exit 0" 0 "$SETUP_EXIT"
 assert_eq "setup second run: .gitignore not duplicated" 1 "$(grep -cxF '.graphify/' "$sandbox/.gitignore")"
 assert_eq "setup second run: curated doc untouched" "user notes" "$(cat "$sandbox/docs/PROJECT_GRAPH.md")"
 
+# Step 5: hooks copied into the project and wired into settings.json, once each
+# even after two runs (this sandbox ran setup twice above).
+assert_file_exists "setup: stale-reminder hook copied" "$sandbox/.claude/hooks/graphify-stale-reminder.sh"
+assert_file_exists "setup: scan-reminder hook copied" "$sandbox/.claude/hooks/graphify-scan-reminder.sh"
+[ -x "$sandbox/.claude/hooks/graphify-stale-reminder.sh" ] \
+  && { echo "[PASS] setup: copied hook is executable"; PASS=$((PASS+1)); } \
+  || { echo "[FAIL] setup: copied hook is executable"; FAIL=$((FAIL+1)); }
+assert_file_exists "setup: settings.json created" "$sandbox/.claude/settings.json"
+python3 -c "import json;json.load(open('$sandbox/.claude/settings.json'))" 2>/dev/null \
+  && { echo "[PASS] setup: settings.json valid JSON"; PASS=$((PASS+1)); } \
+  || { echo "[FAIL] setup: settings.json valid JSON"; FAIL=$((FAIL+1)); }
+assert_eq "setup: stale hook wired once (idempotent)" 1 "$(grep -cF 'graphify-stale-reminder.sh' "$sandbox/.claude/settings.json")"
+assert_eq "setup: scan hook wired once (idempotent)" 1 "$(grep -cF 'graphify-scan-reminder.sh' "$sandbox/.claude/settings.json")"
+
+# Wiring never touches settings.local.json and preserves a pre-existing
+# settings.json (additive merge + backup).
+sandbox="$(make_sandbox setup-wire-preserve)"
+mkdir -p "$sandbox/.claude"
+printf '{"permissions":{"allow":["Bash"]}}' > "$sandbox/.claude/settings.local.json"
+printf '{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"echo keep-me"}]}]}}' > "$sandbox/.claude/settings.json"
+run_setup "$sandbox"
+assert_eq "wire preserve: exit 0" 0 "$SETUP_EXIT"
+assert_eq "wire preserve: settings.local.json untouched" '{"permissions":{"allow":["Bash"]}}' "$(cat "$sandbox/.claude/settings.local.json")"
+assert_contains "wire preserve: kept pre-existing Stop hook" "keep-me" "$(cat "$sandbox/.claude/settings.json")"
+assert_contains "wire preserve: added stale-reminder" "graphify-stale-reminder.sh" "$(cat "$sandbox/.claude/settings.json")"
+ls "$sandbox/.claude/settings.json.bak-"* >/dev/null 2>&1 \
+  && { echo "[PASS] wire preserve: backup created"; PASS=$((PASS+1)); } \
+  || { echo "[FAIL] wire preserve: backup created"; FAIL=$((FAIL+1)); }
+
+# Step 5: hooks copied into .claude/hooks and wired in settings.json, idempotently.
+assert_file_exists "setup wiring: stale-reminder hook copied" "$sandbox/.claude/hooks/graphify-stale-reminder.sh"
+assert_file_exists "setup wiring: scan-reminder hook copied" "$sandbox/.claude/hooks/graphify-scan-reminder.sh"
+assert_file_exists "setup wiring: settings.json created" "$sandbox/.claude/settings.json"
+assert_eq "setup wiring: stale-reminder wired exactly once" 1 "$(grep -c "graphify-stale-reminder.sh" "$sandbox/.claude/settings.json")"
+assert_eq "setup wiring: scan-reminder wired exactly once" 1 "$(grep -c "graphify-scan-reminder.sh" "$sandbox/.claude/settings.json")"
+
 # Version-tolerant scope fallback: a CLI that rejects '--scope committed'
 # (like documented 0.17.x scopes: auto/tracked/all) must still work via auto.
 sandbox="$(make_sandbox setup-scope-fallback)"
