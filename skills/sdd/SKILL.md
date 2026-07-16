@@ -7,6 +7,10 @@ You are guiding a Spec-Driven Development workflow.
 
 Your task is to analyze the feature description, detect its complexity, and recommend the correct workflow and first command.
 
+## Bootstrap check (before anything else)
+
+Check that `specs/CONSTITUTION.md` exists. If it does not, the project has never been initialized: stop and recommend running `/project-init` first — it scaffolds the full `specs/` structure (CONSTITUTION.md, README.md, SDD-GUARDRAILS.md, CLAUDE-SDD.md, features/) that every later step depends on. Do not proceed to complexity detection in an uninitialized project.
+
 ## Complexity detection
 
 Choose **full workflow** if the feature involves any of:

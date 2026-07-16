@@ -1,11 +1,16 @@
 ---
 name: project-init
-description: Initialize a new project's SDD structure. Creates specs/CONSTITUTION.md by interviewing the user about the project stack, architecture rules, coding conventions, security requirements, and review gates. Run this once when starting a new project from the SDD template.
+description: Initialize a new project's SDD structure. Creates specs/CONSTITUTION.md, specs/README.md, specs/SDD-GUARDRAILS.md and specs/CLAUDE-SDD.md by interviewing the user about the project stack, architecture rules, coding conventions, security requirements, and review gates. Run this once when starting a new project from the SDD template.
 ---
 
 You are acting as a senior software architect and SDD setup guide.
 
-Your task is to initialize the project's Spec-Driven Development structure by creating `specs/CONSTITUTION.md` — the permanent rule file that all agents read before reviewing or implementing.
+Your task is to initialize the project's Spec-Driven Development structure by creating the four `specs/` support files every SDD project shares:
+
+- `specs/CONSTITUTION.md` — the permanent rule file that all agents read before reviewing or implementing.
+- `specs/README.md` — folder guide and feature index.
+- `specs/SDD-GUARDRAILS.md` — the per-project Consistency Gate instance (process rules).
+- `specs/CLAUDE-SDD.md` — domain-specific review triggers and operational rules.
 
 ## When to use
 
@@ -16,11 +21,16 @@ Run `/project-init` once at the start of a new project, before creating any spec
 ### Step 1 — Check current state
 
 1. Check if `specs/CONSTITUTION.md` exists.
-   - If it exists and has no `TODO:` markers → ask the user if they want to update it. If no, stop.
+   - If it exists and has no `TODO:` markers → ask the user if they want to update it. If no, skip to step 1.3 (the other support files may still be missing).
    - If it exists with `TODO:` markers → continue to fill in the missing sections.
-   - If it does not exist → copy from `specs/templates/CONSTITUTION.md` if available, otherwise create from scratch.
+   - If it does not exist → copy from the installed templates (`specs/_templates/CONSTITUTION.md` in the central config, e.g. `~/.claude-config/specs/_templates/`) if available, otherwise create from scratch.
 
 2. Check if `specs/features/` directory exists. If not, create it.
+
+3. Check the other three support files, sourcing each from the installed templates (`SPECS-README.md` → `specs/README.md`, `SDD-GUARDRAILS.md` → `specs/SDD-GUARDRAILS.md`, `CLAUDE-SDD.md` → `specs/CLAUDE-SDD.md`):
+   - Missing → create it from its template (strip the HTML installation comment at the top).
+   - Present with `TODO:` markers → fill them in Step 3.
+   - Present without `TODO:` markers → leave untouched.
 
 ### Step 2 — Interview the user
 
@@ -44,9 +54,14 @@ Ask the following questions. Wait for answers before proceeding. Group related q
 - Are there CI/CD checks that must pass? (type check, lint, build, tests)
 - Any patterns that are explicitly forbidden in this project?
 
-### Step 3 — Generate CONSTITUTION.md
+### Step 3 — Generate the specs/ support files
 
-Using the answers, generate `specs/CONSTITUTION.md` filling in all sections. Do not leave any `TODO:` markers — replace all placeholders with project-specific content based on the interview.
+Using the answers:
+
+1. Generate `specs/CONSTITUTION.md` filling in all sections. Do not leave any `TODO:` markers — replace all placeholders with project-specific content based on the interview.
+2. Fill `specs/CLAUDE-SDD.md`: project context, stack and module map from Round 1-2; the domain review triggers from Round 2-3 answers (which paths make `/database-review`, `/security-review`, `/api-review` mandatory; keep the GDPR section only if Round 1 said the project handles regulated personal data); the non-negotiable rules and verification commands from Round 3. No `TODO:` markers may remain.
+3. Fill the `TODO:` rows of `specs/SDD-GUARDRAILS.md` (Source of Truth Matrix schema path, provider contracts, project-specific gate limitations). Leave the generic rules untouched.
+4. Fill `specs/README.md` header (project name, one-line description). The feature index starts empty.
 
 If the user did not answer a question, use a sensible default and note it as a default in the file with a comment `# default — update if needed`.
 
@@ -63,6 +78,9 @@ After saving:
 
 ## Created
 - specs/CONSTITUTION.md — N rules defined
+- specs/README.md — folder guide and feature index
+- specs/SDD-GUARDRAILS.md — Consistency Gate instance
+- specs/CLAUDE-SDD.md — domain review triggers
 - specs/features/ — ready for feature specs
 
 ## Key rules
@@ -71,8 +89,10 @@ After saving:
 - Forbidden patterns: [list]
 - GDPR: [yes/no]
 
-## Next step
-Run `/spec-create` to create your first feature spec.
+## Next steps
+- Run `/spec-create` to create your first feature spec.
+- To activate the hook guardrails in this project, run link-project and then
+  scripts/wire-hooks.sh (or wire-hooks.ps1 on Windows) from the SDD repo.
 ```
 
 ## Context economy
