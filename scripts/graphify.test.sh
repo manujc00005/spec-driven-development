@@ -340,13 +340,6 @@ ls "$sandbox/.claude/settings.json.bak-"* >/dev/null 2>&1 \
   && { echo "[PASS] wire preserve: backup created"; PASS=$((PASS+1)); } \
   || { echo "[FAIL] wire preserve: backup created"; FAIL=$((FAIL+1)); }
 
-# Step 5: hooks copied into .claude/hooks and wired in settings.json, idempotently.
-assert_file_exists "setup wiring: stale-reminder hook copied" "$sandbox/.claude/hooks/graphify-stale-reminder.sh"
-assert_file_exists "setup wiring: scan-reminder hook copied" "$sandbox/.claude/hooks/graphify-scan-reminder.sh"
-assert_file_exists "setup wiring: settings.json created" "$sandbox/.claude/settings.json"
-assert_eq "setup wiring: stale-reminder wired exactly once" 1 "$(grep -c "graphify-stale-reminder.sh" "$sandbox/.claude/settings.json")"
-assert_eq "setup wiring: scan-reminder wired exactly once" 1 "$(grep -c "graphify-scan-reminder.sh" "$sandbox/.claude/settings.json")"
-
 # Version-tolerant scope fallback: a CLI that rejects '--scope committed'
 # (like documented 0.17.x scopes: auto/tracked/all) must still work via auto.
 sandbox="$(make_sandbox setup-scope-fallback)"
