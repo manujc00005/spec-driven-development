@@ -35,6 +35,11 @@ sed_inplace() {
   fi
 }
 
+# Current (correct) README counts, read dynamically so cases survive future
+# skill/hook additions (stale-hardcode failures bit this suite twice).
+SKILLS_NOW=$(grep -oE "<!-- count:skills-total -->[0-9]+" "$REPO_ROOT/README.md" | head -1 | grep -oE "[0-9]+")
+HOOKS_NOW=$(grep -oE "<!-- count:hook-families-total -->[0-9]+" "$REPO_ROOT/README.md" | head -1 | grep -oE "[0-9]+")
+
 assert_case() {
   local name="$1" expect_exit="$2" expect_grep="$3" dir="$4"
   local out actual_exit
@@ -173,7 +178,7 @@ assert_case "settings-wiring-forbidden-pair" 1 "wires both 'maven-compile' and '
 
 # --- FR-008: wrong README count ---
 dir="$(fresh_copy readme-wrong-count)"
-sed_inplace 's/<!-- count:skills-total -->43<!-- \/count -->/<!-- count:skills-total -->44<!-- \/count -->/' "$dir/README.md"
+sed_inplace "s/<!-- count:skills-total -->${SKILLS_NOW}<!-- \\/count -->/<!-- count:skills-total -->9999<!-- \\/count -->/" "$dir/README.md"
 assert_case "readme-wrong-count" 1 "readme-count] skills-total" "$dir"
 
 # --- FR-008: missing required README marker ---
@@ -194,18 +199,35 @@ assert_case "corrupt-json" 1 "not valid JSON" "$dir"
 
 # --- FR-012 / AC-010: --fix with wrong README count should auto-correct ---
 dir="$(fresh_copy fix-readme-marker)"
-sed_inplace 's/<!-- count:skills-total -->43<!-- \/count -->/<!-- count:skills-total -->44<!-- \/count -->/' "$dir/README.md"
-sed_inplace 's/<!-- count:hook-families-total -->12<!-- \/count -->/<!-- count:hook-families-total -->99<!-- \/count -->/' "$dir/README.md"
+sed_inplace "s/<!-- count:skills-total -->${SKILLS_NOW}<!-- \\/count -->/<!-- count:skills-total -->9999<!-- \\/count -->/" "$dir/README.md"
+sed_inplace "s/<!-- count:hook-families-total -->${HOOKS_NOW}<!-- \\/count -->/<!-- count:hook-families-total -->99<!-- \\/count -->/" "$dir/README.md"
 assert_case_fix "fix-readme-marker" 0 "[FIXED] readme" "$dir" "skills-total"
 # Verify BOTH markers were actually updated with correct values
 skills_marker=$(grep -oE "<!-- count:skills-total -->[0-9]+" "$dir/README.md" | head -1 | grep -oE "[0-9]+")
 hooks_marker=$(grep -oE "<!-- count:hook-families-total -->[0-9]+" "$dir/README.md" | head -1 | grep -oE "[0-9]+")
-if [ "$skills_marker" != "43" ]; then
-  echo "[FAIL] fix-readme-marker: skills-total marker not updated correctly (expected 43, got $skills_marker)"
+if [ "$skills_marker" != "$SKILLS_NOW" ]; then
+  echo "[FAIL] fix-readme-marker: skills-total marker not updated correctly (expected $SKILLS_NOW, got $skills_marker)"
   FAIL=$((FAIL + 1))
 fi
-if [ "$hooks_marker" != "12" ]; then
-  echo "[FAIL] fix-readme-marker: hook-families-total marker not updated correctly (expected 12, got $hooks_marker)"
+if [ "$hooks_marker" != "$HOOKS_NOW" ]; then
+  echo "[FAIL] fix-readme-marker: hook-families-total marker not updated correctly (expected $HOOKS_NOW, got $hooks_marker)"
+  FAIL=$((FAIL + 1))
+fi
+
+# --- Spec 012 D003: badge drift is detected and auto-fixed like markers ---
+# Read the current (correct) value instead of hardcoding it, so the case
+# survives future skill additions.
+skills_badge=$(grep -oE "badge/skills-[0-9]+-" "$REPO_ROOT/README.md" | grep -oE "[0-9]+")
+
+dir="$(fresh_copy badge-drift)"
+sed_inplace "s|badge/skills-${skills_badge}-|badge/skills-999-|" "$dir/README.md"
+assert_case "badge-drift" 1 "readme-badge" "$dir"
+
+dir="$(fresh_copy fix-badge-drift)"
+sed_inplace "s|badge/skills-${skills_badge}-|badge/skills-999-|" "$dir/README.md"
+assert_case_fix "fix-badge-drift" 0 "[FIXED] readme-badge skills" "$dir" ""
+if ! grep -q "badge/skills-${skills_badge}-" "$dir/README.md"; then
+  echo "[FAIL] fix-badge-drift: skills badge not restored to ${skills_badge}"
   FAIL=$((FAIL + 1))
 fi
 
@@ -214,12 +236,12 @@ dir="$(fresh_copy fix-blocked-by-orphan)"
 mkdir -p "$dir/skills/zzz-orphan-test"
 echo "# orphan" > "$dir/skills/zzz-orphan-test/SKILL.md"
 # Also make README have wrong count to test that it WON'T be fixed
-sed_inplace 's/<!-- count:skills-total -->43<!-- \/count -->/<!-- count:skills-total -->44<!-- \/count -->/' "$dir/README.md"
+sed_inplace "s/<!-- count:skills-total -->${SKILLS_NOW}<!-- \\/count -->/<!-- count:skills-total -->9999<!-- \\/count -->/" "$dir/README.md"
 assert_case_fix "fix-blocked-by-orphan" 1 "[orphan-skill] zzz-orphan-test" "$dir" ""
 # Verify the README marker was NOT updated (should still be wrong 44)
 actual_marker=$(grep -oE "<!-- count:skills-total -->[0-9]+" "$dir/README.md" | head -1 | grep -oE "[0-9]+")
-if [ "$actual_marker" != "44" ]; then
-  echo "[FAIL] fix-blocked-by-orphan: README was incorrectly modified (expected 44, got $actual_marker)"
+if [ "$actual_marker" != "9999" ]; then
+  echo "[FAIL] fix-blocked-by-orphan: README was incorrectly modified (expected 9999, got $actual_marker)"
   FAIL=$((FAIL + 1))
 fi
 

@@ -370,9 +370,36 @@ else:
     for key in sorted(REQUIRED_MARKERS - seen_keys):
         err("readme-count", key, "required count marker missing from README.md")
 
+    # Shields.io total badges duplicate five computed counts — enforce them like
+    # markers (they drifted by hand once; see spec 012 D003). Patterns are
+    # anchored to the known slugs so unrelated badges are never touched.
+    BADGES = {
+        "skills": "skills-total",
+        "hook%20families": "hook-families-total",
+        "templates": "templates-total",
+        "agents": "agents-total",
+        "profiles": "profiles-total",
+    }
+    found_badges = {}  # {slug: (old_value, regex)}
+    for slug, key in BADGES.items():
+        badge_re = re.compile(rf"(badge/{re.escape(slug)}-)(\d+)(-)")
+        m = badge_re.search(readme_text)
+        if not m:
+            err("readme-badge", slug, "expected a shields.io badge for this count in README.md")
+            continue
+        value = int(m.group(2))
+        found_badges[slug] = (value, badge_re)
+        expected = computed[key]
+        if value != expected:
+            line_no = readme_text.count("\n", 0, m.start()) + 1
+            err("readme-badge", f"{slug} (line {line_no})", f"expected {expected}, found {value}")
+
     # If --fix mode and no non-auto-fixable violations, update markers in README.
     if fix_mode and readme_text:
-        non_readme_errors = [e for e in errors if not e.startswith("[readme-count]")]
+        non_readme_errors = [
+            e for e in errors
+            if not e.startswith("[readme-count]") and not e.startswith("[readme-badge]")
+        ]
 
         if not non_readme_errors:
             # Safe to fix: no orphans, no wiring issues, etc.
@@ -388,6 +415,13 @@ else:
                         fixed_markers.append(f"[FIXED] readme {key} — updated from {old_value} to {new_value}")
                         # Remove readme-count error for this key from errors list.
                         errors = [e for e in errors if f"[readme-count] {key}" not in e]
+
+            for slug, (old_value, badge_re) in sorted(found_badges.items()):
+                new_value = computed[BADGES[slug]]
+                if old_value != new_value:
+                    updated_readme = badge_re.sub(rf"\g<1>{new_value}\g<3>", updated_readme)
+                    fixed_markers.append(f"[FIXED] readme-badge {slug} — updated from {old_value} to {new_value}")
+                    errors = [e for e in errors if f"[readme-badge] {slug}" not in e]
 
             # Write the updated README.md if any markers were fixed.
             if fixed_markers:
