@@ -527,7 +527,6 @@ This repo dogfoods its own workflow: the phases that built it are specced under 
 - Prisma/Next.js-specific reviewers for `next-prisma-web`
 - Defensive hooks: `secret-scan`, `sensitive-file-guard`, `messaging-review-reminder`, `openapi-contract-reminder`
 - `observability-reviewer` skill + `OBSERVABILITY.md` template (deferred from Phase 3)
-- `CONTRIBUTING.md`
 
 **Deferred / external**
 
@@ -568,4 +567,4 @@ Stated plainly, because they matter:
 
 ## 📄 License
 
-MIT — see [`LICENSE`](LICENSE). No `CONTRIBUTING.md` yet (planned); issues and PRs are welcome in the meantime — small, scoped changes with a clear description will get the fastest review, which is only fair given what this repo preaches.
+MIT — see [`LICENSE`](LICENSE). Contributions welcome — read [`CONTRIBUTING.md`](CONTRIBUTING.md) first: features carry a spec (this repo dogfoods its own workflow), hooks and scripts ship in sh/ps1 parity, and the consistency harness is the merge gate. Issue templates cover bugs and feature requests.
