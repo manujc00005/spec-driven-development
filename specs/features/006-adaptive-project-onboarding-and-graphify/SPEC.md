@@ -1,5 +1,4 @@
 ---
-status: Done
 current_date: 2026-07-14
 author: Manuel Jimenez
 phase: 6
@@ -11,6 +10,10 @@ final_review_date: 2026-07-14
 ---
 
 # Adaptive Project Onboarding + Graphify Integration
+
+## Status
+
+Done
 
 **Objective:** Generalize Graphify integration as an optional, cross-platform, non-mandatory capability
 of the SDD framework. Distribute the template documentation from a specific personal project into
