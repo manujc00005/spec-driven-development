@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-14  
 **Reviewer:** Strict quality assurance check  
-**Scope:** All 17 files in examples/002-payment-webhook-idempotency/  
+**Scope:** All 17 files in examples/001-payment-webhook-idempotency/  
 **Verdict:** ✅ **PASS** — All issues identified and corrected
 
 ---

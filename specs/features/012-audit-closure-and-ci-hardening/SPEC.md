@@ -61,7 +61,8 @@ consistency harness checks the five total-count badges and `--fix` syncs them.
   pass (`graphify.test.sh` 66/66, `shellcheck -S error` clean, ps1 parity by
   review until CI runs).
 - AC-002: `grep -rn "002-payment" --include="*.md" .` returns nothing outside
-  `.git/`; the renamed folder retains full history (`git log --follow`).
+  `.git/` and this spec's own description of the rename; the renamed folder
+  retains full history (`git log --follow`).
 - AC-003: `grep -A2 "## Status" specs/features/006-*/SPEC.md` returns `Done`;
   frontmatter no longer contains `status:`.
 - AC-004: Mutating a badge number makes `check-consistency.sh` exit 1 and

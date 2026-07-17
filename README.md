@@ -432,7 +432,7 @@ Do not modify code.
 
 This repository includes professional worked examples demonstrating the SDD framework on real engineering problems:
 
-- **[Payment Webhook Idempotency](examples/002-payment-webhook-idempotency/)** — SDD applied to a Java/Spring webhook receiver pattern: constraint-based idempotency (UNIQUE constraint, not locks), HMAC signature verification, proper HTTP status codes for retry control (200, 202, 400, 401), and security-first design (verify before process). Includes complete SPEC, PLAN, TASKS, DECISIONS, 14 test cases, database migration, and review artifacts. Educational example showing the pattern, not a complete production system.
+- **[Payment Webhook Idempotency](examples/001-payment-webhook-idempotency/)** — SDD applied to a Java/Spring webhook receiver pattern: constraint-based idempotency (UNIQUE constraint, not locks), HMAC signature verification, proper HTTP status codes for retry control (200, 202, 400, 401), and security-first design (verify before process). Includes complete SPEC, PLAN, TASKS, DECISIONS, 14 test cases, database migration, and review artifacts. Educational example showing the pattern, not a complete production system.
 
 ---
 
@@ -515,7 +515,7 @@ This repo dogfoods its own workflow: the phases that built it are specced under 
 - Graphify-aware context layer (3 skills + 1 hook, graceful degradation)
 - Multi-model orchestration (`/sdd-orchestrate`, 2 agents, fallback policy, rollback docs)
 - Adaptive project onboarding (`/sdd-onboard`) with optional Graphify setup templates (`GRAPHIFY.md`, `PROJECT_GRAPH.md`)
-- Worked example: Payment Webhook Idempotency ([`examples/002-payment-webhook-idempotency/`](examples/002-payment-webhook-idempotency/)) — Java/Spring webhook receiver with constraint-based idempotency, full spec/plan/tasks/decisions, 14 tests, database migration, and review artifacts
+- Worked example: Payment Webhook Idempotency ([`examples/001-payment-webhook-idempotency/`](examples/001-payment-webhook-idempotency/)) — Java/Spring webhook receiver with constraint-based idempotency, full spec/plan/tasks/decisions, 14 tests, database migration, and review artifacts
 
 **Planned**
 - `payments-fintech` profile content (`stripe-payments-reviewer`, `payment-idempotency-reviewer`)
@@ -558,7 +558,7 @@ Stated plainly, because they matter:
 - **Windows-first origins.** The default central-dir location and the original hook wiring are Windows-shaped, but parity is shipped, not just documented: every hook has a `.sh` variant, both installers exist, and `settings.template.sh.json` provides the ready-made macOS/Linux hook wiring.
 - **Graphify is external and optional.** This repo ships the integration layer only; without the tool you get graceful degradation, not the architecture map.
 - **Some profiles are declarations, not content.** `payments-fintech` currently ships nothing; `blockchain-crypto` is disabled by design.
-- **One worked example so far.** The [payment webhook idempotency example](examples/002-payment-webhook-idempotency/) demonstrates the workflow artifacts end-to-end, but it is educational — a pattern walkthrough, not a complete production system.
+- **One worked example so far.** The [payment webhook idempotency example](examples/001-payment-webhook-idempotency/) demonstrates the workflow artifacts end-to-end, but it is educational — a pattern walkthrough, not a complete production system.
 - **Hook enforcement is best-effort by design.** Hooks intervene at tool-call level inside Claude Code; they are guardrails against accidental damage, not a security boundary against a determined operator.
 
 ## 📄 License
