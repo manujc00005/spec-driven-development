@@ -20,3 +20,43 @@ jobs:
 
       - name: Run consistency checker self-test
         run: bash scripts/check-consistency.test.sh
+
+      - name: Run graphify hook and setup-script suite
+        run: bash scripts/graphify.test.sh
+
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Severity=error only: near-certain real bugs, no style noise.
+      # See specs/features/012-audit-closure-and-ci-hardening D001.
+      - name: shellcheck (severity error)
+        run: shellcheck -S error scripts/*.sh hooks/*.sh hooks/lib/*.sh install.sh link-project.sh
+
+  # Parse-only parity gate for the PowerShell variants: fails on any syntax
+  # error, never executes a hook (see spec 012 D002).
+  windows-syntax:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Parse every shipped .ps1
+        shell: pwsh
+        run: |
+          $failed = $false
+          $files = Get-ChildItem -Path hooks, scripts -Filter *.ps1 -File
+          $files += Get-Item install.ps1, link-project.ps1
+          foreach ($f in $files) {
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($f.FullName, [ref]$null, [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) {
+              $failed = $true
+              Write-Output "PARSE ERRORS in $($f.FullName):"
+              $errors | ForEach-Object { Write-Output "  $($_.Extent.StartLineNumber): $($_.Message)" }
+            } else {
+              Write-Output "OK: $($f.Name)"
+            }
+          }
+          if ($failed) { exit 1 }
+          Write-Output "All $($files.Count) .ps1 files parse cleanly."
