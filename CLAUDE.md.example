@@ -121,6 +121,17 @@ Do not implement if:
 - `/debugger` — trace bugs and build failures to their root cause.
 - `/handoff` — compact the current conversation into a document for a fresh session to continue.
 
+## Mindset defaults
+
+Apply these mindset manuals at their trigger moments — they define how to work, not extra process steps:
+
+- Before claiming a task done or writing "fixed" → apply `/verifier` ("done" = observed working, not "it compiles").
+- On any bug, before hypothesizing → apply `/root-causer` (reproduce first; fix the cause, not the symptom).
+- Before the first edit in an unfamiliar area → apply `/scout` (read structure, search before building, match conventions).
+- When writing handlers, endpoints, parsers, or anything touching external input → apply `/threat-modeler`.
+- Before planning a non-trivial task (or skipping the plan for a trivial one) → apply `/decomposer`.
+- Always in effect: `/scope-keeper` (minimal diff), `/communicator` (lead with the outcome), `/stopper` (proceed on reversible, ask on destructive), `/honest-advisor` (correct flawed premises, bad news at full strength).
+
 ## Recommended workflow (adapt per feature type)
 
 For most features:
