@@ -102,6 +102,10 @@ cd spec-driven-development
 # Opt-in: link your ~/.claude to the central dir (skills, hooks) + copy agents
 ./install.sh --link-user-claude
 .\install.ps1 -LinkUserClaude
+
+# Per project: wire the shipped hooks into .claude/settings.json (additive, backs up first)
+./scripts/wire-hooks.sh --project-dir <your-project>
+.\scripts\wire-hooks.ps1 -ProjectDir <your-project>
 ```
 
 Then, in any project, start a new Claude Code session and run:
@@ -516,6 +520,7 @@ This repo dogfoods its own workflow: the phases that built it are specced under 
 - Multi-model orchestration (`/sdd-orchestrate`, 2 agents, fallback policy, rollback docs)
 - Adaptive project onboarding (`/sdd-onboard`) with optional Graphify setup templates (`GRAPHIFY.md`, `PROJECT_GRAPH.md`)
 - Worked example: Payment Webhook Idempotency ([`examples/001-payment-webhook-idempotency/`](examples/001-payment-webhook-idempotency/)) — Java/Spring webhook receiver with constraint-based idempotency, full spec/plan/tasks/decisions, 14 tests, database migration, and review artifacts
+- Worked example: Server Action Rate Limiting ([`examples/002-server-action-rate-limiting/`](examples/002-server-action-rate-limiting/)) — TypeScript/Next.js server action with sliding-window rate limiting, x-forwarded-for trust-boundary attack tests, zod validation, enumeration-resistant responses, and a security review whose real finding (SEC-001) is preserved in the trail
 
 **Planned**
 - `payments-fintech` profile content (`stripe-payments-reviewer`, `payment-idempotency-reviewer`)
@@ -558,7 +563,7 @@ Stated plainly, because they matter:
 - **Windows-first origins.** The default central-dir location and the original hook wiring are Windows-shaped, but parity is shipped, not just documented: every hook has a `.sh` variant, both installers exist, and `settings.template.sh.json` provides the ready-made macOS/Linux hook wiring.
 - **Graphify is external and optional.** This repo ships the integration layer only; without the tool you get graceful degradation, not the architecture map.
 - **Some profiles are declarations, not content.** `payments-fintech` currently ships nothing; `blockchain-crypto` is disabled by design.
-- **One worked example so far.** The [payment webhook idempotency example](examples/001-payment-webhook-idempotency/) demonstrates the workflow artifacts end-to-end, but it is educational — a pattern walkthrough, not a complete production system.
+- **Two worked examples so far** ([Java/Spring webhook idempotency](examples/001-payment-webhook-idempotency/), [TypeScript/Next.js rate limiting](examples/002-server-action-rate-limiting/)). Both demonstrate the workflow artifacts end-to-end, but they are educational — pattern walkthroughs, not complete production systems.
 - **Hook enforcement is best-effort by design.** Hooks intervene at tool-call level inside Claude Code; they are guardrails against accidental damage, not a security boundary against a determined operator.
 
 ## 📄 License
