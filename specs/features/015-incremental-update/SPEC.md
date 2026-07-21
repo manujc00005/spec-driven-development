@@ -2,7 +2,7 @@
 
 ## Status
 
-In Progress
+Done
 
 ## Problem
 
@@ -152,6 +152,10 @@ None (no DB). The install manifest is a new JSON state file, versioned by a `sch
 
 ## Open questions
 
-- OQ-001: Should `update.sh` also re-run `wire-hooks` automatically for `--project-dir` targets when new hook families ship, or only remind? (Default: remind only — wiring edits a project's `settings.json`, which deserves an explicit adopter action.)
-- OQ-002: Should the drift check also flag headings the adopter has that the example lacks (reverse drift, e.g. deprecated sections)? (Default: no — adopter-authored sections are legitimate; only example→target direction is reported.)
-- OQ-003: Manifest filename: `.sdd-install.json` (hidden, framework-owned) vs `sdd-install.json` (visible). (Default: hidden dotfile — it is state, not documentation.)
+- OQ-001: **Resolved** (D004) — remind only; `update` never auto-runs `wire-hooks` (it edits an adopter-owned `settings.json`).
+- OQ-002: **Resolved** (D004) — no reverse drift; only example→target headings are reported.
+- OQ-003: **Resolved** (D001) — hidden dotfile `.sdd-install.json` (framework-owned state, not documentation).
+
+## Close summary
+
+Closed 2026-07-21. All 12 tasks complete; all 10 acceptance criteria verified locally (AC-002–AC-007 + AC-010 via `update.test.sh` 7/7, AC-001/AC-009 via the manual E2E and `check-consistency.sh`). One verification deferred, not skipped: **AC-008 `update.ps1` runtime parity on Windows** — no local pwsh; the CI `windows-syntax` parse gate covers it statically, per D007. Run the runtime spot-check on a Windows box before tagging the next release.
