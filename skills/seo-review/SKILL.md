@@ -88,7 +88,10 @@ For each issue:
 
 Logic:
 - If verdict is **Partial** or **Fail**: fix issues and re-run `/seo-review <path>`
-- If verdict is **Pass**: run `/spec-close <path>` or `/pr-description`
+- If verdict is **Pass**: continue down the SEO family for each service contracted in
+  `specs/SERVICES.md` — `/aeo-review <path>` (answer extraction), then `/geo-review <path>`
+  (generative-engine citability), then `/ai-visibility-review <path>` (AI-crawler access).
+  If none of those are contracted: `/spec-close <path>` or `/pr-description`
 
 ## Context economy
 

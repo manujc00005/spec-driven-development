@@ -102,11 +102,10 @@
         "java-spring-reviewer",
         "spring-boot-api-reviewer",
         "spring-security-reviewer",
-        "java-performance-reviewer"
-      ],
-      "plannedSkills": [
+        "java-performance-reviewer",
         "observability-reviewer"
       ],
+      "plannedSkills": [],
       "hooks": [
         "maven-compile",
         "java-build-test-guard",
@@ -150,18 +149,18 @@
     "payments-fintech": {
       "description": "Payment processing, Stripe/PSP integration, idempotency, reconciliation, money/units safety, webhook signature verification.",
       "default": false,
-      "skills": [],
-      "plannedSkills": [
+      "skills": [
         "stripe-payments-reviewer",
         "payment-idempotency-reviewer"
       ],
+      "plannedSkills": [],
       "hooks": [],
       "plannedHooks": [
         "stripe-review-reminder"
       ],
       "templates": [],
       "plannedTemplates": [],
-      "note": "Overlay profile. Can combine with java-spring-backend or next-prisma-web. Nothing is shipped yet."
+      "note": "Overlay profile. Can combine with java-spring-backend or next-prisma-web. Ships the Stripe reviewer (webhook/idempotency-key/minor-units surface) and the processor-agnostic payment-idempotency reviewer (spec 017); the stripe-review-reminder hook is still planned."
     },
     "next-prisma-web": {
       "description": "Next.js App Router, React, TypeScript, Prisma ORM, PostgreSQL, Server Components/Actions, Tailwind.",
@@ -169,12 +168,11 @@
       "skills": [
         "frontend-review",
         "privacy-compliance-review",
-        "database-review"
-      ],
-      "plannedSkills": [
+        "database-review",
         "prisma-migration-reviewer",
         "nextjs-server-actions-reviewer"
       ],
+      "plannedSkills": [],
       "hooks": [
         "ts-check",
         "eslint-fix",
@@ -189,24 +187,23 @@
         "ARCHITECTURE.md"
       ],
       "plannedTemplates": [],
-      "note": "Optional profile. The 3 shipped skills and 3 hooks are generic/stack-agnostic already present in the repo. seo-review moved out to the seo-geo-addon overlay profile (SEO/GEO/AEO are separately billed services — see specs/features/008-billable-service-scope). prisma-migration-reviewer, nextjs-server-actions-reviewer, and prisma-migration-guard are planned."
+      "note": "Optional profile. seo-review moved out to the seo-geo-addon overlay profile (SEO/GEO/AEO are separately billed services — see specs/features/008-billable-service-scope). prisma-migration-reviewer and nextjs-server-actions-reviewer ship with this profile (spec 017); the prisma-migration-guard hook is still planned."
     },
     "seo-geo-addon": {
       "description": "Technical SEO, GEO (generative engine optimization), AEO (answer engine optimization), and AI-visibility review. Billable add-on — install only when the client has contracted seo/geo/aeo/ai-visibility.",
       "default": false,
       "skills": [
-        "seo-review"
-      ],
-      "plannedSkills": [
+        "seo-review",
         "aeo-review",
         "geo-review",
         "ai-visibility-review"
       ],
+      "plannedSkills": [],
       "hooks": [],
       "plannedHooks": [],
       "templates": [],
       "plannedTemplates": [],
-      "note": "Overlay profile, not an automatic addition to next-prisma-web. Currently ships seo-review only (technical on-page SEO + hreflang); GEO, AEO, and AI-visibility are declared as plannedSkills so the profile honestly reflects that they are three separate future reviewers, not covered by seo-review today (see specs/features/008-billable-service-scope DECISIONS D006). Install alongside the web profile with the client's contracted services declared in specs/SERVICES.md: '--profile next-prisma-web,seo-geo-addon' (install.sh) or '-Profile next-prisma-web,seo-geo-addon' (install.ps1)."
+      "note": "Overlay profile, not an automatic addition to next-prisma-web. Ships the full SEO family: seo-review (technical on-page SEO + hreflang), aeo-review (answer extraction), geo-review (generative-engine citability), and ai-visibility-review (AI-crawler access policy) — the three reviewers planned in specs/features/008-billable-service-scope DECISIONS D006 were implemented by spec 017. Every skill in this profile is gated on the service being contracted in specs/SERVICES.md (uncontracted runs log an upsell and stop). Install alongside the web profile with the client's contracted services declared in specs/SERVICES.md: '--profile next-prisma-web,seo-geo-addon' (install.sh) or '-Profile next-prisma-web,seo-geo-addon' (install.ps1)."
     },
     "blockchain-crypto": {
       "description": "On-chain/wallet/transaction reviews. DISABLED BY DEFAULT.",

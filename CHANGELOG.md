@@ -9,6 +9,34 @@ under `specs/features/` — the framework is developed with its own workflow.
 > version** (installer compatibility), not the release version. Releases are
 > tags.
 
+## [Unreleased]
+
+Specs 016–017 · Installer hooks/lib fix, planned skills shipped.
+
+### Added
+- 8 skills promoted from planned to shipped (spec 017), completing every
+  `plannedSkills` entry in `profiles.json`:
+  `observability-reviewer` (java-spring-backend);
+  `stripe-payments-reviewer` + `payment-idempotency-reviewer`
+  (payments-fintech — the profile ships content for the first time);
+  `prisma-migration-reviewer` + `nextjs-server-actions-reviewer`
+  (next-prisma-web); `aeo-review` + `geo-review` + `ai-visibility-review`
+  (seo-geo-addon — full SEO family, all gated on `specs/SERVICES.md`
+  contracts with the upsell-log fallback).
+- Stack-specific reviewer routing table in `/review-all` and profile-gated
+  detection lines in `/sdd` — the pre-existing stack reviewers
+  (java-spring, event-driven, …) are now routed there too, not only the new ones.
+- `scripts/install.test.sh` — regression test for the installer (spec 016):
+  fresh-install hooks/lib presence, git-guardrails exit-2 blocking behavior,
+  idempotent re-run.
+
+### Fixed
+- `install.sh` / `install.ps1` never copied `hooks/lib/` in profile mode,
+  leaving every lib-sourcing hook (git-guardrails, sdd-spec-guard,
+  java-build-test-guard, maven-compile, spring-config-guard) crashing with
+  exit 1 on fresh installs — git-guardrails silently stopped blocking
+  dangerous git commands (spec 016, found by the 2026-07-21 integration audit).
+
 ## [0.5.0] — 2026-07-17
 
 Specs 010–012, 014 · Graphify first-class, audit closure, adoption horizon.

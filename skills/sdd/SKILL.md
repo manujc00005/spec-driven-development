@@ -40,6 +40,14 @@ After choosing the workflow, identify which specialized reviews will likely be n
 - **Backend review**: spec mentions services, controllers, business logic, repositories
 - **Frontend review**: spec mentions UI components, screens, state, forms, frontend flows
 
+Stack/profile reviewers (detect only if the skill is installed — they extend the generic ones above):
+
+- **Payments** (`/stripe-payments-reviewer`, `/payment-idempotency-reviewer`): spec mentions payments, checkout, Stripe, webhooks, refunds, wallets, credits, ledgers
+- **Prisma migrations** (`/prisma-migration-reviewer`): spec mentions Prisma schema or migrations, or the diff touches `prisma/`
+- **Server actions** (`/nextjs-server-actions-reviewer`): spec mentions server actions, mutations, or form submissions in a Next.js App Router project
+- **Observability** (`/observability-reviewer`): spec mentions logging, metrics, tracing, health checks, or adds a service/consumer/job that must be operable
+- **SEO family** (`/seo-review` → `/aeo-review` → `/geo-review` → `/ai-visibility-review`): public pages changed — each step only if that service is contracted in `specs/SERVICES.md`
+
 ## Medium workflow (8 steps)
 
 1. `/spec-create` — creates spec with auto-clarify pass

@@ -32,6 +32,27 @@ Run a review section if the spec mentions:
 - **Backend**: services, controllers, business logic, repositories, background jobs
 - **Frontend**: UI components, screens, state management, forms, frontend flows
 
+## Stack-specific reviewer routing
+
+After the generic checklists, route to the specialized reviewers below when their skill is
+installed and their condition matches. Do not inline their checklists here — invoke the skill
+(each extends a generic review and assumes it already ran):
+
+| Reviewer | Route when |
+|---|---|
+| `/java-spring-reviewer` | Java/Spring project and Backend was detected |
+| `/spring-boot-api-reviewer` | Java/Spring project and API was detected |
+| `/spring-security-reviewer` | Java/Spring project and Security was detected |
+| `/java-performance-reviewer` | Java/Spring project and Performance was detected |
+| `/observability-reviewer` | Java/Spring project and the diff touches logging, metrics, tracing, actuator, or adds a service/consumer/job |
+| `/event-driven-reviewer` | diff touches producers, consumers, topics, or event contracts |
+| `/microservices-patterns-reviewer` | change crosses service boundaries or event contracts |
+| `/stripe-payments-reviewer` | diff touches Stripe SDK calls, payment webhooks, or checkout/billing |
+| `/payment-idempotency-reviewer` | spec mentions payments, refunds, wallets, credits, or ledgers |
+| `/prisma-migration-reviewer` | diff touches `prisma/schema*` or `prisma/migrations/` |
+| `/nextjs-server-actions-reviewer` | diff touches `"use server"` files or App Router route handlers |
+| `/seo-review` + siblings (`/aeo-review`, `/geo-review`, `/ai-visibility-review`) | public pages changed — each only if contracted in `specs/SERVICES.md` (uncontracted → upsell entry, skip) |
+
 ## Review process
 
 1. Read the spec and detect which review types apply.
