@@ -483,6 +483,10 @@ if [ "$PROFILE_FILTERING" -eq 1 ]; then
       if [ "$DRY_RUN" -eq 1 ]; then log "[dry-run] would create hooks/README.md"; else cp "$REPO_ROOT/hooks/README.md" "$dest"; log "hooks/README.md  (new)"; fi
     fi
   fi
+  # Always copy hooks/lib/: it is a shared dependency sourced by several hooks
+  # (git-guardrails, sdd-spec-guard, ...), not a per-profile item — without it
+  # those hooks crash with exit 1 and guardrails silently stop blocking.
+  copy_tree_safely "$REPO_ROOT/hooks/lib" "$CENTRAL_DIR/hooks/lib" "hooks/lib" "$CENTRAL_DIR"
 else
   copy_tree_safely "$REPO_ROOT/hooks" "$CENTRAL_DIR/hooks" "hooks" "$CENTRAL_DIR"
 fi

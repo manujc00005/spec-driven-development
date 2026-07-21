@@ -468,6 +468,13 @@ if ($ProfileFiltering) {
             else { Copy-Item $hooksReadme -Destination $destReadme -Force; Write-Action "hooks/README.md  (new)" }
         }
     }
+    # Always copy hooks/lib/: it is a shared dependency sourced by several hooks
+    # (git-guardrails, sdd-spec-guard, ...), not a per-profile item - without it
+    # those hooks crash with exit 1 and guardrails silently stop blocking.
+    $hooksLibSrc = Join-Path $hooksSrc "lib"
+    if (Test-Path $hooksLibSrc) {
+        Copy-TreeSafely $hooksLibSrc (Join-Path $hooksDst "lib") "hooks/lib" $CentralDir
+    }
 } else {
     Copy-TreeSafely $hooksSrc $hooksDst "hooks" $CentralDir
 }
