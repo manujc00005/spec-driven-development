@@ -40,6 +40,7 @@
         "pr-description",
         "handoff",
         "context-manager",
+        "graphify",
         "graphify-context",
         "sdd-onboard",
         "sdd-orchestrate",
