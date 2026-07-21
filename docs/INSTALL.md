@@ -43,9 +43,9 @@ flowchart TD
     C -->|link-project.ps1 / link-project.sh| P2["Project B\n.claude/skills, .claude/hooks"]
 ```
 
-The central directory is the single source of truth. Everything else — your user-level `~/.claude`, and any individual project — is a link pointing at it, never a copy. Update the central directory once (`git pull` in the clone, then re-run `install.ps1`/`install.sh`), and every linked location picks up the change immediately.
+The central directory is the single source of truth. Everything else — your user-level `~/.claude`, and any individual project — is a link pointing at it, never a copy. Update the central directory once (see [Updating an existing install](#updating-an-existing-install)), and every linked location picks up the change immediately.
 
-**One exception: agents.** Agent definitions (`agents/*.md`, used by the multi-model orchestrated workflow — see [SDD-ORCHESTRATION.md](SDD-ORCHESTRATION.md)) are **copied file-by-file, never linked**, into `~/.claude/agents/` (by `-LinkUserClaude`/`--link-user-claude`) and `<project>/.claude/agents/` (by `link-project`). Those directories commonly contain user- or project-authored agents that a directory link would hide. Copies are additive: existing files are never touched, same-name files that differ are skipped without `-Force`/`--force` (with force, a timestamped backup is taken first). Consequence: after `git pull`, re-run the installer (and `link-project` where used) to refresh agents — they do not update through a link like skills/hooks do.
+**One exception: agents.** Agent definitions (`agents/*.md`, used by the multi-model orchestrated workflow — see [SDD-ORCHESTRATION.md](SDD-ORCHESTRATION.md)) are **copied file-by-file, never linked**, into `~/.claude/agents/` (by `-LinkUserClaude`/`--link-user-claude`) and `<project>/.claude/agents/` (by `link-project`). Those directories commonly contain user- or project-authored agents that a directory link would hide. Copies are additive: existing files are never touched, same-name files that differ are skipped without `-Force`/`--force` (with force, a timestamped backup is taken first). Consequence: agents do not update through a link like skills/hooks do — `update.sh`/`update.ps1` re-copies them for `~/.claude` and for each `--project-dir` you pass.
 
 ---
 
@@ -242,6 +242,37 @@ Get-ChildItem "$env:USERPROFILE\.claude\agents\deep-reasoner.md", "$env:USERPROF
 ```bash
 ls "$HOME/.claude/agents/deep-reasoner.md" "$HOME/.claude/agents/fast-worker.md"
 ```
+
+---
+
+## Updating an existing install
+
+The framework evolves; your install stays current with one command. From the clone you installed from:
+
+```bash
+./scripts/update.sh                       # macOS/Linux
+.\scripts\update.ps1                      # Windows
+```
+
+It runs the whole update in order, and never touches anything you own:
+
+1. **Pre-flight.** Refuses to proceed if the clone has uncommitted changes — it never stashes or resets your work.
+2. **`git pull --ff-only`.** A diverged clone (local commits, a fork) is a hard error you resolve yourself, not a silent merge.
+3. **Re-install** into the central directory using the profiles recorded at install time (from `<central-dir>/.sdd-install.json`), so you don't re-type `--profile`. Differing files are skipped unless you pass `--force` (which backs up first); unchanged files are silent.
+4. **Agents refresh** for `~/.claude` (if you originally linked it) and for any project you pass with `--project-dir <path>` (repeatable).
+5. **"What's new" report** — version delta, the new CHANGELOG release headers, and how many central-dir files were added / overwritten / left alone.
+
+Useful flags (parity across both scripts):
+
+- `--central-dir <path>` / `--claude-home <path>` — non-default locations.
+- `--project-dir <path>` — refresh agents/links in a linked project (repeat per project).
+- `--claude-md <path>` — **drift check**: lists the `##` sections present in the shipped `CLAUDE.md.example` but missing from your real `CLAUDE.md`, so you know what to merge. Report-only — it never edits your `CLAUDE.md`.
+- `--force` — overwrite central-dir files you've locally edited (timestamped backup first).
+- `--dry-run` — preview every step, write nothing.
+
+**The install manifest.** The first time you run `install.sh`/`install.ps1` after this feature, a `<central-dir>/.sdd-install.json` records the installed version, commit, profiles, and whether you linked `~/.claude`. If it's absent (an install predating this feature), `update` runs in "unknown-version mode" — it still updates correctly and writes the manifest for next time.
+
+**Two things `update` reminds you about but won't do for you** (they edit files you own): wiring newly shipped hook families into a project's `settings.json` (`wire-hooks`), and merging new `CLAUDE.md.example` sections into your `CLAUDE.md`. Both are surfaced explicitly in the report when relevant.
 
 ---
 

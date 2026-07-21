@@ -106,6 +106,10 @@ cd spec-driven-development
 # Per project: wire the shipped hooks into .claude/settings.json (additive, backs up first)
 ./scripts/wire-hooks.sh --project-dir <your-project>
 .\scripts\wire-hooks.ps1 -ProjectDir <your-project>
+
+# Later, to update an existing install (git pull + re-install + "what's new" report)
+./scripts/update.sh             # macOS/Linux
+.\scripts\update.ps1            # Windows
 ```
 
 Then, in any project, start a new Claude Code session and run:

@@ -1,0 +1,27 @@
+# Tasks: incremental-update
+
+Order rationale: manifest first (independent value, everything else reads it), bash update in slices with the riskiest assumption (installer-output parsing) validated inside T004 before the report is built on it, PowerShell port only once bash is settled, then docs/CI/tests.
+
+## Phase 1: Preparation
+
+- [x] T001 - Add manifest write to `install.sh`: on successful non-dry-run install, write `<central-dir>/.sdd-install.json` with `schemaVersion: 1`, `installedVersion` (`git describe --tags --always` of the clone; commit hash always included), `installedAt` (ISO-8601), `profiles` (resolved list **merged** with any existing manifest's list), `sourceClone` (absolute clone path). Write failure → warning, never install failure. `--dry-run` writes nothing. python3/stdlib-json only, bash 3.2 compatible. Covers: AC-001.
+- [x] T002 - Mirror T001 in `install.ps1` (same file, same fields, same warning-only failure semantics). Covers: AC-001, AC-008.
+
+## Phase 2: Implementation
+
+- [x] T003 - Create `scripts/update.sh` skeleton: flag parsing (`--central-dir`, `--claude-home`, `--dry-run`, `--force`, `--project-dir` repeatable, `--claude-md` repeatable, `-h`), pre-flight dirty-tree refusal (exit 1, names dirty files, modifies nothing), `git pull --ff-only` with non-ff and offline/credential failures passed through cleanly (exit 1). Log style matches installers (`[ok]/[skip]/[dry-run]`). Covers: AC-004.
+- [x] T004 - Re-install step: read `.sdd-install.json` (corrupt/absent → unknown-version mode, stated in output; manifest written at end for next time), invoke `install.sh` with recorded profiles (repeated `--profile`) or installer default in unknown-version mode, passing through `--central-dir`/`--claude-home`/`--dry-run`/`--force`. **Tracer first:** validate that `[ok]`/`[skip]` prefixes in installer output parse into reliable added/updated/skipped counts before building on them. Covers: AC-002, AC-007.
+- [x] T005 - "What's new" report: old→new version (tags, commit-hash fallback), CHANGELOG excerpt between tags (`git log --oneline old..new` fallback when tags unresolvable), aggregated counts from T004, "local edits detected in N files" list (from skip lines), and the idempotent path — immediate re-run prints "already up to date", changes nothing, exit 0. Covers: AC-002, AC-003, AC-005.
+- [x] T006 - Agents refresh + per-project handling: re-copy agents to `~/.claude/agents` when a prior `--link-user-claude` install is detected (manifest flag or existing copies), and to each `--project-dir` via the same skip/force/backup semantics; print reminders for projects not passed, for wire-hooks when the pulled delta ships new hook families, and for pending CLAUDE.md merges. Covers: AC-002 (FR-007 slice).
+- [x] T007 - CLAUDE.md drift check: for each `--claude-md <path>`, compare `## ` headings of central `CLAUDE.md.example` vs target (CRLF-safe); list missing headings as "sections pending manual merge"; missing target file → advisory "file not found", exit code unaffected; target never written (assert checksum unchanged in tests). Covers: AC-006.
+- [x] T008 - Port to `scripts/update.ps1`: identical flags, step order, report content, and exit codes. Must pass the existing CI PowerShell parse gate. Covers: AC-008.
+- [x] T009 - Docs: add "Updating an existing install" section to `docs/INSTALL.md` (one-command flow, manifest explanation, unknown-version mode, drift check) revising the current prose-only update guidance in place; add the update command to README Quickstart. No count markers involved. Covers: AC-009.
+
+## Phase 3: Tests
+
+- [x] T010 - Create `scripts/update.test.sh` (pattern of `check-consistency.test.sh`: per-case temp setup, PASS/FAIL tally, portable sed). Per case: bare local origin with two tagged releases, working clone at older tag, temp central dir installed from it — **no network**. Cases: behind-by-one update (AC-002), immediate re-run idempotence via checksums (AC-003), dirty clone refusal (AC-004), local central-dir edit without/with `--force` incl. backup existence (AC-005), `--claude-md` drift report + target checksum unchanged (AC-006), missing manifest → unknown-version mode + manifest written (AC-007). Covers: AC-010, AC-002–AC-007.
+- [x] T011 - CI wiring: add an `update.test.sh` step to `.github/workflows/consistency.yml` next to the existing self-tests; verify `shellcheck -S error` passes on `update.sh`/`update.test.sh` and the PS parse gate picks up `update.ps1` (both automatic — confirm, don't rewire). Covers: AC-009, AC-010.
+
+## Phase 4: Review
+
+- [ ] T012 - Full verification: run `check-consistency.sh`, `check-consistency.test.sh`, `graphify.test.sh`, `update.test.sh`, and local shellcheck — all green; manual E2E of `update.sh` on the real central dir across a release delta (report matches CHANGELOG, linked projects see new artifacts); Windows parity spot-check of `update.ps1` (or document it as pending if no Windows machine is available — do not silently skip). Covers: AC-008, AC-009, AC-002.

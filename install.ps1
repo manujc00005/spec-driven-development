@@ -649,4 +649,75 @@ if ($MissingShipped.Count -gt 0) {
     Write-Host "[ERROR]   Finished with $($MissingShipped.Count) shipped item(s) missing from the repo (see [ERROR] lines above). profiles.json is out of sync." -ForegroundColor Red
     exit 1
 }
+
+# ---------------------------------------------------------------------------
+# Install manifest (spec 015 FR-001): records what this run installed so
+# scripts/update.ps1 can answer "what's new since your version?". Written only
+# after a successful non-dry-run install; a write failure is a warning, never
+# an install failure. Profiles accumulate across runs; linkUserClaude is
+# sticky once any run has linked. A corrupt existing manifest is discarded
+# silently  - it is framework-owned state, never adopter content. Written as
+# UTF-8 without BOM so the bash update script's python reader parses it too.
+# ---------------------------------------------------------------------------
+function Write-InstallManifest {
+    $manifestPath = Join-Path $CentralDir ".sdd-install.json"
+    try {
+        $commit = ""
+        try { $commit = (& git -C $RepoRoot rev-parse HEAD 2>&1 | Out-String).Trim() } catch { }
+        if ($LASTEXITCODE -ne 0 -or -not $commit) { $commit = "unknown" }
+        $version = ""
+        try { $version = (& git -C $RepoRoot describe --tags --always 2>&1 | Out-String).Trim() } catch { }
+        if ($LASTEXITCODE -ne 0 -or -not $version) { $version = $commit }
+
+        $existingProfiles = @()
+        $existingLink = $false
+        $existingAt = $null
+        $existingCommit = $null
+        if (Test-Path $manifestPath) {
+            try {
+                $old = Get-Content $manifestPath -Raw | ConvertFrom-Json
+                if ($old.profiles) { $existingProfiles = @($old.profiles | Where-Object { $_ -is [string] }) }
+                if ($old.linkUserClaude -eq $true) { $existingLink = $true }
+                $existingAt = $old.installedAt
+                $existingCommit = $old.installedCommit
+            } catch { }  # absent or corrupt -> start fresh; never fatal
+        }
+
+        $merged = New-Object System.Collections.ArrayList
+        foreach ($p in ($existingProfiles + @($activeProfileNames))) {
+            if ($p -and -not $merged.Contains($p)) { [void]$merged.Add($p) }
+        }
+
+        # installedAt means "when this version was installed", not "last run":
+        # preserve it when re-installing the same commit so a no-op update leaves
+        # the manifest byte-identical (idempotence, spec 015 AC-003).
+        if ($existingCommit -eq $commit -and $existingAt) {
+            $installedAt = "$existingAt"
+        } else {
+            $installedAt = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd'T'HH:mm:ss'Z'")
+        }
+
+        $data = [ordered]@{
+            schemaVersion    = 1
+            installedVersion = "$version"
+            installedCommit  = "$commit"
+            installedAt      = "$installedAt"
+            profiles         = @($merged)
+            linkUserClaude   = [bool]($existingLink -or $LinkUserClaude)
+            sourceClone      = "$RepoRoot"
+        }
+        $json = ($data | ConvertTo-Json -Depth 4) + "`n"
+        [System.IO.File]::WriteAllText($manifestPath, $json, (New-Object System.Text.UTF8Encoding($false)))
+        Write-Action "Install manifest written -> $manifestPath"
+    } catch {
+        Write-Warn2 "could not write install manifest $manifestPath  - scripts/update.ps1 will run in unknown-version mode until a later install succeeds. Error: $($_.Exception.Message)"
+    }
+}
+
+if ($DryRun) {
+    Write-Action "[dry-run] would write install manifest $(Join-Path $CentralDir '.sdd-install.json')"
+} else {
+    Write-InstallManifest
+}
+
 Write-Action "Done."
