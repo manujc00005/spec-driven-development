@@ -129,23 +129,25 @@ if (Test-Path $manifest) {
     Write-Action "No install manifest at $manifest  - first recorded update (unknown-version mode). This run will write one for next time."
 }
 
-# Link mode mirrors the recorded install (FR-007).
-$installArgs = @("-CentralDir", $CentralDir, "-ClaudeHome", $ClaudeHome)
+# Link mode mirrors the recorded install (FR-007). Use hashtable splatting so
+# arguments bind by NAME: array splatting (@("-CentralDir", ...)) is positional
+# in PowerShell and would feed the central-dir path into -Profile.
+$installArgs = @{ CentralDir = $CentralDir; ClaudeHome = $ClaudeHome }
 if ($manifestLink) {
-    $installArgs += "-LinkUserClaude"
+    $installArgs['LinkUserClaude'] = $true
     Write-Action "Recorded install linked ~/.claude  - refreshing its agent copies and links too."
 } else {
-    $installArgs += "-SkipLink"
+    $installArgs['SkipLink'] = $true
 }
 $recordedProfiles = @($manifestProfiles | Where-Object { $_ -ne "core" })
 if ($recordedProfiles.Count -gt 0) {
-    $installArgs += @("-Profile", ($recordedProfiles -join ','))
+    $installArgs['Profile'] = $recordedProfiles
     Write-Action "Re-installing with recorded profiles: $($manifestProfiles -join ',')"
 } else {
     Write-Action "Re-installing with the installer's default profile (no recorded profiles)."
 }
-if ($DryRun) { $installArgs += "-DryRun" }
-if ($Force)  { $installArgs += "-Force" }
+if ($DryRun) { $installArgs['DryRun'] = $true }
+if ($Force)  { $installArgs['Force'] = $true }
 
 $installLog = (New-TemporaryFile).FullName
 try {
@@ -207,9 +209,10 @@ try {
 # ---------------------------------------------------------------------------
 # Per-project refresh (FR-007): reuse link-project.ps1, never reimplement copy.
 # ---------------------------------------------------------------------------
-$linkArgs = @("-CentralDir", $CentralDir)
-if ($DryRun) { $linkArgs += "-DryRun" }
-if ($Force)  { $linkArgs += "-Force" }
+# Hashtable splat (bind by name); array splat would be positional (see above).
+$linkArgs = @{ CentralDir = $CentralDir }
+if ($DryRun) { $linkArgs['DryRun'] = $true }
+if ($Force)  { $linkArgs['Force'] = $true }
 foreach ($proj in $ProjectDir) {
     if (-not (Test-Path $proj)) {
         Write-Warn2 "project dir $proj does not exist  - skipping its agent refresh"
