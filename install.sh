@@ -649,4 +649,77 @@ if [ ${#MISSING_SHIPPED[@]} -gt 0 ]; then
   echo "[ERROR]   Finished with ${#MISSING_SHIPPED[@]} shipped item(s) missing from the repo (see [ERROR] lines above). profiles.json is out of sync."
   exit 1
 fi
+
+# ---------------------------------------------------------------------------
+# Install manifest (spec 015 FR-001): records what this run installed so
+# scripts/update.sh can answer "what's new since your version?". Written only
+# after a successful non-dry-run install; a write failure is a warning, never
+# an install failure. Profiles accumulate across runs (a later
+# --profile messaging-event-driven merges into the list); linkUserClaude is
+# sticky once any run has linked. A corrupt existing manifest is discarded
+# silently  - it is framework-owned state, never adopter content.
+# ---------------------------------------------------------------------------
+write_install_manifest() {
+  local manifest="$CENTRAL_DIR/.sdd-install.json"
+  local commit version
+  commit="$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || echo unknown)"
+  version="$(git -C "$REPO_ROOT" describe --tags --always 2>/dev/null || echo "$commit")"
+  if ! python3 - "$manifest" "$version" "$commit" "$REPO_ROOT" "$LINK_USER_CLAUDE" ${ACTIVE_PROFILES[@]+"${ACTIVE_PROFILES[@]}"} <<'PYEOF'
+import datetime
+import json
+import sys
+
+manifest_path, version, commit, source_clone, link_flag = sys.argv[1:6]
+profiles = sys.argv[6:]
+
+existing_profiles = []
+existing_link = False
+existing_at = None
+existing_commit = None
+try:
+    with open(manifest_path, encoding="utf-8") as f:
+        old = json.load(f)
+    existing_profiles = [p for p in old.get("profiles", []) if isinstance(p, str)]
+    existing_link = old.get("linkUserClaude") is True
+    existing_at = old.get("installedAt")
+    existing_commit = old.get("installedCommit")
+except (OSError, ValueError):
+    pass  # absent or corrupt -> start fresh; never fatal
+
+merged = list(dict.fromkeys(existing_profiles + profiles))
+
+# installedAt means "when this version was installed", not "last run": preserve
+# it when re-installing the same commit so a no-op update leaves the manifest
+# byte-identical (idempotence, spec 015 AC-003).
+if existing_commit == commit and existing_at:
+    installed_at = existing_at
+else:
+    installed_at = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
+
+data = {
+    "schemaVersion": 1,
+    "installedVersion": version,
+    "installedCommit": commit,
+    "installedAt": installed_at,
+    "profiles": merged,
+    "linkUserClaude": existing_link or link_flag == "1",
+    "sourceClone": source_clone,
+}
+with open(manifest_path, "w", encoding="utf-8") as f:
+    json.dump(data, f, indent=2)
+    f.write("\n")
+PYEOF
+  then
+    warn "could not write install manifest $manifest  - scripts/update.sh will run in unknown-version mode until a later install succeeds"
+    return 0
+  fi
+  log "Install manifest written -> $manifest"
+}
+
+if [ "$DRY_RUN" -eq 1 ]; then
+  log "[dry-run] would write install manifest $CENTRAL_DIR/.sdd-install.json"
+else
+  write_install_manifest
+fi
+
 log "Done."

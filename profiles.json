@@ -42,7 +42,16 @@
         "context-manager",
         "graphify-context",
         "sdd-onboard",
-        "sdd-orchestrate"
+        "sdd-orchestrate",
+        "verifier",
+        "scope-keeper",
+        "communicator",
+        "stopper",
+        "honest-advisor",
+        "threat-modeler",
+        "scout",
+        "decomposer",
+        "root-causer"
       ],
       "plannedSkills": [],
       "agents": [

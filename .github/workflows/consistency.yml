@@ -24,6 +24,9 @@ jobs:
       - name: Run graphify hook and setup-script suite
         run: bash scripts/graphify.test.sh
 
+      - name: Run update-script suite
+        run: bash scripts/update.test.sh
+
   shellcheck:
     runs-on: ubuntu-latest
     steps:
