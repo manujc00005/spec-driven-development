@@ -29,4 +29,4 @@
 
 - [x] T017 - Write the skills-vs-agents documentation explainer and the routing model overview. Covers: AC-015.
 - [x] T018 - Verify no project-specific/private content was introduced and Claude Code compatibility is preserved; update `CHANGELOG.md`. Covers: AC-011, AC-012.
-- [ ] T019 - Run `/spec-review`, then dispatch the `final-conformance-reviewer` **agent** (dispatched via the Agent tool — it is an agent, not a slash command); confirm it produces a traceability verdict across SPEC→PLAN→TASKS→DIFF→TESTS→REVIEW. Covers: AC-014.
+- [x] T019 - Run `/spec-review`, then dispatch the `final-conformance-reviewer` **agent** (dispatched via the Agent tool — it is an agent, not a slash command); confirm it produces a traceability verdict across SPEC→PLAN→TASKS→DIFF→TESTS→REVIEW. Covers: AC-014.
