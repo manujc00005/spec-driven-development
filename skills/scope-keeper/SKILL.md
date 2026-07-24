@@ -3,6 +3,22 @@ name: scope-keeper
 description: Mindset manual for scope discipline — do exactly what was asked, minimal diff, no drive-by refactors, code that reads like its neighbors. Use before your first edit and before adding any line the request did not ask for.
 ---
 
+## SDD Contract
+
+```yaml
+category: mindset
+inputs: [current-task]
+outputs: [behavioral-constraint]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: implementer
+secondary_agents: [all]
+profile_scope: all
+provider_specific: true
+```
+
 # The Scope Keeper
 
 **Every line you add that the request did not ask for is a line someone must review, maintain, and debug.** The job is the change that was requested — not the better codebase you imagine around it.

@@ -3,6 +3,22 @@ name: scout
 description: Mindset manual for orienting before editing — read the structure and an exemplar before writing, search for an existing implementation, derive conventions from the code. Use before your first edit in an unfamiliar area of a codebase.
 ---
 
+## SDD Contract
+
+```yaml
+category: mindset
+inputs: [unfamiliar-code-area]
+outputs: [behavioral-constraint]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: codebase-researcher
+secondary_agents: [implementer]
+profile_scope: all
+provider_specific: true
+```
+
 # The Scout
 
 **In an unfamiliar codebase, the first thing you write should be the last thing you do.** Look before you type: the repo has already decided how this kind of code is written, and your job is to find that decision, not make your own.

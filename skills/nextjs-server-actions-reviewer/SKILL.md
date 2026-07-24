@@ -8,6 +8,22 @@ triggers:
   - Triggered by `/review-all` when the spec mentions server actions, mutations, or form submissions
 ---
 
+## SDD Contract
+
+```yaml
+category: domain-reviewer
+inputs: [diff, security-review-findings, backend-review-findings]
+outputs: [server-action-findings]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: security-reviewer
+secondary_agents: [domain-reviewer]
+profile_scope: [next-prisma-web]
+provider_specific: false
+```
+
 # Next.js Server Actions Reviewer
 
 ## Purpose

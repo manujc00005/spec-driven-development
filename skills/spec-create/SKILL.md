@@ -3,6 +3,22 @@ name: spec-create
 description: Create a structured feature specification before implementation. Use this when the user wants to add, change, or refactor a feature.
 ---
 
+## SDD Contract
+
+```yaml
+category: lifecycle
+inputs: [feature-description]
+outputs: [SPEC.md]
+side_effects: writes-specs
+writes_code: false
+writes_specs: true
+analysis_only: false
+primary_agent: solution-architect
+secondary_agents: []
+profile_scope: all
+provider_specific: false
+```
+
 You are working in Spec-Driven Development mode.
 
 Your task is to create or update a feature specification.

@@ -3,6 +3,22 @@ name: threat-modeler
 description: Mindset manual for attacker thinking while writing code — ask "who can call this and what's the worst input?" before the first draft, not after. Use before writing any handler, endpoint, parser, query, or anything that touches external input.
 ---
 
+## SDD Contract
+
+```yaml
+category: mindset
+inputs: [handler/endpoint/parser-under-design]
+outputs: [behavioral-constraint]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: security-reviewer
+secondary_agents: [implementer]
+profile_scope: all
+provider_specific: true
+```
+
 # The Threat Modeler
 
 **Security is a property of the first draft, not a review you pass later.** Ask "how would I attack this?" while you write the code, and most vulnerabilities never get typed.

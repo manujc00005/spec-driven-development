@@ -57,7 +57,13 @@
       "plannedSkills": [],
       "agents": [
         "deep-reasoner",
-        "fast-worker"
+        "fast-worker",
+        "codebase-researcher",
+        "solution-architect",
+        "implementer",
+        "security-reviewer",
+        "domain-reviewer",
+        "final-conformance-reviewer"
       ],
       "plannedAgents": [],
       "hooks": [
@@ -106,6 +112,24 @@
         "observability-reviewer"
       ],
       "plannedSkills": [],
+      "agentRouting": {
+        "domain-reviewer": {
+          "skills": [
+            "java-spring-reviewer",
+            "spring-boot-api-reviewer",
+            "java-performance-reviewer",
+            "observability-reviewer",
+            "api-review",
+            "backend-review",
+            "database-review"
+          ]
+        },
+        "security-reviewer": {
+          "skills": [
+            "spring-security-reviewer"
+          ]
+        }
+      },
       "hooks": [
         "maven-compile",
         "java-build-test-guard",
@@ -135,6 +159,14 @@
         "microservices-patterns-reviewer"
       ],
       "plannedSkills": [],
+      "agentRouting": {
+        "domain-reviewer": {
+          "skills": [
+            "event-driven-reviewer",
+            "microservices-patterns-reviewer"
+          ]
+        }
+      },
       "hooks": [],
       "plannedHooks": [
         "messaging-review-reminder"
@@ -154,6 +186,15 @@
         "payment-idempotency-reviewer"
       ],
       "plannedSkills": [],
+      "agentRouting": {
+        "domain-reviewer": {
+          "skills": [
+            "stripe-payments-reviewer",
+            "payment-idempotency-reviewer"
+          ],
+          "note": "Both reviewers are also consumed by security-reviewer (secondary) for money-movement/idempotency risk — see each skill's SDD Contract secondary_agents."
+        }
+      },
       "hooks": [],
       "plannedHooks": [
         "stripe-review-reminder"
@@ -173,6 +214,22 @@
         "nextjs-server-actions-reviewer"
       ],
       "plannedSkills": [],
+      "agentRouting": {
+        "domain-reviewer": {
+          "skills": [
+            "prisma-migration-reviewer",
+            "frontend-review",
+            "database-review"
+          ]
+        },
+        "security-reviewer": {
+          "skills": [
+            "nextjs-server-actions-reviewer",
+            "privacy-compliance-review"
+          ],
+          "note": "nextjs-server-actions-reviewer is primary per its SDD Contract (auth/input-validation boundary); domain-reviewer consumes it as secondary for Next.js idiom review. privacy-compliance-review is primary here per its own SDD Contract (RGPD/LOPDGDD/AEPD risk review)."
+        }
+      },
       "hooks": [
         "ts-check",
         "eslint-fix",
@@ -199,6 +256,16 @@
         "ai-visibility-review"
       ],
       "plannedSkills": [],
+      "agentRouting": {
+        "domain-reviewer": {
+          "skills": [
+            "seo-review",
+            "aeo-review",
+            "geo-review",
+            "ai-visibility-review"
+          ]
+        }
+      },
       "hooks": [],
       "plannedHooks": [],
       "templates": [],

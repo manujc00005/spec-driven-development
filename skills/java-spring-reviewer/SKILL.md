@@ -1,12 +1,28 @@
 ---
 name: java-spring-reviewer
-description: Review Java/Spring backend code for Spring-specific idioms, transaction boundaries, bean scope, DTO/entity leakage, exception handling, and null-safety. Extends backend-review and routes to the java-spring subagent.
+description: Review Java/Spring backend code for Spring-specific idioms, transaction boundaries, bean scope, DTO/entity leakage, exception handling, and null-safety. Extends backend-review and is consumed by the domain-reviewer agent.
 triggers:
   - After `/spec-review` on Java/Spring changes
   - After `/backend-review` when the project is Spring Boot
   - When the user asks to "review my Spring code" or "check my service layer"
   - Triggered automatically by `/review-all` when `pom.xml` or Spring annotations are detected
 ---
+
+## SDD Contract
+
+```yaml
+category: domain-reviewer
+inputs: [diff, backend-review-findings]
+outputs: [spring-specific-findings]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: domain-reviewer
+secondary_agents: [final-conformance-reviewer]
+profile_scope: [java-spring-backend]
+provider_specific: false
+```
 
 # Java/Spring Reviewer
 
@@ -19,7 +35,7 @@ general service/data-access quality, then this for Spring-specific depth.
 ## Extends
 
 - **Skill:** `backend-review`
-- **Subagent:** `java-spring` (controllers, services, repositories, JPA entities, security, migrations)
+- **Agent:** `domain-reviewer` (controllers, services, repositories, JPA entities, security, migrations)
 
 ## What this skill checks (beyond backend-review)
 

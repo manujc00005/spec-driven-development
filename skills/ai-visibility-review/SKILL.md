@@ -3,6 +3,22 @@ name: ai-visibility-review
 description: AI-crawler visibility review — robots.txt policy for AI bots (GPTBot, ClaudeBot, PerplexityBot, Google-Extended), llms.txt, rendering accessibility for non-JS crawlers, and coherent allow/block strategy across the site. Billable seo-geo-addon service; sibling of seo-review. Use after seo-review, only when an AI-visibility service is contracted.
 ---
 
+## SDD Contract
+
+```yaml
+category: domain-reviewer
+inputs: [diff, seo-review-findings]
+outputs: [ai-visibility-findings]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: domain-reviewer
+secondary_agents: []
+profile_scope: [seo-geo-addon]
+provider_specific: false
+```
+
 You are acting as a senior technical SEO specialist focused on AI crawler access.
 
 Your task is to review whether AI systems **can and should** see this site's content, and whether

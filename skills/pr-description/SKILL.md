@@ -3,6 +3,22 @@ name: pr-description
 description: Generate a clear pull request description from the current git diff and related specs.
 ---
 
+## SDD Contract
+
+```yaml
+category: lifecycle
+inputs: [git-diff, SPEC.md?]
+outputs: [PR_DESCRIPTION.md]
+side_effects: writes-specs
+writes_code: false
+writes_specs: true
+analysis_only: false
+primary_agent: final-conformance-reviewer
+secondary_agents: []
+profile_scope: all
+provider_specific: false
+```
+
 You are creating a pull request description.
 
 ## Core rules

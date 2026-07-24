@@ -1,11 +1,27 @@
 ---
 name: event-driven-reviewer
-description: Review Kafka/RabbitMQ/ActiveMQ producer and consumer code for delivery-semantics correctness, idempotent consumers, retry/backoff, DLQ and poison-message handling, ordering guarantees, schema evolution, correlation ID/trace propagation, the transactional outbox pattern, and saga/compensation flows. Extends backend-review and database-review, and routes to the java-spring subagent for Spring Kafka/AMQP idioms.
+description: Review Kafka/RabbitMQ/ActiveMQ producer and consumer code for delivery-semantics correctness, idempotent consumers, retry/backoff, DLQ and poison-message handling, ordering guarantees, schema evolution, correlation ID/trace propagation, the transactional outbox pattern, and saga/compensation flows. Extends backend-review and database-review, and is consumed by the domain-reviewer agent for Spring Kafka/AMQP idioms.
 triggers:
   - After `/backend-review` when Kafka, RabbitMQ, or ActiveMQ producer/consumer code changes
   - When the user asks to "review my Kafka consumer", "check message idempotency", "review the outbox implementation", or "review the saga/compensation flow"
   - Triggered automatically by `/review-all` when broker client dependencies or `@KafkaListener`/`@RabbitListener`/`@JmsListener` annotations are detected
 ---
+
+## SDD Contract
+
+```yaml
+category: domain-reviewer
+inputs: [diff, backend-review-findings, database-review-findings]
+outputs: [messaging-findings]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: domain-reviewer
+secondary_agents: [solution-architect]
+profile_scope: [messaging-event-driven]
+provider_specific: false
+```
 
 # Event-Driven Reviewer
 
@@ -28,7 +44,7 @@ separate reviewers: the broker changes the API surface, not the review question.
 
 - **Skill:** `backend-review` (general service/data-access quality — run first)
 - **Skill:** `database-review` (outbox table's transactional-write guarantees only)
-- **Subagent:** `java-spring` (Spring Kafka / Spring AMQP / JMS idioms, `@KafkaListener`,
+- **Agent:** `domain-reviewer` (Spring Kafka / Spring AMQP / JMS idioms, `@KafkaListener`,
   `@RabbitListener`, `@JmsListener`, `KafkaTemplate`, `RabbitTemplate`)
 
 ## What this skill checks

@@ -3,6 +3,22 @@ name: geo-review
 description: Generative Engine Optimization review for public pages — citability by LLM-powered search (AI Overviews, ChatGPT, Perplexity), entity clarity, factual density, quotable statements, and source-attribution signals. Billable seo-geo-addon service; sibling of seo-review. Use after seo-review/aeo-review, only when a GEO service is contracted.
 ---
 
+## SDD Contract
+
+```yaml
+category: domain-reviewer
+inputs: [diff, seo-review-findings, aeo-review-findings]
+outputs: [geo-findings]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: domain-reviewer
+secondary_agents: []
+profile_scope: [seo-geo-addon]
+provider_specific: false
+```
+
 You are acting as a senior GEO (Generative Engine Optimization) specialist.
 
 Your task is to review public-facing pages for their likelihood of being **cited and quoted by

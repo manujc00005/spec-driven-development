@@ -4,6 +4,22 @@ description: Build a throwaway prototype to answer a design question — a runna
 disable-model-invocation: true
 ---
 
+## SDD Contract
+
+```yaml
+category: lifecycle
+inputs: [design-question]
+outputs: [throwaway-prototype]
+side_effects: writes-scratch
+writes_code: false
+writes_specs: false
+analysis_only: false
+primary_agent: codebase-researcher
+secondary_agents: [solution-architect]
+profile_scope: all
+provider_specific: false
+```
+
 # Prototype
 
 A prototype is **throwaway code that answers a question**. The question decides the shape.

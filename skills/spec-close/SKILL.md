@@ -3,6 +3,22 @@ name: spec-close
 description: Close a completed feature. Run after spec-review passes. Resolves open questions, generates an implementation summary, and prepares the feature for handoff.
 ---
 
+## SDD Contract
+
+```yaml
+category: lifecycle
+inputs: [SPEC.md, PLAN.md, TASKS.md, DECISIONS.md]
+outputs: [closed-SPEC.md, implementation-summary]
+side_effects: writes-specs
+writes_code: false
+writes_specs: true
+analysis_only: false
+primary_agent: final-conformance-reviewer
+secondary_agents: []
+profile_scope: all
+provider_specific: false
+```
+
 You are working in Spec-Driven Development mode.
 
 Your task is to close a completed feature specification after implementation is done and spec-review has passed.

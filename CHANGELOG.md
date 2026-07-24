@@ -11,9 +11,33 @@ under `specs/features/` — the framework is developed with its own workflow.
 
 ## [Unreleased]
 
-Specs 016–017 · Installer hooks/lib fix, planned skills shipped.
+Specs 016–018 · Installer hooks/lib fix, planned skills shipped, agentic routing layer.
 
 ### Added
+- **Six lifecycle agents** (spec 018) giving the framework's skills an accountable
+  consumer: `codebase-researcher` (bounded research, Graphify-first, read-only),
+  `solution-architect` (SPEC/PLAN/TASKS/DECISIONS, pre-implementation test strategy,
+  specs-only writes), `implementer` (executes approved TASKS within explicit file
+  boundaries, the only lifecycle agent that edits application code), `security-reviewer`
+  (auth/secrets/payments risk findings, read-only), `domain-reviewer` (stack/domain
+  reviewer skills by active profile, read-only), and `final-conformance-reviewer`
+  (SPEC → PLAN → TASKS → DIFF → TESTS → REVIEW traceability verdict, read-only). These
+  are a separate, independent layer from the existing `deep-reasoner`/`fast-worker`
+  model-tier agents (unchanged) — see `docs/AGENTIC_ROUTING.md`.
+- `## SDD Contract` metadata block on all 61 skills (`category`, `primary_agent`,
+  `secondary_agents`, `profile_scope`, `writes_code`/`writes_specs`/`analysis_only`,
+  `side_effects`, `provider_specific`) — every skill now declares which agent owns it.
+  Schema documented in `specs/features/018-agentic-routing-and-skill-contracts/CONTRACT_SCHEMA.md`.
+- Additive `agentRouting` map in `profiles.json` for the five non-core, non-disabled
+  profiles — declares which reviewer skills `domain-reviewer` or `security-reviewer`
+  own for that stack. Ignored by older installers (unknown key, no schema break).
+- `docs/AGENTIC_ROUTING.md` — the skills-vs-agents explainer and routing model reference.
+- `check-consistency.sh` now validates: every skill's `## SDD Contract` parses with
+  required fields and known enums; every `primary_agent`/`secondary_agents` entry
+  resolves; every `agentRouting` target and routed skill is real; every non-core profile
+  skill is covered by `agentRouting` (or explicitly exempted); `blockchain-crypto` stays
+  disabled and unrouted; no `test-engineer` agent exists; `deep-reasoner`/`fast-worker`
+  keep their declared models.
 - 8 skills promoted from planned to shipped (spec 017), completing every
   `plannedSkills` entry in `profiles.json`:
   `observability-reviewer` (java-spring-backend);
@@ -30,12 +54,32 @@ Specs 016–017 · Installer hooks/lib fix, planned skills shipped.
   fresh-install hooks/lib presence, git-guardrails exit-2 blocking behavior,
   idempotent re-run.
 
+### Changed
+- `java-spring-reviewer`, `spring-boot-api-reviewer`, and `event-driven-reviewer` (spec
+  018) no longer name external, unshipped `java-spring`/`api-design` subagents as their
+  routing target — they now route through the repo's own `domain-reviewer` agent. Review
+  logic and checklists are unchanged; only the ownership/routing wording changed.
+
 ### Fixed
 - `install.sh` / `install.ps1` never copied `hooks/lib/` in profile mode,
   leaving every lib-sourcing hook (git-guardrails, sdd-spec-guard,
   java-build-test-guard, maven-compile, spring-config-guard) crashing with
   exit 1 on fresh installs — git-guardrails silently stopped blocking
   dangerous git commands (spec 016, found by the 2026-07-21 integration audit).
+
+### Notes
+- Skills remain reusable capabilities; agents are the accountable actors that consume
+  them — no skill was converted into an agent, and no skill was deleted or renamed.
+- Claude Code compatibility is preserved: all agent files use the same standard
+  frontmatter (`name`, `description`, `tools`, and `model` only where already used);
+  installers already copied `profiles[*].agents` generically and needed no changes.
+- The six lifecycle agents are authored and validated (schema, routing, dry-run installs
+  across all profiles) but have not yet been live-installed into a real Claude Code agent
+  registry as part of this change — that remains a follow-up verification step, the same
+  distinction this changelog already draws for `deep-reasoner`/`fast-worker` in 0.5.0.
+- Graphify remains an optional accelerator, never a requirement — `codebase-researcher`
+  degrades gracefully when no graph report exists, exactly as `context-manager` and
+  `graphify-context` already did.
 
 ## [0.5.0] — 2026-07-17
 

@@ -1,12 +1,28 @@
 ---
 name: spring-boot-api-reviewer
-description: Review Spring Boot REST APIs for contract correctness, DTO design, versioning, error semantics, OpenAPI drift, validation, and backward compatibility. Extends api-review and routes to the api-design subagent.
+description: Review Spring Boot REST APIs for contract correctness, DTO design, versioning, error semantics, OpenAPI drift, validation, and backward compatibility. Extends api-review and is consumed by the domain-reviewer agent.
 triggers:
   - After `/api-review` on Spring Boot projects
   - When controllers, DTOs, or OpenAPI specs change
   - When the user asks to "review my API" or "check backward compatibility"
   - Triggered automatically by `/review-all` when controller annotations are detected
 ---
+
+## SDD Contract
+
+```yaml
+category: domain-reviewer
+inputs: [diff, api-review-findings]
+outputs: [spring-api-contract-findings]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: domain-reviewer
+secondary_agents: [final-conformance-reviewer]
+profile_scope: [java-spring-backend]
+provider_specific: false
+```
 
 # Spring Boot API Reviewer
 
@@ -19,7 +35,7 @@ This skill **extends** `api-review` — run that first for general REST design.
 ## Extends
 
 - **Skill:** `api-review`
-- **Subagent:** `api-design` (REST conventions, OpenAPI/Swagger, versioning, backward compatibility)
+- **Agent:** `domain-reviewer` (REST conventions, OpenAPI/Swagger, versioning, backward compatibility)
 
 ## What this skill checks (beyond api-review)
 

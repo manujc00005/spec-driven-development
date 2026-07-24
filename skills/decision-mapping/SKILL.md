@@ -4,6 +4,22 @@ description: Turn a loose idea into a sequenced map of investigation tickets, th
 disable-model-invocation: true
 ---
 
+## SDD Contract
+
+```yaml
+category: lifecycle
+inputs: [loose-idea]
+outputs: [investigation-tickets]
+side_effects: writes-scratch
+writes_code: false
+writes_specs: false
+analysis_only: false
+primary_agent: solution-architect
+secondary_agents: []
+profile_scope: all
+provider_specific: false
+```
+
 This skill is invoked when a loose idea requires more than one agent session to turn into a plan. It creates a stateful decision map in a markdown file, and drives the user through a sequence of tickets to resolve the open questions — which may require prototyping, research, or discussion.
 
 ## The Decision Map

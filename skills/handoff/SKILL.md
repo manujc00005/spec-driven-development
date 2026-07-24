@@ -5,6 +5,22 @@ argument-hint: "What will the next session be used for?"
 disable-model-invocation: true
 ---
 
+## SDD Contract
+
+```yaml
+category: lifecycle
+inputs: [conversation-context]
+outputs: [handoff-document]
+side_effects: writes-scratch
+writes_code: false
+writes_specs: false
+analysis_only: false
+primary_agent: human
+secondary_agents: []
+profile_scope: all
+provider_specific: true
+```
+
 Write a handoff document summarising the current conversation so a fresh agent can continue the work.
 
 ## What to include

@@ -3,6 +3,22 @@ name: spec-implement
 description: Implement code strictly from an existing SPEC.md, PLAN.md, TASKS.md, and DECISIONS.md.
 ---
 
+## SDD Contract
+
+```yaml
+category: lifecycle
+inputs: [SPEC.md, PLAN.md, TASKS.md, DECISIONS.md]
+outputs: [code-diff, updated-TASKS.md]
+side_effects: writes-code
+writes_code: true
+writes_specs: true
+analysis_only: false
+primary_agent: implementer
+secondary_agents: []
+profile_scope: all
+provider_specific: false
+```
+
 You are working in Spec-Driven Development mode.
 
 Your task is to implement the next task from an existing feature specification.

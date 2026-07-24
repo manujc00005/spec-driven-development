@@ -8,6 +8,22 @@ triggers:
   - Triggered automatically by `/review-all` when Spring Security or Keycloak dependencies are detected
 ---
 
+## SDD Contract
+
+```yaml
+category: domain-reviewer
+inputs: [diff, security-review-findings]
+outputs: [spring-security-findings]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: security-reviewer
+secondary_agents: [domain-reviewer]
+profile_scope: [java-spring-backend]
+provider_specific: false
+```
+
 # Spring Security Reviewer
 
 ## Purpose

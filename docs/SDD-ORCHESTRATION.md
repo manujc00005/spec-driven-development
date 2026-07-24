@@ -4,6 +4,14 @@ Multi-model delegation layer for the SDD workflow: the main session orchestrates
 Opus agent reasons, a Sonnet agent implements. Shipped by this repo since profiles.json
 `0.4.0` (feature `specs/features/004-multimodel-orchestration/`).
 
+**Not to be confused with:** the six *lifecycle* agents (`codebase-researcher`,
+`solution-architect`, `implementer`, `security-reviewer`, `domain-reviewer`,
+`final-conformance-reviewer`) documented in
+[`docs/AGENTIC_ROUTING.md`](AGENTIC_ROUTING.md). Those are split by *lifecycle role*
+(research/architecture/implementation/review); `deep-reasoner`/`fast-worker` below are
+split by *model tier* (Opus/Sonnet cost-awareness). The two systems are independent — use
+either, both, or neither.
+
 ## What problem this solves
 
 Without orchestration, one model does everything in one context: expensive models burn

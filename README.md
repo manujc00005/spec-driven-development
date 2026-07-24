@@ -15,7 +15,7 @@
 ![Skills](https://img.shields.io/badge/skills-61-0969da)
 ![Hooks](https://img.shields.io/badge/hook%20families-12-bf3989)
 ![Templates](https://img.shields.io/badge/templates-22-8250df)
-![Agents](https://img.shields.io/badge/agents-2-1a7f37)
+![Agents](https://img.shields.io/badge/agents-8-1a7f37)
 ![Profiles](https://img.shields.io/badge/profiles-7-d4a72c)
 
 *AI accelerates execution. Engineering judgment keeps control.*
@@ -26,7 +26,7 @@
 
 ---
 
-This repository turns [Claude Code](https://claude.com/claude-code) into a process-driven engineering environment: **<!-- count:skills-total -->61<!-- /count --> skills** (slash commands), **<!-- count:hook-families-total -->12<!-- /count --> hook families** (tool-call-level guardrails), **<!-- count:templates-total -->22<!-- /count --> document templates**, **<!-- count:agents-total -->2<!-- /count --> orchestration agents**, and a **profile-aware installer** — all versioned, reviewable, and installed from a single source of truth.
+This repository turns [Claude Code](https://claude.com/claude-code) into a process-driven engineering environment: **<!-- count:skills-total -->61<!-- /count --> skills** (slash commands), **<!-- count:hook-families-total -->12<!-- /count --> hook families** (tool-call-level guardrails), **<!-- count:templates-total -->22<!-- /count --> document templates**, **<!-- count:agents-total -->8<!-- /count --> agents** (6 lifecycle roles + the `deep-reasoner`/`fast-worker` orchestration pair), and a **profile-aware installer** — all versioned, reviewable, and installed from a single source of truth.
 
 ---
 
@@ -305,10 +305,11 @@ spec-driven-development/
 ├── hooks/                         # 11 hook families × (.ps1 + .sh) = 22 scripts
 │   ├── README.md                  # per-hook trigger, effect, and activation guide
 │   └── lib/claude-json.sh         # dependency-free JSON helper for .sh hooks (no jq, no python)
-├── agents/                        # deep-reasoner.md (Opus) + fast-worker.md (Sonnet) — copied, never linked
+├── agents/                        # 6 lifecycle agents + deep-reasoner.md (Opus) + fast-worker.md (Sonnet) — copied, never linked
 ├── docs/
 │   ├── INSTALL.md                 # step-by-step install guide (Windows, macOS/Linux)
 │   ├── SDD-ORCHESTRATION.md       # multi-model orchestration reference
+│   ├── AGENTIC_ROUTING.md         # lifecycle-agent reference: skills vs. agents, routing model
 │   ├── ROADMAP_JAVA_SPRING_CONTEXT.md  # original phase-planning document (historical)
 │   └── _templates/                # 10 project-context doc templates (PROJECT_CONTEXT, TECH_STACK,
 │                                  #   ARCHITECTURE, TESTING, SECURITY, DEPLOYMENT, MESSAGING,
@@ -361,7 +362,7 @@ Profiles control which skills, hooks, templates, and agents get installed, decla
 
 | Profile | Status | What it adds |
 |---|---|---|
-| `core` | Always installed | Full SDD lifecycle, guardrails, generic reviews, orchestration (<!-- count:core-skills -->41<!-- /count --> skills, <!-- count:core-hooks -->6<!-- /count --> hooks, <!-- count:core-templates -->17<!-- /count --> templates, <!-- count:core-agents -->2<!-- /count --> agents) |
+| `core` | Always installed | Full SDD lifecycle, guardrails, generic reviews, orchestration (<!-- count:core-skills -->41<!-- /count --> skills, <!-- count:core-hooks -->6<!-- /count --> hooks, <!-- count:core-templates -->17<!-- /count --> templates, <!-- count:core-agents -->8<!-- /count --> agents) |
 | `java-spring-backend` | **Default** | <!-- count:java-spring-backend-skills -->8<!-- /count --> review skills (JPA/transactions, Spring REST, Spring Security, JVM performance, observability, database, API, backend), <!-- count:java-spring-backend-hooks -->3<!-- /count --> hooks, <!-- count:java-spring-backend-templates -->6<!-- /count --> context templates. Maven primary, Gradle fallback |
 | `messaging-event-driven` | Optional | `event-driven-reviewer` (Kafka/RabbitMQ/ActiveMQ, outbox, saga, DLQ) + `microservices-patterns-reviewer` (boundaries, resilience, contracts), <!-- count:messaging-event-driven-templates -->2<!-- /count --> templates |
 | `next-prisma-web` | Optional | Frontend/privacy/database reviews + `prisma-migration-reviewer` (generated-SQL safety) + `nextjs-server-actions-reviewer` (action = public endpoint) + `ts-check`/`eslint-fix`/`prettier-format` hooks (`prisma-migration-guard` hook still planned) |
@@ -376,6 +377,12 @@ Rules the installers enforce:
 - **Shipped vs. planned is a hard distinction.** `skills`/`hooks`/`templates`/`agents` entries must exist on disk — a missing one is a manifest-integrity error (exit 1), never a silent skip. `planned*` entries are roadmap-only, reported as `[planned] … not installed`, never an error.
 - **No guessing.** Unknown profile name, explicitly requested disabled profile, or unparsable `profiles.json` → clear `[ERROR]`, non-zero exit, no fallback to "install everything".
 - **Billable scope is explicit.** `seo-geo-addon` (and any future paid add-on) is never bundled into a base profile — it installs only via `--profile next-prisma-web,seo-geo-addon`, matching a client actually having contracted the service in `specs/SERVICES.md`. See the Billing boundary section in `specs/_templates/CONSTITUTION.md`.
+
+Beyond `skills`/`hooks`/`templates`/`agents`, each non-core profile also declares an additive
+`agentRouting` map — which of its reviewer skills `domain-reviewer` or `security-reviewer`
+own for that stack (e.g. `java-spring-backend` routes `spring-security-reviewer` to
+`security-reviewer` and the rest of its reviewers to `domain-reviewer`). Full model:
+[`docs/AGENTIC_ROUTING.md`](docs/AGENTIC_ROUTING.md).
 
 ---
 
@@ -518,9 +525,9 @@ Counted from this repository, not aspirational:
 | Hook families | **<!-- count:hook-families-total -->12<!-- /count -->** (<!-- count:hook-scripts-total -->24<!-- /count --> scripts) | Each ships as a `.ps1` + `.sh` pair; shared bash JSON helper in `hooks/lib/` |
 | SDD lifecycle templates | **<!-- count:specs-templates-total -->12<!-- /count -->** | `specs/_templates/` |
 | Project-context templates | **<!-- count:docs-templates-total -->10<!-- /count -->** | `docs/_templates/` |
-| Agents | **<!-- count:agents-total -->2<!-- /count -->** | `deep-reasoner` (Opus, read-only), `fast-worker` (Sonnet, bounded) |
+| Agents | **<!-- count:agents-total -->8<!-- /count -->** | 6 lifecycle agents (`codebase-researcher`, `solution-architect`, `implementer`, `security-reviewer`, `domain-reviewer`, `final-conformance-reviewer`) + 2 model-tier agents (`deep-reasoner` Opus read-only, `fast-worker` Sonnet bounded) — see [`agents/README.md`](agents/README.md) |
 | Profiles | **<!-- count:profiles-total -->7<!-- /count -->** | `core`, `java-spring-backend` (default), `messaging-event-driven`, `next-prisma-web`, `seo-geo-addon` (billable overlay), `payments-fintech` (payments overlay), `blockchain-crypto` (disabled) |
-| Docs | **3 guides** | `INSTALL.md`, `SDD-ORCHESTRATION.md`, `hooks/README.md` + per-directory READMEs |
+| Docs | **4 guides** | `INSTALL.md`, `SDD-ORCHESTRATION.md`, `AGENTIC_ROUTING.md`, `hooks/README.md` + per-directory READMEs |
 | Installers | **4 scripts** | `install.ps1/.sh`, `link-project.ps1/.sh` — dry-run, backups, profile-aware |
 
 This repo dogfoods its own workflow: the phases that built it are specced under [`specs/features/`](specs/features/) with their own `SPEC/PLAN/TASKS/DECISIONS` documents.

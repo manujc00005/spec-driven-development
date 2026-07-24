@@ -3,6 +3,22 @@ name: spec-update
 description: Update an existing spec mid-implementation. Propagates changes to PLAN.md, TASKS.md, and DECISIONS.md and identifies impacted tasks.
 ---
 
+## SDD Contract
+
+```yaml
+category: lifecycle
+inputs: [SPEC.md, PLAN.md, TASKS.md, DECISIONS.md]
+outputs: [updated-SPEC.md, updated-PLAN.md, updated-TASKS.md]
+side_effects: writes-specs
+writes_code: false
+writes_specs: true
+analysis_only: false
+primary_agent: solution-architect
+secondary_agents: []
+profile_scope: all
+provider_specific: false
+```
+
 You are working in Spec-Driven Development mode.
 
 Your task is to update an existing feature specification after new information, requirement changes, or scope adjustments.

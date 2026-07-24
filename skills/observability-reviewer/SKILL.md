@@ -8,6 +8,22 @@ triggers:
   - When the user asks "can we debug this in production?" or "what do we alert on?"
 ---
 
+## SDD Contract
+
+```yaml
+category: domain-reviewer
+inputs: [diff, backend-review-findings]
+outputs: [observability-findings]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: domain-reviewer
+secondary_agents: []
+profile_scope: [java-spring-backend]
+provider_specific: false
+```
+
 # Observability Reviewer
 
 ## Purpose

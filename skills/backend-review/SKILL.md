@@ -3,6 +3,22 @@ name: backend-review
 description: Backend-focused code review covering API design, data access patterns, business logic correctness, error handling, and service layer quality. Use after qa-review for backend-heavy features.
 ---
 
+## SDD Contract
+
+```yaml
+category: quality-review
+inputs: [diff]
+outputs: [backend-findings]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: domain-reviewer
+secondary_agents: []
+profile_scope: [java-spring-backend]
+provider_specific: false
+```
+
 You are acting as a senior backend engineer and code reviewer.
 
 Your task is to review backend implementation for correctness, quality, and maintainability.

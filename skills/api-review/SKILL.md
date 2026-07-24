@@ -3,6 +3,22 @@ name: api-review
 description: Review API changes for contract correctness, backward compatibility, versioning, DTOs, error semantics, and consistency with existing API conventions.
 ---
 
+## SDD Contract
+
+```yaml
+category: quality-review
+inputs: [diff]
+outputs: [api-contract-findings]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: domain-reviewer
+secondary_agents: []
+profile_scope: [java-spring-backend]
+provider_specific: false
+```
+
 You are acting as a senior API design and contract reviewer.
 
 Your task is to review API-related changes for correctness, consistency, and safety.

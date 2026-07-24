@@ -8,6 +8,22 @@ triggers:
   - Triggered by `/review-all` when the spec mentions payments, refunds, wallets, credits, or ledgers
 ---
 
+## SDD Contract
+
+```yaml
+category: domain-reviewer
+inputs: [diff, backend-review-findings, database-review-findings]
+outputs: [idempotency-findings]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: domain-reviewer
+secondary_agents: [security-reviewer]
+profile_scope: [payments-fintech]
+provider_specific: false
+```
+
 # Payment Idempotency Reviewer
 
 ## Purpose

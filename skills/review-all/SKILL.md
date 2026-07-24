@@ -3,6 +3,22 @@ name: review-all
 description: Run all applicable specialized reviews in one command. Detects which reviews are needed from the spec and runs them sequentially, producing a consolidated report.
 ---
 
+## SDD Contract
+
+```yaml
+category: orchestration
+inputs: [SPEC.md, git-diff]
+outputs: [consolidated-review-report]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: orchestration-context
+secondary_agents: []
+profile_scope: all
+provider_specific: false
+```
+
 You are acting as a senior multi-domain code reviewer.
 
 Your task is to detect which specialized reviews apply to this feature and run them all in sequence, producing a single consolidated report.

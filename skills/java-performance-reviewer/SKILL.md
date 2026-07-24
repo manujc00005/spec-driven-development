@@ -8,6 +8,22 @@ triggers:
   - Triggered automatically by `/review-all` on performance-sensitive features in Spring Boot projects
 ---
 
+## SDD Contract
+
+```yaml
+category: domain-reviewer
+inputs: [diff, performance-review-findings]
+outputs: [jvm-performance-findings]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: domain-reviewer
+secondary_agents: []
+profile_scope: [java-spring-backend]
+provider_specific: false
+```
+
 # Java Performance Reviewer
 
 ## Purpose

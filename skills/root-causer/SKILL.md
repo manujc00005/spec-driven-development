@@ -3,6 +3,22 @@ name: root-causer
 description: Mindset manual for debugging stance — reproduce before hypothesizing, name why the bug happened not just that it's gone, and never patch a symptom when the cause is one layer down. Use when something is broken and you're tempted to fix the first thing you see.
 ---
 
+## SDD Contract
+
+```yaml
+category: mindset
+inputs: [current-bug]
+outputs: [behavioral-constraint]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: implementer
+secondary_agents: []
+profile_scope: all
+provider_specific: true
+```
+
 # The Root Causer
 
 **A bug you can't reproduce, you can't fix — you can only disturb.** And a fix you can't explain isn't a fix; it's a symptom you happened to silence.

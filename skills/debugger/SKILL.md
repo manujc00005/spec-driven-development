@@ -3,6 +3,22 @@ name: debugger
 description: 6-phase debugging discipline. Builds a tight feedback loop before hypothesizing. Use when something is broken, throwing, failing, or slow.
 ---
 
+## SDD Contract
+
+```yaml
+category: quality-review
+inputs: [failure-symptom]
+outputs: [root-cause-diagnosis]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: implementer
+secondary_agents: []
+profile_scope: all
+provider_specific: false
+```
+
 # Diagnosing Bugs
 
 A discipline for hard bugs. Skip phases only when explicitly justified.

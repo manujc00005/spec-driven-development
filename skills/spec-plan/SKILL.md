@@ -3,6 +3,22 @@ name: spec-plan
 description: Convert an approved SPEC.md into an implementation plan, task list, and decision log.
 ---
 
+## SDD Contract
+
+```yaml
+category: lifecycle
+inputs: [SPEC.md]
+outputs: [PLAN.md, TASKS.md, DECISIONS.md]
+side_effects: writes-specs
+writes_code: false
+writes_specs: true
+analysis_only: false
+primary_agent: solution-architect
+secondary_agents: []
+profile_scope: all
+provider_specific: false
+```
+
 You are working in Spec-Driven Development mode.
 
 Your task is to transform an existing `SPEC.md` into an implementation plan.

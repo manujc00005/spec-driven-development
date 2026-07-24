@@ -3,6 +3,22 @@ name: database-review
 description: Review database-related changes including schema design, migrations, indexes, constraints, queries, transactions, data integrity, performance, rollback, and multi-tenant risks.
 ---
 
+## SDD Contract
+
+```yaml
+category: quality-review
+inputs: [diff]
+outputs: [database-findings]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: domain-reviewer
+secondary_agents: []
+profile_scope: [java-spring-backend, next-prisma-web]
+provider_specific: false
+```
+
 You are acting as a senior database engineer and backend reviewer.
 
 Your task is to review database-related implementation and schema changes.

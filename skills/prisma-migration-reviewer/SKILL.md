@@ -8,6 +8,22 @@ triggers:
   - Triggered by `/review-all` when the spec mentions Prisma, schema, or migrations in a Next.js project
 ---
 
+## SDD Contract
+
+```yaml
+category: domain-reviewer
+inputs: [diff, database-review-findings]
+outputs: [migration-findings]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: domain-reviewer
+secondary_agents: []
+profile_scope: [next-prisma-web]
+provider_specific: false
+```
+
 # Prisma Migration Reviewer
 
 ## Purpose

@@ -3,6 +3,22 @@ name: performance-review
 description: Review code changes for performance risks including N+1 queries, unnecessary re-renders, missing indexes, large payloads, algorithmic complexity, and caching opportunities.
 ---
 
+## SDD Contract
+
+```yaml
+category: quality-review
+inputs: [diff]
+outputs: [performance-findings]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: domain-reviewer
+secondary_agents: []
+profile_scope: all
+provider_specific: false
+```
+
 You are acting as a senior performance engineer and code reviewer.
 
 Your task is to review the current implementation for performance risks.

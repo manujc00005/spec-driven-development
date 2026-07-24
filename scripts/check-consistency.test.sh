@@ -36,9 +36,10 @@ sed_inplace() {
 }
 
 # Current (correct) README counts, read dynamically so cases survive future
-# skill/hook additions (stale-hardcode failures bit this suite twice).
+# skill/hook/agent additions (stale-hardcode failures bit this suite three times).
 SKILLS_NOW=$(grep -oE "<!-- count:skills-total -->[0-9]+" "$REPO_ROOT/README.md" | head -1 | grep -oE "[0-9]+")
 HOOKS_NOW=$(grep -oE "<!-- count:hook-families-total -->[0-9]+" "$REPO_ROOT/README.md" | head -1 | grep -oE "[0-9]+")
+AGENTS_NOW=$(grep -oE "<!-- count:agents-total -->[0-9]+" "$REPO_ROOT/README.md" | head -1 | grep -oE "[0-9]+")
 
 assert_case() {
   local name="$1" expect_exit="$2" expect_grep="$3" dir="$4"
@@ -183,7 +184,7 @@ assert_case "readme-wrong-count" 1 "readme-count] skills-total" "$dir"
 
 # --- FR-008: missing required README marker ---
 dir="$(fresh_copy readme-missing-marker)"
-sed_inplace 's/<!-- count:agents-total -->2<!-- \/count -->/2/g' "$dir/README.md"
+sed_inplace "s/<!-- count:agents-total -->${AGENTS_NOW}<!-- \\/count -->/${AGENTS_NOW}/g" "$dir/README.md"
 assert_case "readme-missing-marker" 1 "required count marker missing" "$dir"
 
 # --- FR-008 edge case: stale marker (key in README with no matching computed value) ---

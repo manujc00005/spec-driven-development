@@ -3,6 +3,22 @@ name: architect-review
 description: Strategic architectural analysis before or during implementation. Identifies design issues, root causes, and trade-offs with file:line evidence. Use before spec-plan for complex features or when implementation raises architectural questions.
 ---
 
+## SDD Contract
+
+```yaml
+category: quality-review
+inputs: [diff, SPEC.md?, PLAN.md?]
+outputs: [architectural-findings]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: solution-architect
+secondary_agents: [domain-reviewer]
+profile_scope: all
+provider_specific: false
+```
+
 You are acting as a senior software architect and technical advisor.
 
 Your task is to provide strategic architectural analysis before or during implementation.

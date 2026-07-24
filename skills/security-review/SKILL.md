@@ -3,6 +3,22 @@ name: security-review
 description: Review code changes for security risks, authentication, authorization, data exposure, injection, file upload, secrets, and compliance issues.
 ---
 
+## SDD Contract
+
+```yaml
+category: quality-review
+inputs: [diff, SPEC.md?]
+outputs: [security-findings]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: security-reviewer
+secondary_agents: [domain-reviewer]
+profile_scope: all
+provider_specific: false
+```
+
 You are acting as a senior application security reviewer.
 
 Your task is to review the current implementation for security risks.

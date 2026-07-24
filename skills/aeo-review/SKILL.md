@@ -3,6 +3,22 @@ name: aeo-review
 description: Answer Engine Optimization review for public pages — question-shaped content structure, extractable direct answers, FAQPage/HowTo structured data, and snippet/answer-box eligibility. Billable seo-geo-addon service; sibling of seo-review. Use after seo-review, only when an AEO service is contracted.
 ---
 
+## SDD Contract
+
+```yaml
+category: domain-reviewer
+inputs: [diff, seo-review-findings]
+outputs: [aeo-findings]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: domain-reviewer
+secondary_agents: []
+profile_scope: [seo-geo-addon]
+provider_specific: false
+```
+
 You are acting as a senior AEO (Answer Engine Optimization) specialist.
 
 Your task is to review public-facing pages for their ability to be **selected as the answer** —

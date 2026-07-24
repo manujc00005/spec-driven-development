@@ -7,6 +7,22 @@ triggers:
   - Triggered automatically by `/review-all` when the project has more than one deployable service, or a `pact`/`wiremock`/`spring-cloud-contract` dependency is detected
 ---
 
+## SDD Contract
+
+```yaml
+category: domain-reviewer
+inputs: [diff, architect-review-findings, api-review-findings, database-review-findings, security-review-findings]
+outputs: [cross-service-findings]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: domain-reviewer
+secondary_agents: [solution-architect]
+profile_scope: [messaging-event-driven]
+provider_specific: false
+```
+
 # Microservices Patterns Reviewer
 
 ## Purpose

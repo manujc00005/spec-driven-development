@@ -3,6 +3,22 @@ name: spec-resume
 description: Alias for /spec-status <path>. Resume work on a feature after a break — kept for backwards compatibility.
 ---
 
+## SDD Contract
+
+```yaml
+category: lifecycle
+inputs: [specs/features/<path>]
+outputs: [status-overview]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: any
+secondary_agents: []
+profile_scope: all
+provider_specific: false
+```
+
 > This skill has been unified with `/spec-status`.
 > `/spec-resume <path>` is equivalent to `/spec-status <path>`.
 > Prefer `/spec-status <path>` going forward.

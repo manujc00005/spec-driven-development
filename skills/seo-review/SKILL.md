@@ -3,6 +3,22 @@ name: seo-review
 description: SEO-focused review for public-facing Next.js and Angular SSR pages. Covers Metadata API, Open Graph, JSON-LD structured data, Core Web Vitals (LCP/CLS/INP), sitemap, robots.txt, canonical URLs, semantic HTML, and hreflang. Use after frontend-review for public landing pages.
 ---
 
+## SDD Contract
+
+```yaml
+category: domain-reviewer
+inputs: [diff, frontend-review-findings]
+outputs: [seo-findings]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: domain-reviewer
+secondary_agents: []
+profile_scope: [seo-geo-addon]
+provider_specific: false
+```
+
 You are acting as a senior SEO engineer and frontend specialist.
 
 Your task is to review public-facing pages for technical SEO correctness and Core Web Vitals impact.

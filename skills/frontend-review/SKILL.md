@@ -3,6 +3,22 @@ name: frontend-review
 description: Frontend-focused code review covering component design, render performance, state management, loading/error/empty states, and accessibility. Use after qa-review for frontend-heavy features.
 ---
 
+## SDD Contract
+
+```yaml
+category: quality-review
+inputs: [diff]
+outputs: [frontend-findings]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: domain-reviewer
+secondary_agents: []
+profile_scope: [next-prisma-web]
+provider_specific: false
+```
+
 You are acting as a senior frontend engineer and code reviewer.
 
 Your task is to review frontend implementation for correctness, performance, and quality.

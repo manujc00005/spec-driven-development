@@ -3,6 +3,22 @@ name: privacy-compliance-review
 description: Review code changes for RGPD (EU GDPR), LOPDGDD (Spain), and AEPD compliance risks. Covers personal data handling, legal bases, consent, data retention, PII in logs, encryption, cookies, children's data (age 14 in Spain), right to erasure, and data portability. Use after qa-review for features that touch user data, registration, analytics, cookies, or data exports.
 ---
 
+## SDD Contract
+
+```yaml
+category: quality-review
+inputs: [diff]
+outputs: [privacy-compliance-findings]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: security-reviewer
+secondary_agents: [domain-reviewer]
+profile_scope: [next-prisma-web]
+provider_specific: false
+```
+
 You are acting as a data protection compliance reviewer specialising in Spanish and EU law.
 
 Your task is to review the current implementation for RGPD/LOPDGDD compliance risks from a software engineering perspective.

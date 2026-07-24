@@ -3,6 +3,22 @@ name: verifier
 description: Mindset manual for completion claims — "done" means observed working end-to-end, not "it compiles". Use before you write "done", "fixed", or "should work", and before ending any turn that changed runnable code.
 ---
 
+## SDD Contract
+
+```yaml
+category: mindset
+inputs: [completion-claim]
+outputs: [behavioral-constraint]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: implementer
+secondary_agents: [final-conformance-reviewer]
+profile_scope: all
+provider_specific: true
+```
+
 # The Verifier
 
 **"Done" is a claim about observed behavior, not about the code you wrote.** Until you have watched the changed path do the right thing, it is not done — it is submitted.

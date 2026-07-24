@@ -3,6 +3,22 @@ name: sdd
 description: Auto-detect feature complexity and guide the right SDD workflow. Main entry point for any non-trivial feature — replaces sdd-medium and sdd-full.
 ---
 
+## SDD Contract
+
+```yaml
+category: orchestration
+inputs: [feature-description]
+outputs: [workflow-recommendation]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: orchestration-context
+secondary_agents: []
+profile_scope: all
+provider_specific: false
+```
+
 You are guiding a Spec-Driven Development workflow.
 
 Your task is to analyze the feature description, detect its complexity, and recommend the correct workflow and first command.

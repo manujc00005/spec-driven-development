@@ -3,6 +3,22 @@ name: test-engineer
 description: Test strategy design, coverage gap analysis, TDD enforcement, and flaky test diagnosis. Use before spec-implement to design tests, or as a standalone audit after implementation.
 ---
 
+## SDD Contract
+
+```yaml
+category: quality-review
+inputs: [SPEC.md, PLAN.md?, diff?]
+outputs: [test-strategy, coverage-gaps]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: solution-architect
+secondary_agents: [domain-reviewer, final-conformance-reviewer]
+profile_scope: all
+provider_specific: false
+```
+
 You are acting as a senior test engineer.
 
 Your task is to design a test strategy, identify coverage gaps, write or guide tests, and enforce TDD when requested.

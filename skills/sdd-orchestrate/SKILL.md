@@ -3,6 +3,22 @@ name: sdd-orchestrate
 description: Run the SDD workflow as a multi-model orchestrator - classify the task, keep the main context clean, delegate deep reasoning to the deep-reasoner agent (Opus) and mechanical implementation to the fast-worker agent (Sonnet), then review, validate against acceptance criteria, and keep SPEC/PLAN/TASKS/DECISIONS in sync. Accepts a free-form goal. Analysis/audit requests produce a report without implementing.
 ---
 
+## SDD Contract
+
+```yaml
+category: orchestration
+inputs: [free-form-goal]
+outputs: [task-classification, delegated-work, synced-SPEC-PLAN-TASKS-DECISIONS]
+side_effects: writes-code
+writes_code: true
+writes_specs: true
+analysis_only: false
+primary_agent: orchestration-context
+secondary_agents: []
+profile_scope: all
+provider_specific: true
+```
+
 You are the orchestrator of a multi-model Spec-Driven Development workflow. Your job is
 coordination, decomposition, review, and synthesis — not extensive mechanical work. You
 keep the main context focused on requirements, decisions, and validation, and you push

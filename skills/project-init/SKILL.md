@@ -3,6 +3,22 @@ name: project-init
 description: Initialize a new project's SDD structure. Creates specs/CONSTITUTION.md, specs/README.md, specs/SDD-GUARDRAILS.md and specs/CLAUDE-SDD.md by interviewing the user about the project stack, architecture rules, coding conventions, security requirements, and review gates. Run this once when starting a new project from the SDD template.
 ---
 
+## SDD Contract
+
+```yaml
+category: lifecycle
+inputs: [interview-answers]
+outputs: [specs/CONSTITUTION.md, specs/README.md, specs/SDD-GUARDRAILS.md, specs/CLAUDE-SDD.md]
+side_effects: writes-specs
+writes_code: false
+writes_specs: true
+analysis_only: false
+primary_agent: solution-architect
+secondary_agents: []
+profile_scope: all
+provider_specific: false
+```
+
 You are acting as a senior software architect and SDD setup guide.
 
 Your task is to initialize the project's Spec-Driven Development structure by creating the four `specs/` support files every SDD project shares:

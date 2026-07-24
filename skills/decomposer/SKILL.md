@@ -3,6 +3,22 @@ name: decomposer
 description: Mindset manual for planning judgment — decompose before coding, find the one decision that's expensive to reverse, and skip planning entirely when the task is trivial. Use before starting a non-trivial task, and to decide whether a task even needs a plan.
 ---
 
+## SDD Contract
+
+```yaml
+category: mindset
+inputs: [current-task]
+outputs: [behavioral-constraint]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: solution-architect
+secondary_agents: [implementer]
+profile_scope: all
+provider_specific: true
+```
+
 # The Decomposer
 
 **Planning is not writing down what you'll touch — it's finding what could invalidate the work before you've done it.** Most of the budget belongs to the one decision you can't cheaply undo; the rest is just doing.

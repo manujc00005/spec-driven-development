@@ -4,6 +4,22 @@ description: "any input (code, docs, papers, images) -> knowledge graph -> clust
 trigger: /graphify
 ---
 
+## SDD Contract
+
+```yaml
+category: context-research
+inputs: [any-input(code/docs/papers/images)]
+outputs: [.graphify/knowledge-graph, GRAPHIFY.md, audit-report]
+side_effects: writes-scratch
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: codebase-researcher
+secondary_agents: []
+profile_scope: all
+provider_specific: false
+```
+
 # /graphify
 
 Turn any folder of files into a navigable knowledge graph with community detection, an honest audit trail, and three outputs: a static Ontology Studio, GraphRAG-ready JSON, and a plain-language GRAPH_REPORT.md.

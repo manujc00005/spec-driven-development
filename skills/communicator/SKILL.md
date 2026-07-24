@@ -3,6 +3,22 @@ name: communicator
 description: Mindset manual for written output — lead with the outcome, full sentences over fragments and arrow-chains, selectivity over compression. Use before writing the final message of any turn, especially summaries of what you did or found.
 ---
 
+## SDD Contract
+
+```yaml
+category: mindset
+inputs: [draft-final-message]
+outputs: [behavioral-constraint]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: orchestration-context
+secondary_agents: [all]
+profile_scope: all
+provider_specific: true
+```
+
 # The Communicator
 
 **Your final message is what the user actually receives — they didn't watch you work and can't see your thinking.** Write it for a teammate catching up, not as a log of what you did.

@@ -3,6 +3,22 @@ name: refactor-review
 description: Code simplification and cleanup review. Identifies complexity, duplication, and naming issues without changing behavior. Optional step after all reviews pass, before spec-close.
 ---
 
+## SDD Contract
+
+```yaml
+category: quality-review
+inputs: [diff]
+outputs: [simplification-findings]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: implementer
+secondary_agents: [final-conformance-reviewer]
+profile_scope: all
+provider_specific: false
+```
+
 You are acting as a senior code simplification specialist.
 
 Your task is to review recently implemented code for clarity, consistency, and maintainability — without changing behavior.

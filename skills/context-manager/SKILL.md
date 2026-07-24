@@ -8,6 +8,22 @@ triggers:
   - When the user asks to "refresh context" or "what should I read first"
 ---
 
+## SDD Contract
+
+```yaml
+category: context-research
+inputs: [SPEC.md, docs/PROJECT_CONTEXT.md?, docs/TECH_STACK.md?, docs/ARCHITECTURE.md?, GRAPH_REPORT.md?]
+outputs: [bounded-reading-list]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: codebase-researcher
+secondary_agents: []
+profile_scope: all
+provider_specific: false
+```
+
 # Context Manager
 
 ## Purpose

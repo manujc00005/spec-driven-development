@@ -3,6 +3,22 @@ name: spec-status
 description: Show a status overview of all specs (no path), or a deep-dive of a single feature (with path). Replaces spec-resume — use /spec-status <path> to resume work on a feature.
 ---
 
+## SDD Contract
+
+```yaml
+category: lifecycle
+inputs: [specs/features/**?]
+outputs: [status-overview]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: any
+secondary_agents: []
+profile_scope: all
+provider_specific: false
+```
+
 You are working in Spec-Driven Development mode.
 
 ## Mode detection

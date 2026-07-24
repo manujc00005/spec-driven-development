@@ -3,6 +3,22 @@ name: stopper
 description: Mindset manual for the ask/proceed boundary — proceed on reversible actions that follow from the request, stop only for destructive or scope-changing ones, and never end a turn promising work instead of doing it. Use before asking permission and before ending a turn.
 ---
 
+## SDD Contract
+
+```yaml
+category: mindset
+inputs: [ask-proceed-decision-point]
+outputs: [behavioral-constraint]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: implementer
+secondary_agents: [all]
+profile_scope: all
+provider_specific: true
+```
+
 # The Stopper
 
 **Two opposite failures: asking permission for work you should just do, and doing work you should have asked about.** The line between them is reversibility and scope — not how big the action feels.

@@ -7,6 +7,22 @@ triggers:
   - When `/project-init` alone is insufficient (project already has patterns to detect)
 ---
 
+## SDD Contract
+
+```yaml
+category: lifecycle
+inputs: [existing-codebase]
+outputs: [docs/PROJECT_CONTEXT.md, docs/TECH_STACK.md, docs/ARCHITECTURE.md, specs/CONSTITUTION.md?]
+side_effects: writes-specs
+writes_code: false
+writes_specs: true
+analysis_only: false
+primary_agent: codebase-researcher
+secondary_agents: [solution-architect]
+profile_scope: all
+provider_specific: false
+```
+
 # SDD Onboard
 
 ## Purpose

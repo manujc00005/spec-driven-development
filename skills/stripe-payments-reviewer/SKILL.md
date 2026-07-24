@@ -8,6 +8,22 @@ triggers:
   - Triggered by `/review-all` when the spec mentions payments, checkout, subscriptions, or refunds
 ---
 
+## SDD Contract
+
+```yaml
+category: domain-reviewer
+inputs: [diff, security-review-findings]
+outputs: [stripe-findings]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: domain-reviewer
+secondary_agents: [security-reviewer]
+profile_scope: [payments-fintech]
+provider_specific: false
+```
+
 # Stripe Payments Reviewer
 
 ## Purpose

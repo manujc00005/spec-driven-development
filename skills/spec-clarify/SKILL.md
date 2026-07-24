@@ -3,6 +3,22 @@ name: spec-clarify
 description: Clarify and strengthen an existing SPEC.md before planning. Use this to detect ambiguity, missing requirements, unclear acceptance criteria, edge cases and blocking questions.
 ---
 
+## SDD Contract
+
+```yaml
+category: lifecycle
+inputs: [SPEC.md]
+outputs: [SPEC.md(clarified)]
+side_effects: writes-specs
+writes_code: false
+writes_specs: true
+analysis_only: false
+primary_agent: solution-architect
+secondary_agents: []
+profile_scope: all
+provider_specific: false
+```
+
 You are working in Spec-Driven Development mode.
 
 Your task is to clarify an existing feature specification before implementation planning.

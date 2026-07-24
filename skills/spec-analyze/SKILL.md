@@ -3,6 +3,22 @@ name: spec-analyze
 description: Analyze consistency between SPEC.md, PLAN.md, TASKS.md and DECISIONS.md before implementation. Use this to detect missing coverage, contradictions, weak tasks and readiness issues.
 ---
 
+## SDD Contract
+
+```yaml
+category: lifecycle
+inputs: [SPEC.md, PLAN.md, TASKS.md, DECISIONS.md]
+outputs: [consistency-report]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: solution-architect
+secondary_agents: [final-conformance-reviewer]
+profile_scope: all
+provider_specific: false
+```
+
 You are working in Spec-Driven Development mode.
 
 Your task is to analyze the SDD documents before implementation.

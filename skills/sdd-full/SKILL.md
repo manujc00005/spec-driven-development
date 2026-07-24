@@ -3,6 +3,22 @@ name: sdd-full
 description: Guide a full SDD workflow. Consider using /sdd instead — it auto-detects complexity and selects the right workflow for you.
 ---
 
+## SDD Contract
+
+```yaml
+category: orchestration
+inputs: [feature-description]
+outputs: [workflow-recommendation]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: orchestration-context
+secondary_agents: []
+profile_scope: all
+provider_specific: false
+```
+
 > Consider using `/sdd` instead — it auto-detects whether medium or full workflow is appropriate.
 > This skill is kept for cases where you want to explicitly force the full workflow.
 

@@ -9,6 +9,22 @@ triggers:
   - During `/sdd-onboard` (initial architecture discovery)
 ---
 
+## SDD Contract
+
+```yaml
+category: context-research
+inputs: [GRAPH_REPORT.md]
+outputs: [impact-analysis, staleness-flag]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: codebase-researcher
+secondary_agents: [solution-architect]
+profile_scope: all
+provider_specific: false
+```
+
 # Graphify Context
 
 ## Purpose

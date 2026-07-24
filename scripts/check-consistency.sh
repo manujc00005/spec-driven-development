@@ -315,6 +315,179 @@ for rel in ("scripts/setup-graphify.sh", "scripts/setup-graphify.ps1"):
 
 
 # ---------------------------------------------------------------------------
+# Feature 018: Agentic routing — SDD Contract schema + agentRouting coverage
+# See specs/features/018-agentic-routing-and-skill-contracts/CONTRACT_SCHEMA.md
+# for the full VR1-VR15 rule set this section implements (the hard-fail subset),
+# and DECISIONS.md D014 for the agentRouting coverage rule (rule 7 below).
+# ---------------------------------------------------------------------------
+SDD_CONTRACT_RE = re.compile(r"## SDD Contract\s*\n```yaml\n(.*?)\n```", re.S)
+
+LIFECYCLE_AGENTS = {
+    "codebase-researcher", "solution-architect", "implementer",
+    "security-reviewer", "domain-reviewer", "final-conformance-reviewer",
+}
+PRIMARY_AGENT_ENUM = LIFECYCLE_AGENTS | {"orchestration-context", "any", "human"}
+CATEGORY_ENUM = {"lifecycle", "context-research", "domain-reviewer", "quality-review", "mindset", "orchestration"}
+SIDE_EFFECTS_ENUM = {"none", "writes-specs", "writes-code", "writes-scratch"}
+REQUIRED_CONTRACT_KEYS = ["category", "inputs", "outputs", "side_effects", "writes_code",
+                          "writes_specs", "analysis_only", "primary_agent", "profile_scope",
+                          "provider_specific"]
+ALL_CONTRACT_KEYS = set(REQUIRED_CONTRACT_KEYS + ["secondary_agents"])
+
+
+def parse_flow_list(v):
+    v = v.strip()
+    if not (v.startswith("[") and v.endswith("]")):
+        return None
+    inner = v[1:-1].strip()
+    return [x.strip() for x in inner.split(",")] if inner else []
+
+
+def parse_contract_block(block):
+    data = {}
+    perrs = []
+    for line in block.splitlines():
+        line = line.rstrip()
+        if not line.strip():
+            continue
+        m = re.match(r"^([a-zA-Z_]+):\s*(.*)$", line)
+        if not m:
+            perrs.append(f"unparseable line: {line!r}")
+            continue
+        key, val = m.group(1), m.group(2)
+        if key in ("inputs", "outputs", "secondary_agents"):
+            lst = parse_flow_list(val)
+            if lst is None:
+                perrs.append(f"{key} is not a flow list: {val!r}")
+            else:
+                data[key] = lst
+        elif key == "profile_scope":
+            if val.strip() == "all":
+                data[key] = "all"
+            else:
+                lst = parse_flow_list(val)
+                if lst is None:
+                    perrs.append(f"profile_scope malformed: {val!r}")
+                else:
+                    data[key] = lst
+        elif val.strip() == "true":
+            data[key] = True
+        elif val.strip() == "false":
+            data[key] = False
+        else:
+            data[key] = val.strip()
+    return data, perrs
+
+
+# Rule 1: every SKILL.md has a valid '## SDD Contract' block.
+for skill_name in sorted(disk_skills):
+    path = os.path.join(skills_dir, skill_name, "SKILL.md")
+    with open(path, encoding="utf-8") as f:
+        text = f.read()
+    matches = SDD_CONTRACT_RE.findall(text)
+    if len(matches) == 0:
+        err("sdd-contract", skill_name, "missing '## SDD Contract' yaml block")
+        continue
+    if len(matches) > 1:
+        err("sdd-contract", skill_name, "more than one '## SDD Contract' yaml block")
+        continue
+
+    contract_data, contract_perrs = parse_contract_block(matches[0])
+    if contract_perrs:
+        for p in contract_perrs:
+            err("sdd-contract", skill_name, f"parse error: {p}")
+        continue
+
+    missing_keys = [k for k in REQUIRED_CONTRACT_KEYS if k not in contract_data]
+    if missing_keys:
+        err("sdd-contract", skill_name, f"missing required keys: {missing_keys}")
+        continue
+    unknown_keys = [k for k in contract_data if k not in ALL_CONTRACT_KEYS]
+    if unknown_keys:
+        err("sdd-contract", skill_name, f"unknown keys: {unknown_keys}")
+
+    if contract_data["category"] not in CATEGORY_ENUM:
+        err("sdd-contract", skill_name, f"bad category: {contract_data['category']!r}")
+    if contract_data["side_effects"] not in SIDE_EFFECTS_ENUM:
+        err("sdd-contract", skill_name, f"bad side_effects: {contract_data['side_effects']!r}")
+
+    # Rule 2: primary_agent resolves to one of the six lifecycle agents,
+    # 'orchestration-context', 'any', or 'human'.
+    primary_agent = contract_data.get("primary_agent")
+    if primary_agent not in PRIMARY_AGENT_ENUM:
+        err("agent-routing", skill_name, f"primary_agent {primary_agent!r} does not resolve (must be one of the six lifecycle agents, 'orchestration-context', 'any', or 'human')")
+
+    # Rule 3: secondary_agents entries resolve; 'all' only as sole sentinel.
+    secondary_agents = contract_data.get("secondary_agents", [])
+    if secondary_agents == ["all"]:
+        pass
+    else:
+        if "all" in secondary_agents:
+            err("agent-routing", skill_name, "'all' must be the sole entry in secondary_agents, not mixed with named agents")
+        bad_secondary = [a for a in secondary_agents if a != "all" and a not in LIFECYCLE_AGENTS]
+        if bad_secondary:
+            err("agent-routing", skill_name, f"secondary_agents has unresolvable entries: {bad_secondary}")
+
+    profile_scope_val = contract_data.get("profile_scope")
+    if profile_scope_val != "all" and isinstance(profile_scope_val, list):
+        bad_profiles = [p for p in profile_scope_val if p not in profiles]
+        if bad_profiles:
+            err("sdd-contract", skill_name, f"profile_scope references unknown profiles: {bad_profiles}")
+
+# Rule 9: no test-engineer agent exists (D004).
+if has_agent("test-engineer"):
+    err("agent-routing", "test-engineer", "a 'test-engineer' agent exists on disk — spec 018 D004 explicitly excludes a dedicated test-engineer agent in Phase 2")
+
+# Rule 10: deep-reasoner and fast-worker remain valid model-tier agents.
+for model_tier_agent, expected_model in (("deep-reasoner", "opus"), ("fast-worker", "sonnet")):
+    mt_path = os.path.join(agents_dir, f"{model_tier_agent}.md")
+    if not os.path.isfile(mt_path):
+        err("agent-routing", model_tier_agent, "model-tier agent file missing")
+        continue
+    with open(mt_path, encoding="utf-8") as f:
+        mt_text = f.read()
+    if f"model: {expected_model}" not in mt_text:
+        err("agent-routing", model_tier_agent, f"expected 'model: {expected_model}' in frontmatter")
+
+# Rules 4-8: agentRouting structural checks + per-profile coverage (D014).
+# Rule 4 (every profile agent exists in agents/ or plannedAgents) is already
+# enforced generically above by the FR-001..004/FR-006 'agents' category checks;
+# no separate code needed here.
+for pname, pdef in profiles.items():
+    profile_disabled = pdef.get("disabled") is True
+    routing = pdef.get("agentRouting", {})
+
+    # Rule 8: a disabled profile (blockchain-crypto today) must stay unrouted.
+    if profile_disabled:
+        if routing:
+            err("agent-routing", f"profile '{pname}'", "disabled profile must not declare agentRouting")
+        continue
+
+    routed_skills_this_profile = set()
+    for agent_name, agent_spec in routing.items():
+        # Rule 6: routing target must be a known lifecycle agent.
+        if agent_name not in LIFECYCLE_AGENTS:
+            err("agent-routing", f"profile '{pname}'", f"agentRouting target '{agent_name}' is not one of the six lifecycle agents")
+        routed_skill_list = agent_spec.get("skills", []) if isinstance(agent_spec, dict) else []
+        for routed_skill in routed_skill_list:
+            routed_skills_this_profile.add(routed_skill)
+            # Rule 5: every routed skill exists under skills/.
+            if not has_skill(routed_skill):
+                err("agent-routing", f"profile '{pname}'", f"agentRouting['{agent_name}'] references skill '{routed_skill}' but skills/{routed_skill}/SKILL.md does not exist")
+
+    # Rule 7: every non-core profile skill meant for lifecycle-agent consumption
+    # is covered by agentRouting, unless listed in the profile's optional
+    # 'agentRoutingExempt' array (D014 — core is exempt by design, not via
+    # this escape hatch, since its skills are not stack-specific reviewer routing).
+    if pname != "core":
+        exempted_skills = set(pdef.get("agentRoutingExempt", []))
+        profile_skill_set = set(pdef.get("skills", []))
+        uncovered_skills = profile_skill_set - routed_skills_this_profile - exempted_skills
+        for uncovered in sorted(uncovered_skills):
+            err("agent-routing", f"profile '{pname}'", f"skill '{uncovered}' is shipped by this profile but not covered by agentRouting (add it, or list it in 'agentRoutingExempt' with a documented reason)")
+
+
+# ---------------------------------------------------------------------------
 # FR-008: README.md count markers
 # ---------------------------------------------------------------------------
 computed = {

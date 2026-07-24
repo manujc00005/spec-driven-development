@@ -3,6 +3,22 @@ name: spec-review
 description: Review current code changes against the active specification, plan, tasks, and decision log.
 ---
 
+## SDD Contract
+
+```yaml
+category: lifecycle
+inputs: [git-diff, SPEC.md, PLAN.md, TASKS.md, DECISIONS.md]
+outputs: [review-findings]
+side_effects: none
+writes_code: false
+writes_specs: false
+analysis_only: true
+primary_agent: final-conformance-reviewer
+secondary_agents: [solution-architect]
+profile_scope: all
+provider_specific: false
+```
+
 You are working in Spec-Driven Development mode.
 
 Your task is to review the current implementation against the related SDD files.
