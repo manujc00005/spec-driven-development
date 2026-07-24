@@ -1,0 +1,136 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="820" viewBox="0 0 1240 820" role="img" aria-labelledby="title desc">
+  <title id="title">Spec-Driven Development architecture</title>
+  <desc id="desc">An engineer drives SDD Core, which coordinates specs, profiles, hooks, and optional Graphify context. Profiles route capabilities to the lifecycle agents (discovery and design, delivery, specialist review) that consume reusable skills. Their work flows through review gates into evidence and a PR-ready delivery.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#94a3b8"/>
+    </marker>
+    <marker id="arrowL" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#cbd5e1"/>
+    </marker>
+    <filter id="sh" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#0f172a" flood-opacity="0.10"/>
+    </filter>
+    <style>
+      .panel{fill:#ffffff;stroke:#e2e8f0;stroke-width:1.5}
+      .card{fill:#ffffff;stroke:#cbd5e1;stroke-width:1.5;filter:url(#sh)}
+      .core{fill:#eef2ff;stroke:#6366f1;stroke-width:1.5;filter:url(#sh)}
+      .found{fill:#eff6ff;stroke:#3b82f6;stroke-width:1.5;filter:url(#sh)}
+      .guard{fill:#fff7ed;stroke:#f59e0b;stroke-width:1.5;filter:url(#sh)}
+      .opt{fill:#f8fafc;stroke:#94a3b8;stroke-width:1.5;stroke-dasharray:6 5}
+      .band{fill:#f5f7ff;stroke:#c7d2fe;stroke-width:1.5}
+      .skills{fill:#eff6ff;stroke:#3b82f6;stroke-width:1.5;filter:url(#sh)}
+      .review{fill:#fff1f2;stroke:#f43f5e;stroke-width:1.5;filter:url(#sh)}
+      .evidence{fill:#f0fdf4;stroke:#22c55e;stroke-width:1.5;filter:url(#sh)}
+      .delivery{fill:#ecfdf5;stroke:#059669;stroke-width:2.5;filter:url(#sh)}
+      .edge{fill:none;stroke:#94a3b8;stroke-width:2;marker-end:url(#arrow)}
+      .edge-d{fill:none;stroke:#cbd5e1;stroke-width:1.75;stroke-dasharray:6 5;marker-end:url(#arrowL)}
+      .bus{fill:none;stroke:#cbd5e1;stroke-width:2}
+      .guide{stroke:#eef2f6;stroke-width:1.5}
+      .glabel{font:600 11px system-ui,-apple-system,Segoe UI,sans-serif;fill:#94a3b8;letter-spacing:1.5px}
+      .title{font:700 19px system-ui,-apple-system,Segoe UI,sans-serif;fill:#0f172a}
+      .label{font:600 16px system-ui,-apple-system,Segoe UI,sans-serif;fill:#0f172a}
+      .small{font:13px system-ui,-apple-system,Segoe UI,sans-serif;fill:#64748b}
+      .agent{font:600 13px ui-monospace,SFMono-Regular,Consolas,monospace;fill:#334155}
+      .cap{font:italic 12px system-ui,-apple-system,Segoe UI,sans-serif;fill:#8a93a5}
+    </style>
+  </defs>
+
+  <rect class="panel" x="0" y="0" width="1240" height="820" rx="20"/>
+
+  <!-- lane gutter -->
+  <line class="guide" x1="160" y1="44" x2="160" y2="792"/>
+  <text class="glabel" x="140" y="80" text-anchor="end">ACTOR</text>
+  <text class="glabel" x="140" y="180" text-anchor="end">ORCHESTRATION</text>
+  <text class="glabel" x="140" y="287" text-anchor="end">FOUNDATIONS</text>
+  <text class="glabel" x="140" y="466" text-anchor="end">LIFECYCLE</text>
+  <text class="glabel" x="140" y="482" text-anchor="end">AGENTS</text>
+  <text class="glabel" x="140" y="661" text-anchor="end">ASSURANCE</text>
+  <text class="glabel" x="140" y="755" text-anchor="end">OUTCOME</text>
+
+  <!-- actor -->
+  <rect class="card" x="548" y="46" width="300" height="56" rx="12"/>
+  <text class="label" x="698" y="80" text-anchor="middle">Engineer / Maintainer</text>
+  <path class="edge" d="M698 102 V144"/>
+
+  <!-- orchestration -->
+  <rect class="core" x="548" y="144" width="300" height="64" rx="14"/>
+  <text class="title" x="698" y="183" text-anchor="middle">SDD Core</text>
+
+  <!-- distribution bus -->
+  <path class="bus" d="M698 208 V228"/>
+  <path class="bus" d="M296 228 H1100"/>
+  <path class="edge" d="M296 228 V240"/>
+  <path class="edge" d="M564 228 V240"/>
+  <path class="edge" d="M832 228 V240"/>
+  <path class="edge-d" d="M1100 228 V240"/>
+
+  <!-- foundations -->
+  <rect class="found" x="180" y="240" width="232" height="80" rx="12"/>
+  <text class="label" x="296" y="276" text-anchor="middle">Specs</text>
+  <text class="small" x="296" y="299" text-anchor="middle">SPEC · PLAN · TASKS · DECISIONS</text>
+
+  <rect class="found" x="448" y="240" width="232" height="80" rx="12"/>
+  <text class="label" x="564" y="276" text-anchor="middle">Profiles</text>
+  <text class="small" x="564" y="299" text-anchor="middle">Stack-aware routing</text>
+
+  <rect class="guard" x="716" y="240" width="232" height="80" rx="12"/>
+  <text class="label" x="832" y="276" text-anchor="middle">Hooks</text>
+  <text class="small" x="832" y="299" text-anchor="middle">Deterministic guardrails</text>
+
+  <rect class="opt" x="984" y="240" width="232" height="80" rx="12"/>
+  <text class="label" x="1100" y="276" text-anchor="middle">Graphify</text>
+  <text class="small" x="1100" y="299" text-anchor="middle">Optional bounded context</text>
+
+  <!-- profiles route into the agents band -->
+  <path class="edge" d="M564 320 V356"/>
+  <!-- graphify optionally feeds discovery/research -->
+  <path class="edge-d" d="M1100 320 C 820 352 540 352 317 406"/>
+
+  <!-- lifecycle agents band -->
+  <rect class="band" x="180" y="356" width="1036" height="232" rx="16"/>
+  <text class="cap" x="204" y="382">Lifecycle agents · own outcomes · consume skills</text>
+
+  <rect class="card" x="204" y="410" width="226" height="150" rx="12"/>
+  <text class="label" x="317" y="450" text-anchor="middle">Discovery &amp; design</text>
+  <text class="agent" x="317" y="491" text-anchor="middle">codebase-researcher</text>
+  <text class="agent" x="317" y="519" text-anchor="middle">solution-architect</text>
+
+  <rect class="card" x="458" y="410" width="226" height="150" rx="12"/>
+  <text class="label" x="571" y="450" text-anchor="middle">Delivery</text>
+  <text class="agent" x="571" y="491" text-anchor="middle">implementer</text>
+  <text class="agent" x="571" y="519" text-anchor="middle">final-conformance-reviewer</text>
+
+  <rect class="card" x="712" y="410" width="226" height="150" rx="12"/>
+  <text class="label" x="825" y="450" text-anchor="middle">Specialist review</text>
+  <text class="agent" x="825" y="491" text-anchor="middle">security-reviewer</text>
+  <text class="agent" x="825" y="519" text-anchor="middle">domain-reviewer</text>
+
+  <rect class="skills" x="966" y="410" width="226" height="150" rx="12"/>
+  <text class="label" x="1079" y="454" text-anchor="middle">Skills</text>
+  <text class="small" x="1079" y="491" text-anchor="middle">Reusable capabilities,</text>
+  <text class="small" x="1079" y="512" text-anchor="middle">workflows &amp; review lenses</text>
+
+  <!-- agent groups into review gates -->
+  <path class="edge" d="M317 560 V626"/>
+  <path class="edge" d="M571 560 V626"/>
+  <path class="edge" d="M825 560 V626"/>
+
+  <!-- specs (contract) and hooks (guardrails) frame the review, routed in clear channels -->
+  <path class="edge-d" d="M296 320 H190 V655 H204"/>
+  <path class="edge-d" d="M832 320 H952 V655 H938"/>
+
+  <!-- assurance -->
+  <rect class="review" x="204" y="626" width="734" height="60" rx="12"/>
+  <text class="title" x="571" y="663" text-anchor="middle">Review Gates</text>
+  <path class="edge" d="M571 686 V720"/>
+
+  <!-- outcome -->
+  <rect class="evidence" x="421" y="720" width="300" height="58" rx="12"/>
+  <text class="label" x="571" y="745" text-anchor="middle">Evidence</text>
+  <text class="small" x="571" y="766" text-anchor="middle">Tests · findings · traceability</text>
+  <path class="edge" d="M721 749 H761"/>
+
+  <rect class="delivery" x="761" y="720" width="300" height="58" rx="12"/>
+  <text class="title" x="911" y="756" text-anchor="middle">PR-ready delivery</text>
+</svg>

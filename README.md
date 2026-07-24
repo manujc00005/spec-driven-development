@@ -1,10 +1,12 @@
+# Spec-Driven Development
+
+**A lightweight, provider-aware engineering governance layer for AI-assisted software delivery.**
+
+AI accelerates execution. SDD keeps delivery controlled through specs, plans, decisions, agents, skills, hooks, and verifiable review gates.
+
+**Requirement → SPEC → PLAN → TASKS → DECISIONS → Agent execution → Review gates → Evidence → PR-ready delivery**
+
 <div align="center">
-
-# 🧭 Spec-Driven Development for Claude Code
-
-### Spec → Plan → Build → Review → Ship
-
-**A disciplined, enforceable workflow for AI-assisted software engineering —<br/>specs, plans, reviews, guardrails, and multi-model orchestration, without giving up engineering control.**
 
 ![Methodology](https://img.shields.io/badge/methodology-Spec--Driven%20Development-1f6feb)
 ![Claude Code](https://img.shields.io/badge/runtime-Claude%20Code-6b46c1)
@@ -18,15 +20,112 @@
 ![Agents](https://img.shields.io/badge/agents-8-1a7f37)
 ![Profiles](https://img.shields.io/badge/profiles-7-d4a72c)
 
-*AI accelerates execution. Engineering judgment keeps control.*
-
-[🚀 Quickstart](#-quickstart) · [🔄 Core workflow](#-core-workflow) · [🧠 Orchestration](#-multi-model-orchestration) · [⚙️ Installation](#️-installation) · [🛡️ Safety model](#️-safety-model)
+[Quickstart](#-quickstart) · [How it works](#how-it-works) · [Agents and skills](#agents-and-skills) · [Profiles](#️-profiles) · [Current support](#current-support)
 
 </div>
 
 ---
 
-This repository turns [Claude Code](https://claude.com/claude-code) into a process-driven engineering environment: **<!-- count:skills-total -->61<!-- /count --> skills** (slash commands), **<!-- count:hook-families-total -->12<!-- /count --> hook families** (tool-call-level guardrails), **<!-- count:templates-total -->22<!-- /count --> document templates**, **<!-- count:agents-total -->8<!-- /count --> agents** (6 lifecycle roles + the `deep-reasoner`/`fast-worker` orchestration pair), and a **profile-aware installer** — all versioned, reviewable, and installed from a single source of truth.
+SDD does not make agents more autonomous. It makes AI-assisted delivery more accountable: requirements become durable artifacts, work is bounded by explicit responsibilities, and completion requires reviewable evidence.
+
+## How it works
+
+![Spec-Driven Development architecture](docs/assets/sdd-architecture.svg)
+
+<details>
+<summary>Mermaid source</summary>
+
+```mermaid
+flowchart TD
+    classDef core fill:#eef2ff,stroke:#6366f1,color:#0f172a
+    classDef found fill:#eff6ff,stroke:#3b82f6,color:#0f172a
+    classDef guard fill:#fff7ed,stroke:#f59e0b,color:#0f172a
+    classDef opt fill:#f8fafc,stroke:#94a3b8,stroke-dasharray:5 4,color:#334155
+    classDef agent fill:#ffffff,stroke:#cbd5e1,color:#0f172a
+    classDef skills fill:#eff6ff,stroke:#3b82f6,color:#0f172a
+    classDef review fill:#fff1f2,stroke:#f43f5e,color:#0f172a
+    classDef evidence fill:#f0fdf4,stroke:#22c55e,color:#0f172a
+    classDef delivery fill:#ecfdf5,stroke:#059669,stroke-width:2px,color:#064e3b
+
+    H["Engineer / Maintainer"] --> SDD["SDD Core"]
+
+    SDD --> SPEC["Specs<br/><small>SPEC · PLAN · TASKS · DECISIONS</small>"]
+    SDD --> PROF["Profiles<br/><small>Stack-aware capability routing</small>"]
+    SDD --> HOOKS["Hooks<br/><small>Deterministic guardrails</small>"]
+    SDD -.-> GRAPH["Graphify<br/><small>Optional bounded context</small>"]
+
+    PROF --> AGENTS
+
+    subgraph AGENTS["Lifecycle agents · own outcomes · consume skills"]
+      direction LR
+      DIS["Discovery &amp; design<br/><small>codebase-researcher · solution-architect</small>"]
+      DEL["Delivery<br/><small>implementer · final-conformance-reviewer</small>"]
+      SPC["Specialist review<br/><small>security-reviewer · domain-reviewer</small>"]
+      SKILLS["Skills<br/><small>Reusable capabilities &amp; review lenses</small>"]
+    end
+
+    GRAPH -.-> DIS
+    DIS --> REVIEW["Review Gates"]
+    DEL --> REVIEW
+    SPC --> REVIEW
+    SPEC -.-> REVIEW
+    HOOKS -.-> REVIEW
+
+    REVIEW --> EVIDENCE["Evidence<br/><small>Tests · findings · traceability</small>"]
+    EVIDENCE --> PR["PR-ready delivery"]
+
+    class SDD core
+    class SPEC,PROF found
+    class HOOKS guard
+    class GRAPH opt
+    class DIS,DEL,SPC agent
+    class SKILLS skills
+    class REVIEW review
+    class EVIDENCE evidence
+    class PR delivery
+```
+
+</details>
+
+| Layer | Responsibility |
+|---|---|
+| **SDD Core** | Governs `SPEC`, `PLAN`, `TASKS`, `DECISIONS`, traceability, review gates, and evidence. |
+| **Lifecycle agents** | Own outcomes across research, architecture, implementation, specialist review, and final conformance. |
+| **Skills** | Supply reusable workflows, checklists, review lenses, and profile-scoped capabilities. |
+| **Profiles** | Activate the skills, hooks, templates, and agent routing relevant to a project stack. |
+| **Hooks** | Apply deterministic tool-call guardrails; they complement review and are not a security boundary. |
+| **Graphify** | Optionally supplies bounded architectural context to research; SDD works without it. |
+
+> **Skills define how to do something. Agents are responsible for producing an outcome.**
+
+The shipped Claude Code adapter packages **<!-- count:skills-total -->61<!-- /count --> skills**, **<!-- count:hook-families-total -->12<!-- /count --> hook families**, **<!-- count:templates-total -->22<!-- /count --> document templates**, and **<!-- count:agents-total -->8<!-- /count --> agent definitions** behind a profile-aware installer.
+
+## Agents and skills
+
+SDD separates responsibility from capability. Lifecycle agents own a bounded result and invoke applicable skills; profiles decide which stack- or domain-specific skills are available to those agents.
+
+| Lifecycle agent | Accountable outcome |
+|---|---|
+| `codebase-researcher` | Evidence-based map of the relevant code and constraints |
+| `solution-architect` | Implementable design aligned with the approved spec |
+| `implementer` | Bounded code and tests that follow the plan |
+| `security-reviewer` | Security findings and risk verdict |
+| `domain-reviewer` | Stack- and domain-specific findings |
+| `final-conformance-reviewer` | Final traceability, evidence, and conformance verdict |
+
+The existing multi-model orchestration path uses a separate model-tier pair: `deep-reasoner` for read-only analysis and `fast-worker` for bounded implementation. Lifecycle agents define **what outcome is owned**; model-tier agents define **how the existing orchestration path delegates work**. See [`docs/AGENTIC_ROUTING.md`](docs/AGENTIC_ROUTING.md) and [`docs/SDD-ORCHESTRATION.md`](docs/SDD-ORCHESTRATION.md).
+
+## Current support
+
+| Area | Status |
+|---|---|
+| Claude Code adapter, installers, skills, hooks, and model-tier orchestration | **Shipped** |
+| Six lifecycle-agent definitions and profile routing contracts | **Shipped; schema- and dry-run validated, not yet live-install verified** |
+| Java/Spring backend profile | **Default** |
+| Messaging/event-driven, payments/fintech, Next/Prisma, and SEO/GEO profiles | **Optional** |
+| Blockchain/crypto profile | **Disabled placeholder** |
+| Graphify integration | **Optional; Graphify itself is external** |
+| Other AI providers, including Codex | **Conceptually compatible workflow; no full adapter parity claimed** |
 
 ---
 
@@ -34,6 +133,9 @@ This repository turns [Claude Code](https://claude.com/claude-code) into a proce
 
 - [🧩 What is this?](#-what-is-this)
 - [🎯 Why it exists](#-why-it-exists)
+- [How it works](#how-it-works)
+- [Agents and skills](#agents-and-skills)
+- [Current support](#current-support)
 - [🚀 Quickstart](#-quickstart)
 - [🔄 Core workflow](#-core-workflow)
 - [🧠 Multi-model orchestration](#-multi-model-orchestration)
@@ -66,7 +168,7 @@ Five kinds of artifacts implement it:
 | **Hooks** | Small scripts Claude Code runs at tool-call level — they can block a destructive git command or surface a compile error *before* the session moves on | [`hooks/`](hooks/) |
 | **Profiles** | A manifest ([`profiles.json`](profiles.json)) mapping stacks (Java/Spring, Next.js, messaging, …) to the skills/hooks/templates/agents they need, consumed by the installers | repo root |
 | **Templates** | Starter documents for specs, plans, tasks, decisions, and project context docs | [`specs/_templates/`](specs/_templates/), [`docs/_templates/`](docs/_templates/) |
-| **Agents** | Subagent definitions for the multi-model orchestrated mode — a read-only Opus analyst and a bounded Sonnet implementer | [`agents/`](agents/) |
+| **Agents** | Six lifecycle responsibility contracts plus the `deep-reasoner` / `fast-worker` model-tier pair used by the existing orchestration path | [`agents/`](agents/) |
 
 It is not a demo. It is the process used to build real features in real codebases, where an unreviewed change to auth, payments, or a database schema is expensive to get wrong. The AI writes a meaningful share of the code — that part isn't in question. What this repo adds is the structure around that code, and the tooling that makes the structure hard to skip.
 
@@ -83,7 +185,7 @@ This workflow addresses that directly:
 - **Decisions written down** — every non-obvious choice lands in `DECISIONS.md` with its reasoning, instead of living only in a conversation that will be compacted away.
 - **Enforcement in tooling, not just prose** — hooks intervene at tool-call level (see [Safety model](#️-safety-model)).
 
-The engineer decides what gets built, what risk is acceptable, and which changes should not happen. The AI executes the process — it does not own it.
+The engineer decides what gets built, what risk is acceptable, and which changes should not happen. The AI executes within the process — it does not own it. This is the difference from vibe coding: speed comes from reducing ambiguity, not skipping engineering controls.
 
 ## 🚀 Quickstart
 
@@ -301,8 +403,8 @@ spec-driven-development/
 ├── settings.template.sh.json      # hook wiring template — macOS/Linux (bash commands, same hook set)
 ├── install.ps1 / install.sh       # profile-aware installers (central config dir + optional ~/.claude linking)
 ├── link-project.ps1 / .sh         # link one project's .claude/ to the central dir
-├── skills/                        # 52 skills — one folder per slash command
-├── hooks/                         # 11 hook families × (.ps1 + .sh) = 22 scripts
+├── skills/                        # 61 skills — one folder per slash command
+├── hooks/                         # 12 hook families × (.ps1 + .sh) = 24 scripts
 │   ├── README.md                  # per-hook trigger, effect, and activation guide
 │   └── lib/claude-json.sh         # dependency-free JSON helper for .sh hooks (no jq, no python)
 ├── agents/                        # 6 lifecycle agents + deep-reasoner.md (Opus) + fast-worker.md (Sonnet) — copied, never linked
@@ -536,22 +638,24 @@ This repo dogfoods its own workflow: the phases that built it are specced under 
 
 **Shipped**
 
-- Core SDD lifecycle + guardrails + generic reviews (52 skills)
-- Enforcement hooks (11 families, cross-platform) with activation guide
+- Core SDD lifecycle, guardrails, and generic reviews
+- Six lifecycle-agent contracts, profile routing, and the two model-tier orchestration agents
+- Enforcement hooks (cross-platform) with activation guide
 - Profile-aware installers with shipped/planned separation and integrity checks
-- Java/Spring backend profile (7 review skills, 3 hooks, 6 context templates)
+- Java/Spring backend profile
 - Messaging/event-driven + microservices-patterns profile (2 reviewers, 2 templates)
-- Graphify-aware context layer (3 skills + 1 hook, graceful degradation)
+- Payments/fintech, Next/Prisma web, and SEO/GEO optional profiles
+- Graphify-aware context layer with graceful degradation
 - Multi-model orchestration (`/sdd-orchestrate`, 2 agents, fallback policy, rollback docs)
 - Adaptive project onboarding (`/sdd-onboard`) with optional Graphify setup templates (`GRAPHIFY.md`, `PROJECT_GRAPH.md`)
 - Worked example: Payment Webhook Idempotency ([`examples/001-payment-webhook-idempotency/`](examples/001-payment-webhook-idempotency/)) — Java/Spring webhook receiver with constraint-based idempotency, full spec/plan/tasks/decisions, 14 tests, database migration, and review artifacts
 - Worked example: Server Action Rate Limiting ([`examples/002-server-action-rate-limiting/`](examples/002-server-action-rate-limiting/)) — TypeScript/Next.js server action with sliding-window rate limiting, x-forwarded-for trust-boundary attack tests, zod validation, enumeration-resistant responses, and a security review whose real finding (SEC-001) is preserved in the trail
 
 **Planned**
-- `payments-fintech` profile content (`stripe-payments-reviewer`, `payment-idempotency-reviewer`)
-- Prisma/Next.js-specific reviewers for `next-prisma-web`
-- Defensive hooks: `secret-scan`, `sensitive-file-guard`, `messaging-review-reminder`, `openapi-contract-reminder`
-- `observability-reviewer` skill + `OBSERVABILITY.md` template (deferred from Phase 3)
+
+- Defensive hooks declared in profiles, including `messaging-review-reminder`, `openapi-contract-reminder`, `prisma-migration-guard`, and `stripe-review-reminder`
+- `observability-reviewer` skill + `OBSERVABILITY.md` template
+- Live-install verification of the six lifecycle agents
 
 **Deferred / external**
 
@@ -580,13 +684,13 @@ As a portfolio piece, it demonstrates: AI-assisted engineering workflow design; 
 
 Stated plainly, because they matter:
 
-- **Requires Claude Code.** The skills, hooks, and agents are Claude Code configuration; nothing here runs standalone.
+- **Claude Code is the primary shipped adapter.** The workflow concepts are provider-aware, but this repository does not claim full Codex or other-provider parity.
 - **Model availability depends on your account.** Fable/Opus/Sonnet are aliases resolved by your Claude Code plan and version; the orchestration degrades along the documented fallback table rather than failing, but the "ideal" three-model setup is not guaranteed everywhere.
-- **Agent recognition requires install + a new session.** Agent/skill discovery happens at session start — after installing (or re-installing after `git pull`), an already-open session will not see new agents or skills. The live-discovery check has passed on the reference setup (see Phase 4's spec); re-verify per the documented procedure after any reinstall.
+- **Agent recognition requires install + a new session.** Live discovery passed for `deep-reasoner` and `fast-worker`; the six lifecycle agents are authored, schema-validated, and installer dry-run validated, but have not yet been verified through a real agent-registry install.
 - **`install.sh` requires `python3`** (stdlib only) for profile resolution. No `jq` anywhere.
 - **Windows-first origins.** The default central-dir location and the original hook wiring are Windows-shaped, but parity is shipped, not just documented: every hook has a `.sh` variant, both installers exist, and `settings.template.sh.json` provides the ready-made macOS/Linux hook wiring.
 - **Graphify is external and optional.** This repo ships the integration layer only; without the tool you get graceful degradation, not the architecture map.
-- **Some profiles are declarations, not content.** `payments-fintech` currently ships nothing; `blockchain-crypto` is disabled by design.
+- **Not every profile is active.** `blockchain-crypto` is a disabled placeholder; planned profile entries are reported but not installed.
 - **Two worked examples so far** ([Java/Spring webhook idempotency](examples/001-payment-webhook-idempotency/), [TypeScript/Next.js rate limiting](examples/002-server-action-rate-limiting/)). Both demonstrate the workflow artifacts end-to-end, but they are educational — pattern walkthroughs, not complete production systems.
 - **Hook enforcement is best-effort by design.** Hooks intervene at tool-call level inside Claude Code; they are guardrails against accidental damage, not a security boundary against a determined operator.
 
