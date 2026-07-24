@@ -4,12 +4,15 @@
 
 AI accelerates execution. SDD keeps delivery controlled through specs, plans, decisions, agents, skills, hooks, and verifiable review gates.
 
+**The methodology is provider-neutral.** Its portable core — SPEC/PLAN/TASKS/DECISIONS, review gates, skill contracts, the agent responsibility model, and guardrail intent — is packaged for a specific AI coding agent by a *provider adapter*: **Claude Code** (the primary, fully featured adapter) and **Codex** (an additional, prompt-based adapter over the same core). See [Provider adapters](#provider-adapters).
+
 **Requirement → SPEC → PLAN → TASKS → DECISIONS → Agent execution → Review gates → Evidence → PR-ready delivery**
 
 <div align="center">
 
 ![Methodology](https://img.shields.io/badge/methodology-Spec--Driven%20Development-1f6feb)
-![Claude Code](https://img.shields.io/badge/runtime-Claude%20Code-6b46c1)
+![Adapter: Claude Code](https://img.shields.io/badge/adapter-Claude%20Code%20%28primary%29-6b46c1)
+![Adapter: Codex](https://img.shields.io/badge/adapter-Codex%20%28prompt--based%29-8a63d2)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-2ea44f)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Status](https://img.shields.io/badge/status-active-success)
@@ -20,7 +23,7 @@ AI accelerates execution. SDD keeps delivery controlled through specs, plans, de
 ![Agents](https://img.shields.io/badge/agents-8-1a7f37)
 ![Profiles](https://img.shields.io/badge/profiles-7-d4a72c)
 
-[Quickstart](#-quickstart) · [How it works](#how-it-works) · [Agents and skills](#agents-and-skills) · [Profiles](#️-profiles) · [Current support](#current-support)
+[Quickstart](#-quickstart) · [How it works](#how-it-works) · [Agents and skills](#agents-and-skills) · [Profiles](#️-profiles) · [Provider adapters](#provider-adapters) · [Current support](#current-support)
 
 </div>
 
@@ -98,7 +101,7 @@ flowchart TD
 
 > **Skills define how to do something. Agents are responsible for producing an outcome.**
 
-The shipped Claude Code adapter packages **<!-- count:skills-total -->61<!-- /count --> skills**, **<!-- count:hook-families-total -->12<!-- /count --> hook families**, **<!-- count:templates-total -->22<!-- /count --> document templates**, and **<!-- count:agents-total -->8<!-- /count --> agent definitions** behind a profile-aware installer.
+The primary **Claude Code adapter** packages **<!-- count:skills-total -->61<!-- /count --> skills**, **<!-- count:hook-families-total -->12<!-- /count --> hook families**, **<!-- count:templates-total -->22<!-- /count --> document templates**, and **<!-- count:agents-total -->8<!-- /count --> agent definitions** behind a profile-aware installer. A second, prompt-based **Codex adapter** ([`adapters/codex/`](adapters/codex/)) packages the same provider-neutral core as an `AGENTS.md` operating guide plus lifecycle prompts — honestly, with no hook/subagent/skill parity claimed. See [Provider adapters](#provider-adapters).
 
 ## Agents and skills
 
@@ -125,7 +128,41 @@ The existing multi-model orchestration path uses a separate model-tier pair: `de
 | Messaging/event-driven, payments/fintech, Next/Prisma, and SEO/GEO profiles | **Optional** |
 | Blockchain/crypto profile | **Disabled placeholder** |
 | Graphify integration | **Optional; Graphify itself is external** |
-| Other AI providers, including Codex | **Conceptually compatible workflow; no full adapter parity claimed** |
+| Codex adapter | **Shipped as an additive, prompt-based adapter** (operating guide + lifecycle prompts + copy-only installer). Unverified against a live Codex CLI; no parity claimed — see [`adapters/codex/PARITY.md`](adapters/codex/PARITY.md) |
+| Other AI providers | **Conceptually compatible; add via the adapter model** in [`docs/PROVIDER_ADAPTERS.md`](docs/PROVIDER_ADAPTERS.md) |
+
+### Provider adapters
+
+SDD is a provider-neutral workflow with per-provider packaging. **SDD Core** — the SPEC/PLAN/TASKS/DECISIONS
+lifecycle, review gates, skill contracts, agent responsibility model, guardrail intent, and bounded-context
+doctrine — does not depend on any AI tool. A **provider adapter** packages that core for a specific agent:
+
+- **Claude Code** — the primary shipped adapter; it *is* the repository root (`skills/`, `agents/`, `hooks/`,
+  installers, settings templates). Nothing was moved. Pointer: [`adapters/claude/README.md`](adapters/claude/README.md).
+- **Codex** — a first, honest, prompt-based adapter under [`adapters/codex/`](adapters/codex/): an `AGENTS.md`
+  operating guide, the lifecycle-spine prompts, and a self-contained copy-only installer. It reuses the same
+  `specs/_templates/`. It does **not** claim parity — no enforced hooks, no native subagents, no profile-filtered
+  install — and is unverified against a live Codex CLI. The gaps are stated in
+  [`adapters/codex/PARITY.md`](adapters/codex/PARITY.md).
+
+Both adapters install with independent, idempotent scripts (they touch disjoint locations and never
+overlap). To install both first-time, a thin convenience wrapper calls each in order — it does not
+modify or reimplement either installer:
+
+```bash
+./install-all.sh --dry-run                       # preview both, writes nothing
+./install-all.sh --codex-target /path/to/project # Claude (install.sh) then Codex (install-codex.sh)
+./install-all.sh --skip-codex                     # only Claude   ·   --skip-claude → only Codex
+.\install-all.ps1 -CodexTarget C:\code\my-app     # Windows twin
+```
+
+Because each installer is idempotent, re-running adds only what is missing for that adapter. There is
+no single "install the rest" detection — you pick which adapters to run. `--codex-target` is what
+installs the per-project `AGENTS.md`; without it the Codex **prompts** still install globally but
+`AGENTS.md` is skipped (it is never written into the current directory or the framework repo).
+
+Model and rationale: [`docs/PROVIDER_ADAPTERS.md`](docs/PROVIDER_ADAPTERS.md) · registry and capability matrix:
+[`adapters/README.md`](adapters/README.md).
 
 ---
 
@@ -156,7 +193,7 @@ The existing multi-model orchestration path uses a separate model-tier pair: `de
 
 ## 🧩 What is this?
 
-A **Spec-Driven Development (SDD) workflow for AI-assisted software engineering**, packaged as installable Claude Code configuration. It is the reproducible sequence that sits between "having an idea" and "opening a pull request":
+A **provider-neutral Spec-Driven Development (SDD) workflow for AI-assisted software engineering** — shipped primarily as installable Claude Code configuration, with an additional prompt-based [Codex adapter](#provider-adapters) over the same core. It is the reproducible sequence that sits between "having an idea" and "opening a pull request":
 
 **specification → clarification → planning → consistency analysis → scoped implementation → layered review → close-out.**
 
@@ -169,6 +206,8 @@ Five kinds of artifacts implement it:
 | **Profiles** | A manifest ([`profiles.json`](profiles.json)) mapping stacks (Java/Spring, Next.js, messaging, …) to the skills/hooks/templates/agents they need, consumed by the installers | repo root |
 | **Templates** | Starter documents for specs, plans, tasks, decisions, and project context docs | [`specs/_templates/`](specs/_templates/), [`docs/_templates/`](docs/_templates/) |
 | **Agents** | Six lifecycle responsibility contracts plus the `deep-reasoner` / `fast-worker` model-tier pair used by the existing orchestration path | [`agents/`](agents/) |
+
+> These five artifacts are the **Claude Code** adapter's packaging. Codex consumes the same provider-neutral core through a different packaging — an `AGENTS.md` operating guide plus lifecycle prompts under [`adapters/codex/`](adapters/codex/), with guardrails as conventions rather than enforced hooks. See [Provider adapters](#provider-adapters).
 
 It is not a demo. It is the process used to build real features in real codebases, where an unreviewed change to auth, payments, or a database schema is expensive to get wrong. The AI writes a meaningful share of the code — that part isn't in question. What this repo adds is the structure around that code, and the tooling that makes the structure hard to skip.
 
@@ -200,6 +239,10 @@ cd spec-driven-development
 # Install core + default profile (java-spring-backend) into the central config dir
 ./install.sh
 .\install.ps1
+
+# Provider-aware: install BOTH adapters (Claude Code + the prompt-based Codex adapter)
+./install-all.sh --codex-target <your-project>    # macOS/Linux — calls both installers in order
+.\install-all.ps1 -CodexTarget <your-project>     # Windows
 
 # Opt-in: link your ~/.claude to the central dir (skills, hooks) + copy agents
 ./install.sh --link-user-claude
@@ -401,8 +444,10 @@ spec-driven-development/
 ├── CLAUDE.md.example              # sanitized project instructions — copy/merge into your own CLAUDE.md
 ├── settings.template.json         # hook wiring template — Windows (PowerShell commands)
 ├── settings.template.sh.json      # hook wiring template — macOS/Linux (bash commands, same hook set)
-├── install.ps1 / install.sh       # profile-aware installers (central config dir + optional ~/.claude linking)
+├── install.ps1 / install.sh       # profile-aware installers (Claude adapter — central config dir + optional ~/.claude linking)
+├── install-all.ps1 / .sh          # convenience wrapper — installs both adapters by calling each installer in order
 ├── link-project.ps1 / .sh         # link one project's .claude/ to the central dir
+├── adapters/                      # provider-adapter layer — claude/ (pointer to this root) + codex/ (prompt-based adapter)
 ├── skills/                        # 61 skills — one folder per slash command
 ├── hooks/                         # 12 hook families × (.ps1 + .sh) = 24 scripts
 │   ├── README.md                  # per-hook trigger, effect, and activation guide
@@ -412,6 +457,7 @@ spec-driven-development/
 │   ├── INSTALL.md                 # step-by-step install guide (Windows, macOS/Linux)
 │   ├── SDD-ORCHESTRATION.md       # multi-model orchestration reference
 │   ├── AGENTIC_ROUTING.md         # lifecycle-agent reference: skills vs. agents, routing model
+│   ├── PROVIDER_ADAPTERS.md       # SDD Core vs. provider adapters — the provider-neutral/adapter boundary
 │   ├── ROADMAP_JAVA_SPRING_CONTEXT.md  # original phase-planning document (historical)
 │   └── _templates/                # 10 project-context doc templates (PROJECT_CONTEXT, TECH_STACK,
 │                                  #   ARCHITECTURE, TESTING, SECURITY, DEPLOYMENT, MESSAGING,
@@ -497,6 +543,10 @@ Three concerns, three scripts — full guide in [`docs/INSTALL.md`](docs/INSTALL
 | Install into a central config dir | `install.ps1` / `install.sh` | Central directory only, by default |
 | Link your per-user `~/.claude` | same scripts, `-LinkUserClaude` / `--link-user-claude` | `~/.claude` — **opt-in** |
 | Link one project | `link-project.ps1` / `link-project.sh` | `<project>/.claude` only |
+| Install **both** adapters (Claude + Codex) | `install-all.ps1` / `install-all.sh` | Calls both installers in order; disjoint locations |
+| Install the Codex adapter alone | `adapters/codex/install-codex.ps1` / `.sh` | Project-root `AGENTS.md` + `~/.codex/prompts/` |
+
+The last two are the **provider-adapter layer** (see [Provider adapters](#provider-adapters) above and [`docs/PROVIDER_ADAPTERS.md`](docs/PROVIDER_ADAPTERS.md)). `install-all` does not modify or reimplement the Claude installers — it only calls them — and each installer stays independently idempotent.
 
 **Windows**
 
@@ -629,8 +679,9 @@ Counted from this repository, not aspirational:
 | Project-context templates | **<!-- count:docs-templates-total -->10<!-- /count -->** | `docs/_templates/` |
 | Agents | **<!-- count:agents-total -->8<!-- /count -->** | 6 lifecycle agents (`codebase-researcher`, `solution-architect`, `implementer`, `security-reviewer`, `domain-reviewer`, `final-conformance-reviewer`) + 2 model-tier agents (`deep-reasoner` Opus read-only, `fast-worker` Sonnet bounded) — see [`agents/README.md`](agents/README.md) |
 | Profiles | **<!-- count:profiles-total -->7<!-- /count -->** | `core`, `java-spring-backend` (default), `messaging-event-driven`, `next-prisma-web`, `seo-geo-addon` (billable overlay), `payments-fintech` (payments overlay), `blockchain-crypto` (disabled) |
-| Docs | **4 guides** | `INSTALL.md`, `SDD-ORCHESTRATION.md`, `AGENTIC_ROUTING.md`, `hooks/README.md` + per-directory READMEs |
+| Docs | **5 guides** | `INSTALL.md`, `SDD-ORCHESTRATION.md`, `AGENTIC_ROUTING.md`, `PROVIDER_ADAPTERS.md`, `hooks/README.md` + per-directory READMEs |
 | Installers | **4 scripts** | `install.ps1/.sh`, `link-project.ps1/.sh` — dry-run, backups, profile-aware |
+| Provider adapters | **2** | Claude Code (primary, shipped — the repo root) + Codex (prompt-based, copy-only installer, unverified against a live CLI). See [`adapters/README.md`](adapters/README.md) |
 
 This repo dogfoods its own workflow: the phases that built it are specced under [`specs/features/`](specs/features/) with their own `SPEC/PLAN/TASKS/DECISIONS` documents.
 
@@ -650,12 +701,14 @@ This repo dogfoods its own workflow: the phases that built it are specced under 
 - Adaptive project onboarding (`/sdd-onboard`) with optional Graphify setup templates (`GRAPHIFY.md`, `PROJECT_GRAPH.md`)
 - Worked example: Payment Webhook Idempotency ([`examples/001-payment-webhook-idempotency/`](examples/001-payment-webhook-idempotency/)) — Java/Spring webhook receiver with constraint-based idempotency, full spec/plan/tasks/decisions, 14 tests, database migration, and review artifacts
 - Worked example: Server Action Rate Limiting ([`examples/002-server-action-rate-limiting/`](examples/002-server-action-rate-limiting/)) — TypeScript/Next.js server action with sliding-window rate limiting, x-forwarded-for trust-boundary attack tests, zod validation, enumeration-resistant responses, and a security review whose real finding (SEC-001) is preserved in the trail
+- Provider-adapter layer ([`docs/PROVIDER_ADAPTERS.md`](docs/PROVIDER_ADAPTERS.md), [`adapters/`](adapters/)) separating provider-neutral SDD Core from per-provider packaging, plus a first **prompt-based Codex adapter** (`AGENTS.md` operating guide, lifecycle-spine prompts, copy-only installer) and an `install-all` wrapper — honest by design: no hook/subagent/skill parity claimed, unverified against a live Codex CLI (see [`adapters/codex/PARITY.md`](adapters/codex/PARITY.md))
 
 **Planned**
 
 - Defensive hooks declared in profiles, including `messaging-review-reminder`, `openapi-contract-reminder`, `prisma-migration-guard`, and `stripe-review-reminder`
 - `observability-reviewer` skill + `OBSERVABILITY.md` template
 - Live-install verification of the six lifecycle agents
+- Codex-adapter verification against a live Codex CLI (confirm the custom-prompt directory and config schema), then promote its status from *prompt-based* to *verified*
 
 **Deferred / external**
 
@@ -684,7 +737,7 @@ As a portfolio piece, it demonstrates: AI-assisted engineering workflow design; 
 
 Stated plainly, because they matter:
 
-- **Claude Code is the primary shipped adapter.** The workflow concepts are provider-aware, but this repository does not claim full Codex or other-provider parity.
+- **Claude Code is the primary, fully featured adapter.** A second **Codex adapter** ships too, but it is deliberately narrower: prompt-based, unverified against a live Codex CLI, with no enforced hooks, no native subagents, and only the lifecycle-spine skills. This repository does **not** claim Claude/Codex parity — the gaps are enumerated in [`adapters/codex/PARITY.md`](adapters/codex/PARITY.md).
 - **Model availability depends on your account.** Fable/Opus/Sonnet are aliases resolved by your Claude Code plan and version; the orchestration degrades along the documented fallback table rather than failing, but the "ideal" three-model setup is not guaranteed everywhere.
 - **Agent recognition requires install + a new session.** Live discovery passed for `deep-reasoner` and `fast-worker`; the six lifecycle agents are authored, schema-validated, and installer dry-run validated, but have not yet been verified through a real agent-registry install.
 - **`install.sh` requires `python3`** (stdlib only) for profile resolution. No `jq` anywhere.

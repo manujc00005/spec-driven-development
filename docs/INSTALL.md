@@ -13,6 +13,57 @@ Four concerns, four scripts:
 
 All scripts are **idempotent** and **safe to re-run**: an already-correct install or link is detected and reported as a no-op, nothing is deleted, and any overwrite requires `-Force`/`--force` and is preceded by an automatic timestamped backup.
 
+> **Scope of this guide.** The four scripts above install the **Claude Code adapter** — the primary, shipped adapter. SDD is a provider-neutral workflow with per-provider packaging; the Codex adapter and the "install both" wrapper are covered in [Provider adapters](#provider-adapters) below. Everything from [Wiring hooks](#wiring-hooks-into-a-project) onward describes the Claude adapter.
+
+---
+
+## Provider adapters
+
+SDD Core (the SPEC/PLAN/TASKS/DECISIONS lifecycle, review gates, skill contracts, agent responsibility model, and guardrail intent) is **provider-neutral**. A **provider adapter** packages that core for a specific AI coding agent. Full model and rationale: [`PROVIDER_ADAPTERS.md`](PROVIDER_ADAPTERS.md); registry and capability matrix: [`../adapters/README.md`](../adapters/README.md).
+
+| Adapter | Status | Installer | Installs to |
+|---|---|---|---|
+| **Claude Code** | Primary, shipped. *It is the repository root* — no files were moved. | `install.sh` / `install.ps1` (+ the three scripts above) | Central config dir (+ opt-in `~/.claude`) |
+| **Codex** | Prompt-based; **unverified against a live Codex CLI**. No parity claimed. | `adapters/codex/install-codex.sh` / `.ps1` (copy-only) | Project-root `AGENTS.md` + `~/.codex/prompts/` |
+
+The two adapters install to **disjoint locations and never overlap**, and each installer is independently idempotent.
+
+### The Codex adapter on its own
+
+Copy-only: it never runs the `codex` CLI, never touches secrets or your existing `~/.codex/config.toml`, and backs up any file it would overwrite. Preview first:
+
+```bash
+# from the repo root
+./adapters/codex/install-codex.sh --dry-run --target /path/to/your/project     # writes nothing
+./adapters/codex/install-codex.sh --target /path/to/your/project               # AGENTS.md + prompts
+```
+
+```powershell
+.\adapters\codex\install-codex.ps1 -Target C:\code\my-app                       # Windows twin
+```
+
+Flags: `--target DIR` (project root that receives `AGENTS.md` — **required to install `AGENTS.md`**; without it, `AGENTS.md` is skipped and only the prompts install; the framework repo root is refused), `--codex-home DIR` (prompts go to `<codex-home>/prompts`, default `~/.codex`), `--prompts-only` / `--agents-only`, `--dry-run`, `--force`. Its guardrails are **conventions, not enforced hooks** — see [`../adapters/codex/PARITY.md`](../adapters/codex/PARITY.md) for the full list of what does and does not carry over from the Claude adapter.
+
+### Installing both — `install-all`
+
+A thin convenience wrapper installs both adapters by **calling** the two installers in order (Claude first, then Codex). It does **not** modify or reimplement either installer, so each stays the single source of truth for its own behavior and safety guarantees:
+
+```bash
+./install-all.sh --dry-run                             # preview both; writes nothing
+./install-all.sh --codex-target /path/to/your/project  # Claude, then Codex
+./install-all.sh --skip-codex                          # only Claude   ·   --skip-claude → only Codex
+```
+
+```powershell
+.\install-all.ps1 -CodexTarget C:\code\my-app          # Windows twin
+```
+
+- `--dry-run` / `--force` are forwarded to **both** installers.
+- `--profile` / `--link-user-claude` go to the Claude installer; `--codex-target` / `--codex-home` go to the Codex installer. `--claude-args "…"` / `--codex-args "…"` pass extra raw flags through to each.
+- **`--codex-target` is what installs `AGENTS.md`.** Without it, `install-all` still installs the Codex **prompts** globally but skips the per-project `AGENTS.md` (it is never dropped into the current directory or the framework repo). Pass `--codex-target <your-project>` to install `AGENTS.md` too.
+- If the Claude step fails, the wrapper **skips Codex** and returns that exit code — no partial-state surprise.
+- Because each installer is idempotent, re-running adds only what is missing for that adapter. There is no "detect and install the rest" — you choose which adapters to run.
+
 ---
 
 ## Wiring hooks into a project

@@ -1,0 +1,28 @@
+# Example Codex config — SDD adapter
+#
+# THIS IS AN EXAMPLE, NOT A SHIPPED CONFIG. It illustrates one plausible way to point an OpenAI
+# Codex install at the SDD operating guide and lifecycle prompts. It is based on DOCUMENTED Codex
+# conventions and is UNVERIFIED against a live Codex CLI in this environment (the `codex` binary is
+# not installed here). Treat every key below as illustrative:
+#
+#   - Verify the real key names and file locations against your installed Codex version
+#     (`codex --help`, `codex config --help`, or the official docs) before relying on them.
+#   - This adapter never writes or edits your real `~/.codex/config.toml`. The installer only copies
+#     `AGENTS.md` and the prompt files. Any config wiring below is something YOU apply by hand.
+#
+# See ./README.md and ./PARITY.md for the adapter's verification status and limitations.
+
+# Codex reads project instructions from a project-root `AGENTS.md`. Copy `adapters/codex/AGENTS.md`
+# there (the installer does this for you with --target). No config key is needed for that — it is a
+# file convention, shown here only as a reminder of the moving parts.
+
+# Illustrative: where custom prompts live. Confirm the actual path/behavior for your Codex version.
+# The installer copies the SDD lifecycle prompts into this directory by default.
+# prompts_dir = "~/.codex/prompts"
+
+# Illustrative model selection — use whatever your Codex install supports. The SDD workflow does not
+# require any specific model and does NOT ship a model router (see the framework's non-goals).
+# model = "<your-codex-model>"
+
+# The SDD workflow is provider-neutral. Nothing here enables Claude-style hooks or subagents — Codex
+# has no verified equivalent in this environment, and the adapter does not claim one (see PARITY.md).
