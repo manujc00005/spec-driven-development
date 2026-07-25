@@ -1,6 +1,8 @@
 # Project instructions — Spec-Driven Development
 
 > This is a **generic, sanitized example**. Copy it into your own project as `CLAUDE.md` (or merge it into an existing one) and adjust the stack-specific details — nothing here should be treated as universal just because it's the default.
+>
+> This file is the **Claude Code adapter's** project-instructions artifact (Claude Code reads `CLAUDE.md`). The SDD *workflow* it describes is provider-neutral — a Codex user follows the same lifecycle through the Codex adapter's `AGENTS.md` instead.
 
 ## Development mode
 

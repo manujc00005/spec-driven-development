@@ -224,13 +224,20 @@ context, rather than centralized in a fifth:
 
 ## Provider positioning
 
-Claude Code is the current shipped agent file format (`name`/`description`/`tools:`
+Claude Code is the primary shipped agent file format (`name`/`description`/`tools:`
 frontmatter, read by `~/.claude/agents/` or a project's `.claude/agents/`). The six lifecycle
 agents' *responsibilities* — research, architecture, implementation, security review, domain
 review, final conformance — are conceptually provider-agnostic: the accountability split
-they encode doesn't depend on any Claude-specific mechanism. That said, this repo does not
-claim or implement parity with any other agent runtime (e.g. Codex) today; if and when
-another provider is actually integrated, that will be its own tracked decision, not an
-assumption made here. Each skill's `## SDD Contract` carries a `provider_specific` flag for
-exactly this reason — mindset-manual-style skills that encode Claude-specific behavioral
-guidance are flagged `true`; generic lifecycle/review skills are flagged `false`.
+they encode doesn't depend on any Claude-specific mechanism.
+
+Since spec 019, that neutrality is concrete rather than aspirational: the repo has a
+**provider-adapter layer** ([`../adapters/`](../adapters/) · [`PROVIDER_ADAPTERS.md`](PROVIDER_ADAPTERS.md)).
+Claude Code is the primary, fully featured adapter — the six agents ship as native subagent files
+with an enforced `tools:` grant. A first, **prompt-based Codex adapter**
+([`../adapters/codex/`](../adapters/codex/)) maps the same six responsibilities onto roles described
+in its `AGENTS.md` operating guide, with **no** native subagent grant and **no** claim of parity —
+the gaps (no enforced isolation, no hooks) are enumerated in
+[`../adapters/codex/PARITY.md`](../adapters/codex/PARITY.md). Each skill's `## SDD Contract` carries
+a `provider_specific` flag for exactly this reason — mindset-manual-style skills that encode
+Claude-specific behavioral guidance are flagged `true`; generic lifecycle/review skills are flagged
+`false`.

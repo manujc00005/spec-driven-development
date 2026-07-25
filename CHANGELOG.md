@@ -11,9 +11,29 @@ under `specs/features/` — the framework is developed with its own workflow.
 
 ## [Unreleased]
 
-Specs 016–018 · Installer hooks/lib fix, planned skills shipped, agentic routing layer.
+Specs 016–019 · Installer hooks/lib fix, planned skills shipped, agentic routing layer,
+provider-adapter layer and a first Codex adapter.
 
 ### Added
+- **Provider-adapter layer** (spec 019) — `docs/PROVIDER_ADAPTERS.md` and an `adapters/`
+  tree separating the provider-neutral **SDD Core** (SPEC/PLAN/TASKS/DECISIONS lifecycle,
+  review gates, skill contracts, agent responsibility model, guardrail intent) from
+  per-provider packaging. `adapters/README.md` is the adapter registry + capability/honesty
+  matrix; `adapters/claude/README.md` is a pointer — the Claude Code adapter remains the
+  repository root, and no file was moved.
+- **Codex adapter** (spec 019) — a first, **prompt-based** adapter under `adapters/codex/`:
+  an `AGENTS.md` operating guide, a curated lifecycle-spine of prompts (create → plan →
+  analyze → implement → review → close, plus a guardrails/consistency pass) derived from the
+  core skills, an example config, and a self-contained, **copy-only** `install-codex.{sh,ps1}`.
+  Honest by design — guardrails are conventions (not enforced hooks), the six roles are
+  personas (not native subagents with a `tools:` grant), only the lifecycle spine is ported
+  (not all 61 skills), and it is **unverified against a live Codex CLI**. The gaps are
+  enumerated in `adapters/codex/PARITY.md`.
+- **`install-all.{sh,ps1}`** (spec 019) — a thin convenience wrapper that installs both
+  adapters by *calling* each installer in order; it does not modify or reimplement
+  `install.sh`/`install.ps1`. `--codex-target` installs the per-project `AGENTS.md`; without
+  it the Codex prompts still install globally and `AGENTS.md` is skipped — it is never written
+  into the current directory or the framework repo itself (a hard guard refuses the latter).
 - **Six lifecycle agents** (spec 018) giving the framework's skills an accountable
   consumer: `codebase-researcher` (bounded research, Graphify-first, read-only),
   `solution-architect` (SPEC/PLAN/TASKS/DECISIONS, pre-implementation test strategy,
@@ -55,6 +75,11 @@ Specs 016–018 · Installer hooks/lib fix, planned skills shipped, agentic rout
   idempotent re-run.
 
 ### Changed
+- Documentation repositioned as **provider-aware** rather than Claude-specific (spec 019):
+  the README header, "What is this?", and `docs/AGENTIC_ROUTING.md`'s "Provider positioning"
+  now frame SDD as a provider-neutral core with Claude Code as the primary adapter and Codex
+  as a second, prompt-based adapter. No overclaiming — Claude/Codex parity is explicitly
+  disclaimed. Count markers and validated badges are unchanged.
 - `java-spring-reviewer`, `spring-boot-api-reviewer`, and `event-driven-reviewer` (spec
   018) no longer name external, unshipped `java-spring`/`api-design` subagents as their
   routing target — they now route through the repo's own `domain-reviewer` agent. Review
@@ -80,6 +105,12 @@ Specs 016–018 · Installer hooks/lib fix, planned skills shipped, agentic rout
 - Graphify remains an optional accelerator, never a requirement — `codebase-researcher`
   degrades gracefully when no graph report exists, exactly as `context-manager` and
   `graphify-context` already did.
+- The spec-019 provider-adapter layer is **purely additive**: `profiles.json`, the Claude
+  installers (`install.sh`/`install.ps1`), the hook scripts, the settings templates, and
+  every `skills/`/`agents/`/`hooks/` file were left untouched. The Codex adapter is honest
+  about its limits (prompt-based, no enforced hooks, no native subagents, no profile-filtered
+  install) and remains unverified against a live Codex CLI — a tracked follow-up, mirroring
+  the structural-vs-live distinction this changelog already draws for the lifecycle agents.
 
 ## [0.5.0] — 2026-07-17
 

@@ -463,8 +463,8 @@ spec-driven-development/
 │                                  #   ARCHITECTURE, TESTING, SECURITY, DEPLOYMENT, MESSAGING,
 │                                  #   MICROSERVICES_PATTERNS, GRAPHIFY, PROJECT_GRAPH)
 ├── specs/
-│   ├── _templates/                # 7 SDD lifecycle templates (SPEC, PLAN, TASKS, DECISIONS,
-│   │                              #   CONSTITUTION, PR_DESCRIPTION, REVIEW_REPORT_TEMPLATE)
+│   ├── _templates/                # 12 SDD lifecycle templates (SPEC, PLAN, TASKS, DECISIONS,
+│   │                              #   CONSTITUTION, SERVICES, PR_DESCRIPTION, REVIEW_REPORT_TEMPLATE, …)
 │   └── features/                  # this repo's own features, built with its own workflow (dogfooding)
 └── examples/                      # worked end-to-end examples (payment webhook idempotency)
 ```
@@ -536,7 +536,7 @@ own for that stack (e.g. `java-spring-backend` routes `spring-security-reviewer`
 
 ## ⚙️ Installation
 
-Three concerns, three scripts — full guide in [`docs/INSTALL.md`](docs/INSTALL.md):
+Installation is split across a few small, single-purpose scripts — full guide in [`docs/INSTALL.md`](docs/INSTALL.md):
 
 | Concern | Script | Touches |
 |---|---|---|
@@ -737,7 +737,7 @@ As a portfolio piece, it demonstrates: AI-assisted engineering workflow design; 
 
 Stated plainly, because they matter:
 
-- **Claude Code is the primary, fully featured adapter.** A second **Codex adapter** ships too, but it is deliberately narrower: prompt-based, unverified against a live Codex CLI, with no enforced hooks, no native subagents, and only the lifecycle-spine skills. This repository does **not** claim Claude/Codex parity — the gaps are enumerated in [`adapters/codex/PARITY.md`](adapters/codex/PARITY.md).
+- **Claude Code is the primary, fully featured adapter.** A second **Codex adapter** ships too, but it is deliberately narrower: prompt-based, unverified against a live Codex CLI, with no enforced hooks, no native subagents, and only the lifecycle-spine prompts. This repository does **not** claim Claude/Codex parity — the gaps are enumerated in [`adapters/codex/PARITY.md`](adapters/codex/PARITY.md).
 - **Model availability depends on your account.** Fable/Opus/Sonnet are aliases resolved by your Claude Code plan and version; the orchestration degrades along the documented fallback table rather than failing, but the "ideal" three-model setup is not guaranteed everywhere.
 - **Agent recognition requires install + a new session.** Live discovery passed for `deep-reasoner` and `fast-worker`; the six lifecycle agents are authored, schema-validated, and installer dry-run validated, but have not yet been verified through a real agent-registry install.
 - **`install.sh` requires `python3`** (stdlib only) for profile resolution. No `jq` anywhere.

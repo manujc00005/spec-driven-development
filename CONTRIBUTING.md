@@ -22,6 +22,14 @@ Every non-trivial change carries a spec.
    degraded) without the CLI installed.
 5. **No consistency drift.** `profiles.json`, the on-disk artifacts, the
    settings templates, and the README counters/badges must agree.
+6. **Adapters are additive.** SDD Core (the `specs/_templates/` artifacts, the
+   workflow, the review gates) is provider-neutral; provider-specific packaging
+   lives under `adapters/`. Never move or rename Claude adapter files
+   (`skills/`, `agents/`, `hooks/`, the installers) to support another provider —
+   a new adapter is a new `adapters/<provider>/` tree with its own `PARITY.md`
+   and, if installable, a self-contained copy-only installer. Label anything not
+   verified against the provider's real CLI as such. See
+   [`docs/PROVIDER_ADAPTERS.md`](docs/PROVIDER_ADAPTERS.md).
 
 ## The merge gate
 

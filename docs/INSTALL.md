@@ -102,7 +102,7 @@ The central directory is the single source of truth. Everything else — your us
 
 ## Profile-aware installation
 
-Both scripts read [`profiles.json`](../profiles.json) to decide **which** skills, hooks, templates, and agents to install. Every profile declares SHIPPED entries (`skills`/`hooks`/`templates`/`agents` — must exist on disk) and PLANNED entries (`plannedSkills`/`plannedHooks`/`plannedTemplates`/`plannedAgents` — roadmap-only, may not exist yet). The `agents`/`plannedAgents` keys are optional per profile (added in 0.4.0; only `core` ships agents today). See [Profiles](../README.md#profiles) in the main README for the full explanation.
+Both scripts read [`profiles.json`](../profiles.json) to decide **which** skills, hooks, templates, and agents to install. Every profile declares SHIPPED entries (`skills`/`hooks`/`templates`/`agents` — must exist on disk) and PLANNED entries (`plannedSkills`/`plannedHooks`/`plannedTemplates`/`plannedAgents` — roadmap-only, may not exist yet). The `agents`/`plannedAgents` keys are optional per profile (added in 0.4.0; only `core` ships agents today). See [Profiles](../README.md#️-profiles) in the main README for the full explanation.
 
 ```bash
 # Install default: core + java-spring-backend (the default profile in profiles.json)
@@ -246,7 +246,7 @@ Claude Code is a terminal/CLI tool that requires a local shell (PowerShell, bash
 
 ---
 
-## Wiring hooks into a project
+## Hook wiring templates
 
 Installing/linking makes the hook *scripts* available; Claude Code only runs them once they are wired in the project's `.claude/settings.json`. Two ready-to-copy templates ship at the repo root, wiring the same hook set:
 
@@ -257,7 +257,7 @@ Per-hook detail (what each one does, which are opt-in, which are deprecated) is 
 
 ---
 
-## Safety model (applies to all three scripts)
+## Safety model (applies to every script above)
 
 - **Idempotent** — running any script twice with nothing changed produces no changes the second time; already-correct state is reported and skipped.
 - **Additive by default** — missing files/links are created; existing files that already match are left alone; existing files that differ are reported and skipped **unless** `-Force`/`--force` is passed.
