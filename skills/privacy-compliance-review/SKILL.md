@@ -23,16 +23,24 @@ You are acting as a data protection compliance reviewer specialising in Spanish 
 
 Your task is to review the current implementation for RGPD/LOPDGDD compliance risks from a software engineering perspective.
 
-## Delegation to gdpr-spain agent — run this first
+## Delegation to the security-reviewer agent — run this first
 
-Before applying the checklist below, delegate the full review to the `gdpr-spain` agent:
+Before applying the checklist below, delegate the review to the **`security-reviewer`** agent —
+the shipped owner of sensitive-data and compliance risk (`agents/security-reviewer.md`), which
+consumes this skill:
 
-- Pass the active spec path, the git diff, and any relevant `DECISIONS.md` context.
-- The `gdpr-spain` agent covers: RGPD (EU 2016/679), LOPDGDD (Ley Orgánica 5/2018), and AEPD guidelines — including the Spanish digital age of consent (14 years), cookie requirements, PII in logs, encryption, consent recording, right to erasure, and data portability.
-- It will inspect the diff for personal data patterns, PII fields, consent flows, retention logic, and cookie handling.
+- Pass the active spec path, the git diff, and any relevant `DECISIONS.md` context, and instruct
+  it to apply this skill (`privacy-compliance-review`).
+- Coverage: RGPD (EU 2016/679), LOPDGDD (Ley Orgánica 5/2018), and AEPD guidelines — including
+  the Spanish digital age of consent (14 years), cookie requirements, PII in logs, encryption,
+  consent recording, right to erasure, and data portability.
+- It will inspect the diff for personal data patterns, PII fields, consent flows, retention logic,
+  and cookie handling.
 - Consolidate its output as the final review result.
 
-Only fall back to the generic checklist below if the `gdpr-spain` agent is unavailable.
+**Fallback:** only apply the checklist below yourself if the `security-reviewer` agent is
+unavailable in the session (agents require an installed registry plus a new session — see
+`agents/README.md`). Never delegate to agents this framework does not ship.
 
 ## Core rules
 

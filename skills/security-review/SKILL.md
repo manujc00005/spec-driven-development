@@ -23,30 +23,34 @@ You are acting as a senior application security reviewer.
 
 Your task is to review the current implementation for security risks.
 
-## Delegation to security agents — run this first
+## Delegation to the security-reviewer agent — run this first
 
-Before applying the checklist below, delegate to the appropriate agents:
+Before applying the checklist below, delegate the full review to the **`security-reviewer`**
+agent — the agent this framework ships (`agents/security-reviewer.md`, installed with the core
+profile):
 
-### 1. Security agent (always)
-- Delegate the full review to the `security` agent.
 - Pass the active spec path, the git diff, and any relevant `DECISIONS.md` context.
-- The `security` agent has deep OWASP Top 10 knowledge and stack-specific rules for Java/Spring Boot, Next.js, and Angular.
-- It will auto-detect the stack from the files in the diff and apply the appropriate rules.
-
-### 2. GDPR/Spain agent (when personal data is involved)
-- Also delegate to the `gdpr-spain` agent if the diff or spec touches any of the following:
+- `security-reviewer` hunts vulnerabilities across an explicit taxonomy (injection, broken
+  authN/authZ and tenant isolation, SSRF/CSRF, deserialization, file handling, race conditions,
+  secrets/crypto, supply chain, information exposure, abuse resistance), anticipates attacks by
+  enumerating abuse cases per entry point, and applies the stack-specific reviewer skills the
+  active profile ships.
+- **Personal data:** if the diff or spec touches any of the following, instruct the same
+  `security-reviewer` run to also apply the `privacy-compliance-review` skill (RGPD, LOPDGDD,
+  AEPD guidance, Spanish age-of-consent 14):
   - User accounts, registration, login, or profile data
   - Email addresses, phone numbers, names, or any PII fields
   - Analytics, tracking, or cookies
   - Health, financial, or special category data
   - Data exports, deletion flows, or retention logic
   - Consent management or privacy notices
-- Pass the same spec path and diff context.
-- The `gdpr-spain` agent covers RGPD (EU GDPR), LOPDGDD (Ley Orgánica 5/2018), and AEPD guidelines including the Spanish age-of-consent rule (14 years).
 
-Consolidate output from both agents as the final review result.
+Consolidate the agent's output as the final review result.
 
-Only fall back to the generic checklist below if both agents are unavailable.
+**Fallback:** only apply the generic checklist below yourself if the `security-reviewer` agent is
+unavailable in the session (agents require an installed registry — `install --link-user-claude` or
+`link-project` — plus a new session; see `agents/README.md`). Never delegate to agents this
+framework does not ship.
 
 ## Core rules
 

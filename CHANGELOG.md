@@ -11,10 +11,20 @@ under `specs/features/` — the framework is developed with its own workflow.
 
 ## [Unreleased]
 
-Specs 016–019 · Installer hooks/lib fix, planned skills shipped, agentic routing layer,
-provider-adapter layer and a first Codex adapter.
+Specs 016–020 · Installer hooks/lib fix, planned skills shipped, agentic routing layer,
+provider-adapter layer and a first Codex adapter, security-agent hardening.
 
 ### Added
+- **Hardened `security-reviewer` agent** (spec 020) — now the framework's explicit owner of
+  vulnerability hunting (named taxonomy: injection, broken authN/authZ and tenant isolation,
+  SSRF/CSRF, deserialization, file handling, race/TOCTOU, secrets/crypto, supply chain,
+  information exposure, abuse resistance), attack anticipation (abuse cases per entry point
+  and trust-boundary mapping *before* reading the implementation), and RGPD/LOPDGDD/AEPD
+  review via the `privacy-compliance-review` skill. Review discipline: source-to-sink
+  tracing separates **Confirmed** from **Potential** findings, structural verification is
+  preferred over call-site spot-checks, and a plausibility filter keeps inapplicable
+  findings out. Read-only tools and boundaries unchanged; no scanner/pentest capability is
+  claimed.
 - **Provider-adapter layer** (spec 019) — `docs/PROVIDER_ADAPTERS.md` and an `adapters/`
   tree separating the provider-neutral **SDD Core** (SPEC/PLAN/TASKS/DECISIONS lifecycle,
   review gates, skill contracts, agent responsibility model, guardrail intent) from
@@ -86,6 +96,15 @@ provider-adapter layer and a first Codex adapter.
   logic and checklists are unchanged; only the ownership/routing wording changed.
 
 ### Fixed
+- `security-review` and `privacy-compliance-review` (spec 020) delegated to `security` /
+  `gdpr-spain` subagents this repo never shipped — in any self-contained install the primary
+  path could not work and every run fell back to the generic checklist ("el agente security
+  no está disponible"). Both skills now delegate to the shipped `security-reviewer` agent
+  (their `## SDD Contract` blocks already declared it as `primary_agent`); the inline
+  checklists remain as the documented fallback for agent-less sessions. Same drift class,
+  same fix as spec 018 D006 (`java-spring`/`api-design` → `domain-reviewer`). A user-level
+  stopgap skill created downstream (`software-security-review`) was unified back into the
+  agent and retired with a backup (spec 020 D004).
 - `install.sh` / `install.ps1` never copied `hooks/lib/` in profile mode,
   leaving every lib-sourcing hook (git-guardrails, sdd-spec-guard,
   java-build-test-guard, maven-compile, spring-config-guard) crashing with
