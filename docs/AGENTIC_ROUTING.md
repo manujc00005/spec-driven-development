@@ -94,16 +94,22 @@ are in each agent's own file; this is the summary.
 
 ### `security-reviewer`
 
-- **Responsibility:** review secrets, authentication, authorization, payments, permissions,
-  and other sensitive-data handling in a diff; produce severity-ranked findings with
-  concrete evidence.
+- **Responsibility:** hunt vulnerabilities in a diff across an explicit taxonomy (injection,
+  broken authN/authZ and tenant isolation, SSRF/CSRF, deserialization, file handling,
+  race/TOCTOU, secrets/crypto, supply chain, information exposure, abuse resistance);
+  anticipate attacks by enumerating abuse cases per entry point *before* reading the
+  implementation; own RGPD/LOPDGDD/AEPD review when personal data is involved; produce
+  severity-ranked findings with source-to-sink evidence, separating Confirmed from
+  Potential (spec 020).
 - **Key skills consumed:** `security-review`, `spring-security-reviewer`,
   `nextjs-server-actions-reviewer`, `privacy-compliance-review`, `threat-modeler`, and the
   payment reviewers (`stripe-payments-reviewer`, `payment-idempotency-reviewer`) whenever
-  the diff moves money.
+  the diff moves money. `security-review` and `privacy-compliance-review` delegate to this
+  agent by name — never to unshipped external agents (spec 020, same rule as D006).
 - **Allowed actions:** Read, Grep, Glob.
 - **Forbidden actions:** modifying code, tests, or configuration; silently downgrading a
-  finding; reporting a finding without evidence.
+  finding; reporting a finding without evidence; claiming scanner/pentest coverage it
+  cannot have.
 - **When it runs:** on any diff touching auth, user data, tenant isolation, public APIs,
   file uploads, tokens, secrets, or payment/money-movement flows.
 

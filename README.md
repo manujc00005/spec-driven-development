@@ -112,7 +112,7 @@ SDD separates responsibility from capability. Lifecycle agents own a bounded res
 | `codebase-researcher` | Evidence-based map of the relevant code and constraints |
 | `solution-architect` | Implementable design aligned with the approved spec |
 | `implementer` | Bounded code and tests that follow the plan |
-| `security-reviewer` | Security findings and risk verdict |
+| `security-reviewer` | Vulnerability hunting (explicit taxonomy), attack anticipation, and RGPD/LOPDGDD review — severity-ranked findings and risk verdict |
 | `domain-reviewer` | Stack- and domain-specific findings |
 | `final-conformance-reviewer` | Final traceability, evidence, and conformance verdict |
 
@@ -702,6 +702,7 @@ This repo dogfoods its own workflow: the phases that built it are specced under 
 - Worked example: Payment Webhook Idempotency ([`examples/001-payment-webhook-idempotency/`](examples/001-payment-webhook-idempotency/)) — Java/Spring webhook receiver with constraint-based idempotency, full spec/plan/tasks/decisions, 14 tests, database migration, and review artifacts
 - Worked example: Server Action Rate Limiting ([`examples/002-server-action-rate-limiting/`](examples/002-server-action-rate-limiting/)) — TypeScript/Next.js server action with sliding-window rate limiting, x-forwarded-for trust-boundary attack tests, zod validation, enumeration-resistant responses, and a security review whose real finding (SEC-001) is preserved in the trail
 - Provider-adapter layer ([`docs/PROVIDER_ADAPTERS.md`](docs/PROVIDER_ADAPTERS.md), [`adapters/`](adapters/)) separating provider-neutral SDD Core from per-provider packaging, plus a first **prompt-based Codex adapter** (`AGENTS.md` operating guide, lifecycle-spine prompts, copy-only installer) and an `install-all` wrapper — honest by design: no hook/subagent/skill parity claimed, unverified against a live Codex CLI (see [`adapters/codex/PARITY.md`](adapters/codex/PARITY.md))
+- Hardened `security-reviewer` agent (spec 020): explicit vulnerability taxonomy, abuse-case attack anticipation, RGPD/LOPDGDD/AEPD ownership, and Confirmed-vs-Potential source-to-sink evidence discipline; `security-review`/`privacy-compliance-review` now delegate to this shipped agent instead of unshipped external subagents
 
 **Planned**
 

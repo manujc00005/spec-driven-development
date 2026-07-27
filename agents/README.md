@@ -18,7 +18,7 @@ duplicating their logic.
 | `codebase-researcher` | Read, Grep, Glob | Understands the affected code area; uses Graphify when available; produces a bounded reading list. Read-only, never edits. |
 | `solution-architect` | Read, Grep, Glob, Edit, Write | Reviews/authors SPEC, PLAN, TASKS, DECISIONS; surfaces architectural decisions; owns the pre-implementation test strategy. Writes SDD documents only, never application code. |
 | `implementer` | Read, Grep, Glob, Edit, Write, Bash | Executes approved TASKS within explicit file boundaries; stops on any undocumented decision. The only lifecycle agent that edits application code. |
-| `security-reviewer` | Read, Grep, Glob | Reviews secrets, auth, payments, permissions, and sensitive-data handling; produces severity-ranked findings. Read-only, never edits. |
+| `security-reviewer` | Read, Grep, Glob | Hunts vulnerabilities across an explicit taxonomy (injection, authN/authZ, tenant isolation, SSRF, secrets, supply chain, …), anticipates attacks via abuse-case enumeration, and owns RGPD/LOPDGDD review via `privacy-compliance-review`; severity-ranked findings with source-to-sink evidence. Read-only, never edits. |
 | `domain-reviewer` | Read, Grep, Glob | Loads the stack/domain reviewer skills the active profile ships (Java/Spring, event-driven, payments idioms, Next.js/Prisma, SEO/GEO); owns stack-specific review. Read-only, never edits. |
 | `final-conformance-reviewer` | Read, Grep, Glob | Verifies SPEC → PLAN → TASKS → DIFF → TESTS → REVIEW and validates evidence before a feature can close. Read-only, never edits. |
 
