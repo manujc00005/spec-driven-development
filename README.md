@@ -226,6 +226,8 @@ This workflow addresses that directly:
 
 The engineer decides what gets built, what risk is acceptable, and which changes should not happen. The AI executes within the process — it does not own it. This is the difference from vibe coding: speed comes from reducing ambiguity, not skipping engineering controls.
 
+It also addresses a cost shift. AI coding tools are moving from seat-based to usage-based (per-token) pricing, where the bill tracks how much context an agent reads and which model tier it burns. SDD treats context as an engineering budget — bounded reading lists, graph-derived impact, and cost-aware model routing instead of loading the whole repository on an expensive model. That makes delivery cheaper and more reviewable at the same time (see [`docs/TOKEN_ECONOMY.md`](docs/TOKEN_ECONOMY.md)).
+
 ## 🚀 Quickstart
 
 ```bash
@@ -723,7 +725,7 @@ This repo dogfoods its own workflow: the phases that built it are specced under 
 - **Explicit decisions** — assumptions and trade-offs go in `DECISIONS.md`, not in chat history.
 - **Traceability** — every task maps to an acceptance criterion; every decision has a recorded why.
 - **Enforcement over convention** — if a rule matters, a hook or a hard installer error backs it.
-- **Model cost awareness** — expensive models for reasoning, cheap models for mechanics, never the reverse.
+- **Context is a budget** — spend context and model tier deliberately: cost-aware model routing (expensive models for reasoning, cheap for mechanics, never the reverse), bounded reading lists over whole-repo scans, graph-first impact analysis, and summaries over pasted file contents (see [`docs/TOKEN_ECONOMY.md`](docs/TOKEN_ECONOMY.md)).
 - **Fallback over hard dependency** — Graphify optional, model aliases with a documented fallback table, `jq`-free hooks.
 - **Honest status** — shipped, planned, and disabled are three different words, enforced by the installer and used consistently in the docs.
 - **No vibe coding** — velocity comes from removing ambiguity, not from skipping steps.

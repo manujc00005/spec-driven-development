@@ -32,9 +32,10 @@ log.
 ## Procedure
 
 1. Read the SPEC. Inspect impacted areas of the repo.
-2. Write `PLAN.md`: Summary, Related spec, Impacted areas, Proposed approach, Alternatives
-   considered, Dependencies, Risks, Test strategy, Rollback strategy, and the PLAN verification
-   checklist.
+2. Write `PLAN.md`: Summary, Related spec, Impacted areas, Context budget (a bounded reading list +
+   model routing note — the token economy contract, see `docs/TOKEN_ECONOMY.md`), Proposed approach,
+   Alternatives considered, Dependencies, Risks, Test strategy, Rollback strategy, and the PLAN
+   verification checklist.
 3. Write `TASKS.md`: phased, numbered `T001…`, each with `Covers: AC-XXX`.
 4. Write `DECISIONS.md`: one `D001…` entry per non-obvious decision (Context / Decision / Reasoning /
    Consequences / Status).

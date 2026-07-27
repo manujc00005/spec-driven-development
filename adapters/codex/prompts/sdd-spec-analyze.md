@@ -31,6 +31,10 @@ task is implemented.
    PLAN/TASKS.
 6. **Review detection** — from the SPEC's API/data-model/security sections, list which reviews apply
    (security, database, API, performance, frontend, privacy, domain/stack).
+7. **Context budget** — the PLAN declares a `## Context budget` (reading list + model routing), the
+   token economy contract (`docs/TOKEN_ECONOMY.md`). Missing section → **warning**, verdict may still
+   be Ready. Section present but empty or placeholder → **blocker**. A short budget is valid; reject
+   only emptiness.
 
 ## Verdict rule
 

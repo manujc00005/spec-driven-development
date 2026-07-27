@@ -62,7 +62,22 @@ Check:
 - Are test tasks sufficient?
 - Are risks documented?
 - Is rollback strategy documented when relevant?
+- Does the plan declare a Context budget (bounded reading list + model routing)? See the "Context budget check" rule below.
 - Is the next implementation task clear?
+
+## Context budget check
+
+The token economy contract (`docs/TOKEN_ECONOMY.md`) requires each `PLAN.md` to
+declare a `## Context budget` section with a bounded `Reading list` and a
+`Model routing` note. Apply this rule:
+
+- **Section missing entirely → warning, not a blocker.** Report it under
+  "Context budget" in the output, but the verdict may still be `Ready`. This
+  keeps plans authored before the rule (and trivial plans) passing.
+- **Section present but empty or still holding placeholder text → blocker.**
+  The verdict cannot be `Ready`; treat it like an unmet acceptance criterion.
+- A valid budget can be short (even one line per subsection). Accept brevity;
+  reject only emptiness or unfilled template text.
 
 ## Review detection rules
 
@@ -123,6 +138,10 @@ Ready for implementation | Partial | Not ready
 ## Tasks without acceptance criteria
 
 ## Acceptance criteria without tasks
+
+## Context budget
+
+Filled | Missing (warning) | Empty/placeholder (blocker) — with a one-line reason. Per the Context budget check rule.
 
 ## Blocking open questions
 

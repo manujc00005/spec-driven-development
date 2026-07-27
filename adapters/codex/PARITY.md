@@ -24,6 +24,7 @@ primary Claude Code adapter. **No parity is claimed.** Read this before relying 
 | Generic review gate | `/spec-review`, `/qa-review` | `prompts/sdd-spec-review.md` (inline risk list) | ⚠️ prompt-based |
 | Agent responsibility model | `agents/*.md` subagents (`tools:` grant) | roles in `AGENTS.md` | ⚠️ described as personas |
 | Bounded context (Graphify optional) | optional, graceful | same doctrine | ✅ shared (external tool) |
+| Token economy (`## Context budget`) | PLAN template + `/spec-analyze` check | shared PLAN template + mirrored check in `prompts/sdd-spec-analyze.md` | ⚠️ template shared, check prompt-based |
 | PR-ready delivery / traceability | `/pr-description` + evidence chain | described in `AGENTS.md` | ⚠️ discipline, no PR tooling |
 
 ## What does NOT carry over (honest gaps)

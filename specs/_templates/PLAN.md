@@ -14,6 +14,18 @@ Path to the related `SPEC.md`.
 
 List modules, folders, services, components, entities, APIs, jobs, tests, or config likely to change.
 
+## Context budget
+
+Declare the bounded context this plan needs. Keep it tight — this is the token economy contract: read a justified slice, not the whole repository.
+
+### Reading list
+
+Files, folders, or globs the implementer may read for this feature. Prefer the active feature folder and the specific impacted files over whole-repo scans.
+
+### Model routing
+
+Which phases need a deep-reasoning model vs. a cheap/mechanical one. Justify any expensive model or tool usage.
+
 ## Proposed approach
 
 Describe the implementation approach.
@@ -42,6 +54,7 @@ Describe how to revert or disable the change if needed.
 
 - [ ] The plan covers all acceptance criteria.
 - [ ] The plan avoids behavior outside the spec.
+- [ ] The Context budget section is filled (reading list + model routing), not left as placeholder.
 - [ ] Risks are documented.
 - [ ] Test strategy is documented.
 - [ ] Rollback strategy is documented.

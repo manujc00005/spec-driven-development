@@ -57,6 +57,16 @@ TODO with project-specific content instead of leaving a generic placeholder.
 
 This table is owner-editable — adjust it per project during `/project-init` if the commercial boundary differs.
 
+## Token economy
+
+Context is a budget. These rules apply to every agent working in this project:
+
+- Read a bounded, justified slice — never the whole repository by default. Prefer the active feature folder and the specific impacted files.
+- Every `PLAN.md` declares a `## Context budget` (reading list + model routing); `/spec-analyze` checks it.
+- Use expensive models for reasoning and cheap models for mechanical work — never the reverse.
+- When a graph report exists, derive impact from it before any repo-wide scan.
+- Prefer summaries over pasted file contents; do not restate whole documents.
+
 ## Notes
 
 Run `/project-init` to populate this file through an interview instead of filling in the TODOs by hand.
