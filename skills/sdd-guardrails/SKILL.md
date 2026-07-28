@@ -318,6 +318,8 @@ performer, and each performer must verify its precondition before promoting:
 | `Ready` → `In Progress` | `/spec-implement` | First task actually being implemented (no tasks checked yet) |
 | `In Progress` → `In Review` | `/spec-review` | Review verdict is **Pass**. On `Partial`/`Fail` the status does **not** change |
 | `In Review` → `Done` | `/spec-close` | Status is already `In Review`; open questions resolved; acceptance criteria covered |
+| any → `Archived` | **explicit user decision only** — no skill archives on its own initiative | The abandonment or supersession is recorded in `DECISIONS.md`, naming the superseding spec when one exists |
+| any → an earlier state (demotion) | **explicit user decision only** | The reason is recorded in `DECISIONS.md`; the work the demoted gate represented must be redone, not assumed |
 
 Rules:
 
@@ -326,8 +328,12 @@ Rules:
 - **Writing the status is not passing the gate.** `In Review` means `/spec-review` returned Pass;
   a hand-edited `In Review` is a false claim that makes `/spec-close`'s check meaningless. The
   same applies to `Ready` (no validated plan) and `Done` (no close-out).
-- **Demotion follows the same rule** — reopening a `Done` or `In Review` spec is a decision, not
-  a cleanup; record it in `DECISIONS.md`.
+- **Demotion and archiving belong to the human**, not to a skill or agent. Reopening a `Done` or
+  `In Review` spec, or archiving an abandoned one, is a decision rather than a cleanup: it needs
+  an explicit user instruction and a `DECISIONS.md` entry. A skill may perform the edit once the
+  user asks, but must never initiate it.
+- **Re-entering a gate re-runs it.** A spec demoted from `In Review` back to `In Progress` must
+  pass `/spec-review` again to return; the earlier Pass does not carry over.
 - **Exception — explicit user instruction.** The rule binds skills and agents, not the human. If
   the user explicitly asks for a status change, make it and say which gate was skipped.
 

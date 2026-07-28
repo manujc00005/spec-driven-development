@@ -38,27 +38,27 @@ skill/agent frontmatter keys other than `description`.
 
 | Skill | Confusable with | Clause to append |
 |---|---|---|
-| `spec-create` | `spec-clarify`, `spec-update` | Not for strengthening an existing spec (use `/spec-clarify`) or changing one mid-implementation (use `/spec-update`). |
-| `spec-clarify` | `spec-create`, `spec-update` | Not for creating a new spec (use `/spec-create`) or changing scope after implementation started (use `/spec-update`). |
-| `spec-update` | `spec-clarify` | Not for pre-planning clarification of a `Draft` spec — use `/spec-clarify`. |
-| `spec-plan` | `spec-analyze`, `architect-review` | Not for validating an existing plan (use `/spec-analyze`) or exploring architecture before one exists (use `/architect-review`). |
-| `spec-analyze` | `spec-plan`, `sdd-guardrails` | Not for producing PLAN/TASKS/DECISIONS — use `/spec-plan`. |
-| `spec-review` | `qa-review`, `review-all` | Not for behaviour/regression review (use `/qa-review`) or running every applicable review at once (use `/review-all`). |
-| `qa-review` | `spec-review`, `test-engineer` | Not for spec-conformance review (use `/spec-review`) or designing a test strategy up front (use `/test-engineer`). |
-| `test-engineer` | `qa-review` | Not for the pre-merge acceptance-criteria and regression review — that is `/qa-review`. (Reworded during implementation: the original draft said "not for verifying an existing implementation", which contradicted this skill's own "or as a standalone audit after implementation".) |
-| `review-all` | `spec-review` | Not for a single targeted review — invoke that review directly. |
-| `refactor-review` | `scope-keeper` | Not a licence to refactor during implementation — for scope discipline while editing, use `/scope-keeper`. |
-| `debugger` | `root-causer` | Not the mindset manual on debugging stance — that is `/root-causer`. |
-| `root-causer` | `debugger` | Not the step-by-step debugging procedure — that is `/debugger`. |
-| `security-review` | `threat-modeler` | Not for attacker-mindset guidance *before* writing code — that is `/threat-modeler`. |
-| `threat-modeler` | `security-review` | Not a review of existing code — for that, use `/security-review`. |
-| `verifier` | `qa-review` | Not a test/coverage review — that is `/qa-review`. |
-| `scope-keeper` | `refactor-review` | Not a cleanup review of code already written — that is `/refactor-review`. |
-| `context-manager` | `graphify-context` | Not for interpreting an existing Graphify report — that is `/graphify-context`. |
-| `graphify-context` | `context-manager` | Not for building a reading list without a graph — that is `/context-manager`. |
-| `sdd` | `sdd-orchestrate` | Not for multi-model delegation across `deep-reasoner`/`fast-worker` — that is `/sdd-orchestrate`. |
-| `sdd-orchestrate` | `sdd` | Not needed for single-session work — `/sdd` covers that without delegation overhead. |
-| `architect-review` | `spec-plan` | Not for producing PLAN/TASKS artefacts — that is `/spec-plan`. |
+| `spec-create` | `spec-clarify`, `spec-update` | Not for strengthening an existing spec (use /spec-clarify) or changing one mid-implementation (use /spec-update). |
+| `spec-clarify` | `spec-create`, `spec-update` | Not for creating a new spec (use /spec-create) or changing scope after implementation started (use /spec-update). |
+| `spec-update` | `spec-clarify` | Not for pre-planning clarification of a Draft spec — use /spec-clarify. |
+| `spec-plan` | `spec-analyze`, `architect-review` | Not for validating an existing plan (use /spec-analyze) or exploring architecture before one exists (use /architect-review). |
+| `spec-analyze` | `spec-plan`, `sdd-guardrails` | Not for producing PLAN/TASKS/DECISIONS — use /spec-plan. |
+| `spec-review` | `qa-review`, `review-all` | Not for behaviour and regression review (use /qa-review) or for running every applicable review at once (use /review-all). |
+| `qa-review` | `spec-review`, `test-engineer` | Not for spec-conformance review (use /spec-review) or for designing a test strategy up front (use /test-engineer). |
+| `test-engineer` | `qa-review` | Not for the pre-merge acceptance-criteria and regression review — that is /qa-review. (Reworded during implementation: the original draft said "not for verifying an existing implementation", which contradicted this skill's own "or as a standalone audit after implementation".) |
+| `review-all` | `spec-review` | Not for a single targeted review — invoke that review directly (e.g. /security-review). |
+| `refactor-review` | `scope-keeper` | Not a licence to refactor during implementation — for scope discipline while editing, use /scope-keeper. |
+| `debugger` | `root-causer` | Not the mindset manual on debugging stance — that is /root-causer. |
+| `root-causer` | `debugger` | Not the step-by-step debugging procedure — that is /debugger. |
+| `security-review` | `threat-modeler` | Not for attacker-mindset guidance before code is written — that is /threat-modeler. |
+| `threat-modeler` | `security-review` | Not a review of code already written — for that, use /security-review. |
+| `verifier` | `qa-review` | Not a test-coverage or acceptance review — that is /qa-review. |
+| `scope-keeper` | `refactor-review` | Not a cleanup review of code already written — that is /refactor-review. |
+| `context-manager` | `graphify-context` | Not for interpreting an existing Graphify report — that is /graphify-context. |
+| `graphify-context` | `context-manager` | Not for building a reading list when no graph exists — that is /context-manager. |
+| `sdd` | `sdd-orchestrate` | Not for multi-model delegation across deep-reasoner/fast-worker — that is /sdd-orchestrate. |
+| `sdd-orchestrate` | `sdd` | Not needed for single-session work — /sdd covers that without delegation overhead. |
+| `architect-review` | `spec-plan` | Not for producing PLAN/TASKS artefacts — that is /spec-plan. |
 
 `sdd-medium` / `sdd-full` already carry an informal redirect to `/sdd` and are left as-is.
 

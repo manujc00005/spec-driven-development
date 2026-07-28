@@ -102,3 +102,73 @@ Limitations would leave a closing section stranded in the middle of the document
 Decision State Machine (section 1) and the new Spec Status Authority (section 11) are deliberately
 separate: one governs `DECISIONS.md` entries, the other governs `SPEC.md` status, and conflating
 them was part of why the spec-status rule was never written down.
+
+### D005 - FR-006 widened to a negation family; PLAN table generated from shipped text
+
+**Date:** 2026-07-25
+
+**Status:** Accepted
+
+**Context:** `/spec-review` returned **Partial** twice on the delivered work, with two findings
+that were both real. (1) FR-006 specified a single literal template,
+`Not for <case> — use /<other-skill>.`, but 7 of the 21 shipped clauses opened with `Not a …`,
+`Not the …`, or `Not needed …`. (2) PLAN's *Confusion pairs* table, which declares itself "the
+maintained source of truth for FR-005", had drifted from the shipped wording in 6 of 21 rows.
+Two options were on the table: widen the contract to match the prose (A), or rewrite the 7
+clauses to fit the template (B).
+
+**Decision:** Option A. FR-006 now requires *one terse sentence opening with a negation from the
+family* `Not for …` / `Not a …` / `Not the …` / `Not needed …` *and naming the correct sibling as
+a slash-command*, keeping the No-ALL-CAPS and no-restructuring constraints. AC-005 is updated to
+match and additionally requires PLAN's table to equal the shipped text verbatim. The 6 drifted
+rows were regenerated **from the actual descriptions** rather than re-typed.
+
+**Reasoning:** The template was too narrow for the mindset-vs-procedure pairs, where the natural
+negation is a noun phrase: *"Not the mindset manual on debugging stance — that is /root-causer"*
+reads correctly, while a forced `Not for …` variant would be contorted for no gain. FR-006's real
+intent — one sentence, calm tone, names the sibling — is fully preserved by the wider family, so
+widening the contract costs nothing and improves the prose. Regenerating the table from disk (not
+by hand) removes the mechanism that produced the drift in the first place.
+
+**Consequences:** The two review findings are closed at their source. This is a spec correction
+made *because* review caught the deviation, which is the workflow behaving as designed: the
+implementation was not quietly bent to match a wrong contract, and the contract was not quietly
+ignored. Residual limitation unchanged from D003: `check-consistency` still does not validate
+descriptions, so clause drift is caught by review, not by CI.
+
+### D006 - Archiving and demotion belong to the human; agent parity covers every write-capable agent
+
+**Date:** 2026-07-25
+
+**Status:** Accepted
+
+**Context:** `/qa-review` returned **Partial** with three gaps in the very state machine this spec
+set out to make authoritative. (1) `Archived` is part of the documented lifecycle
+(`spec-create`: `Draft → Ready → In Progress → In Review → Done | Archived`) but appeared zero
+times in section 11 — combined with "no other skill, agent, or ad-hoc edit may promote a status",
+that left **nobody able to archive**. (2) Demotion was said to "follow the same rule" without
+naming an owner, which is not a rule. (3) FR-004 applied agent/skill parity to
+`solution-architect` only, while `implementer` and `fast-worker` also hold Edit/Write and carried
+no status rule at all — `implementer` being the agent behind the one skill that does promote.
+
+**Decision:**
+- **Archiving and demotion require an explicit user decision**, recorded in `DECISIONS.md`. No
+  skill or agent initiates either; a skill may perform the edit once the user asks.
+- **Re-entering a gate re-runs it**: a spec demoted from `In Review` must pass `/spec-review`
+  again — the earlier Pass does not carry over.
+- **Every write-capable agent carries a status prohibition scoped to what it owns**:
+  `solution-architect` (specs only), `implementer` (`Ready` → `In Progress` only),
+  `fast-worker` (none). `spec-update` is aligned with the new wording.
+
+**Reasoning:** A state machine with an unreachable state is not authoritative, and "follows the
+same rule" is not an owner. Assigning archiving and demotion to the human rather than inventing a
+skill owner matches the existing user-instruction exception and reflects what they actually are —
+judgment calls about abandoning or reopening work, not mechanical steps. Extending parity to all
+three write-capable agents applies the spec-020 lesson completely instead of by example: leaving
+two of three agents silent is precisely the kind of partial coverage that produced the original
+`security`/`gdpr-spain` drift.
+
+**Consequences:** FR-001/003/004 and AC-001/003/004 widened; T011/T012 added. `sdd-guardrails`
+section 11 now covers every state in the documented lifecycle, so "which skill may write this
+status" has an answer for all of them. Unchanged: nothing is hook-enforced (D001), and no
+`profiles.json`, installer, or hook was touched.

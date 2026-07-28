@@ -2,7 +2,7 @@
 
 ## Status
 
-In Progress
+Done
 
 ## Problem
 
@@ -82,18 +82,26 @@ Azure Skills plugin's handling of the same problems
   containing: the four transitions with their sole owner, the precondition each owner must
   verify before promoting, an explicit statement that no other skill/agent/manual edit may
   promote, and the rule that writing the status string does not satisfy the gate the string
-  represents.
+  represents. It must also cover the two non-forward moves the lifecycle allows —
+  **`Archived`** and **demotion** — naming their owner and their recording requirement, so no
+  documented state is left without one (added during QA — see D006).
 - **FR-002:** Each of `spec-plan`, `spec-implement`, `spec-review`, `spec-close` states that
   it is the **only** authorized performer of its transition.
-- **FR-003:** `spec-create`, `spec-clarify`, `spec-analyze`, and `sdd-orchestrate` state
-  that they must not promote status, and name the skill that may.
-- **FR-004:** `agents/solution-architect.md` carries the same prohibition in its Forbidden
-  actions (agent/skill parity — the spec-020 lesson: prose must match across both layers).
+- **FR-003:** `spec-create`, `spec-clarify`, `spec-analyze`, `sdd-orchestrate`, and
+  `spec-update` state that they must not promote status, and name the skill that may.
+  (`spec-update` added during QA — its pre-existing line was weaker than the new rule.)
+- **FR-004:** **Every agent able to write files** carries the same prohibition, scoped to what
+  it legitimately owns — `solution-architect`, `implementer` (may perform only
+  `Ready` → `In Progress`), and `fast-worker` (may perform none). Agent/skill parity is the
+  spec-020 lesson: prose must match across both layers, and applying it to one of three
+  write-capable agents leaves the gap open (widened during QA — see D006).
 - **FR-005:** Negative-trigger clauses are added to the descriptions of the documented
   confusion pairs listed in PLAN's *Confusion pairs* table.
-- **FR-006:** Negative triggers use one terse sentence in the form
-  `Not for <case> — use /<other-skill>.` appended to the existing description. No ALL-CAPS,
-  no multi-line blocks, no restructuring of existing description text.
+- **FR-006:** Negative triggers use **one terse sentence** appended to the existing
+  description, opening with a negation from the family `Not for …` / `Not a …` / `Not the …` /
+  `Not needed …`, and naming the correct sibling as a slash-command. No ALL-CAPS, no
+  multi-line blocks, no restructuring of existing description text. (Widened from a single
+  literal template during review — see D005.)
 - **FR-007:** `scripts/check-consistency.sh` exits 0, and `profiles.json`, `hooks/`,
   `install*.{sh,ps1}`, and `settings.template*.json` are untouched.
 
@@ -130,15 +138,19 @@ None.
 ## Acceptance criteria
 
 - **AC-001:** `skills/sdd-guardrails/SKILL.md` contains a Spec Status Authority section with
-  all four transitions, their sole owners, and the no-manual-promotion rule. (FR-001)
+  all four forward transitions plus `Archived` and demotion, their owners, and the
+  no-manual-promotion rule — every state in the documented lifecycle has an owner. (FR-001)
 - **AC-002:** Each of the four owning skills contains an explicit sole-authority sentence for
   its own transition. (FR-002)
-- **AC-003:** `spec-create`, `spec-clarify`, `spec-analyze`, `sdd-orchestrate` each contain
-  an explicit must-not-promote sentence naming the authorized skill. (FR-003)
-- **AC-004:** `agents/solution-architect.md` forbids promoting spec status outside the
-  documented owners. (FR-004)
-- **AC-005:** Every skill named in PLAN's *Confusion pairs* table has a `Not for … — use
-  /…` clause in its frontmatter `description`, one sentence, no ALL-CAPS. (FR-005, FR-006)
+- **AC-003:** `spec-create`, `spec-clarify`, `spec-analyze`, `sdd-orchestrate`, and
+  `spec-update` each contain an explicit must-not-promote sentence naming the authorized
+  skill. (FR-003)
+- **AC-004:** Every write-capable agent (`solution-architect`, `implementer`, `fast-worker`)
+  forbids promoting spec status outside what it legitimately owns. (FR-004)
+- **AC-005:** Every skill named in PLAN's *Confusion pairs* table has a negative-trigger clause
+  in its frontmatter `description` — one sentence, opening with a `Not for/a/the/needed …`
+  negation, naming the correct sibling as a slash-command, no ALL-CAPS — and PLAN's table text
+  matches the shipped text verbatim. (FR-005, FR-006)
 - **AC-006:** `bash scripts/check-consistency.sh` exits 0 and `git status --porcelain` shows
   no modification to `profiles.json`, `hooks/`, `install*.sh`, `install*.ps1`, or
   `settings.template*.json`. (FR-007)
@@ -160,9 +172,16 @@ None.
 
 ## Open questions
 
-- **OQ-1:** Whether a non-blocking `spec-status-reminder` hook (warn when a `SPEC.md` Status
-  line is edited, without claiming to authorize) is worth a future spec. Deferred, not
-  blocking — see D001.
+- **OQ-1 — Deferred.** Whether a non-blocking `spec-status-reminder` hook (warn when a
+  `SPEC.md` Status line is edited, without claiming to authorize) is worth a future spec.
+  Unchanged at close: the reasoning in D001 still holds — a hook cannot attribute an edit to a
+  skill, so it could only warn. Track alongside the CI-validation gap below rather than as part
+  of this feature.
+- **OQ-2 — Deferred (raised at close).** Neither the negative-trigger clauses nor the section-11
+  rules are machine-validated: `check-consistency.sh` does not inspect skill descriptions or
+  agent prose, so a new confusable skill without a clause, or a new write-capable agent without
+  a status rule, would pass CI unnoticed. Accepted for this feature (D003/D005/D006) and worth
+  its own small spec.
 
 ## Contracted services
 

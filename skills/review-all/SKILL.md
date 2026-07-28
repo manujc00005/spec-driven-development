@@ -1,6 +1,6 @@
 ---
 name: review-all
-description: Run all applicable specialized reviews in one command. Detects which reviews are needed from the spec and runs them sequentially, producing a consolidated report. Not for a single targeted review — invoke that review directly.
+description: Run all applicable specialized reviews in one command. Detects which reviews are needed from the spec and runs them sequentially, producing a consolidated report. Not for a single targeted review — invoke that review directly (e.g. /security-review).
 ---
 
 ## SDD Contract

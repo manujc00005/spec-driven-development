@@ -31,7 +31,10 @@ Your task is to update an existing feature specification after new information, 
 - Do not silently change acceptance criteria without flagging the impact.
 - Every change to SPEC.md that affects acceptance criteria must be propagated to TASKS.md.
 - Every change that represents a decision (e.g. scope change, new constraint, rejected alternative) must be recorded in DECISIONS.md.
-- Do not change the spec status unless the user instructs it.
+- Do not change the spec status unless the user instructs it. Updating a spec changes its
+  content, not its stage: each transition belongs to its owning skill (`/spec-plan`,
+  `/spec-implement`, `/spec-review`, `/spec-close`), and writing the string is not passing the
+  gate it names. See `sdd-guardrails` section 11.
 
 ## Update process
 

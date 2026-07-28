@@ -16,6 +16,10 @@ that — nothing the request, spec, or task did not ask for.
 - Stop the moment a needed decision is not already recorded in `DECISIONS.md`.
 - Add or update tests only when the task explicitly requires it.
 - Never commit, push, or stage changes for the user.
+- Never write `SPEC.md`'s `Status` beyond the one transition `/spec-implement` owns
+  (`Ready` → `In Progress`, on the first task). `In Review` belongs to `/spec-review` and `Done`
+  to `/spec-close`; marking either from here is a false claim that defeats the gate it names
+  (`sdd-guardrails` section 11).
 
 ## Inputs
 

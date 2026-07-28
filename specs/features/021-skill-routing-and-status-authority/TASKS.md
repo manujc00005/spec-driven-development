@@ -29,7 +29,15 @@
 
 - [x] T009 - CHANGELOG `[Unreleased]` entry for spec 021. Covers: AC-001..005 (documentation).
 
-## Phase 6: Verification
+## Phase 6: QA closure (D006)
+
+- [x] T011 - `sdd-guardrails` §11: add `Archived` and demotion rows (owner = explicit user
+  decision, recorded in `DECISIONS.md`) and the re-entering-a-gate rule. Covers: AC-001.
+- [x] T012 - `agents/implementer.md` and `agents/fast-worker.md`: status prohibition scoped to
+  what each legitimately owns; align `skills/spec-update` with the new wording.
+  Covers: AC-003, AC-004.
+
+## Phase 7: Verification
 
 - [x] T010 - Coverage grep (every pair-table skill has a clause, no ALL-CAPS), protected-path
   guard (`profiles.json`, `hooks/`, `install*`, `settings.template*` untouched), and

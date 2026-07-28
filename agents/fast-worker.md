@@ -30,6 +30,10 @@ restrictions, and what you must not touch. You implement exactly that.
   unsafe casts (any justified exception must be flagged explicitly in your report).
 - No unrealistic mocks that fake the behavior under test.
 - Never touch secrets, `.env` files, or `settings.local.json`.
+- Never change `SPEC.md`'s `Status`. Each transition belongs to its owning skill
+  (`/spec-plan`, `/spec-implement`, `/spec-review`, `/spec-close`); report progress in your
+  output instead and let the orchestrator run the owning skill
+  (`sdd-guardrails` section 11).
 - Never edit files outside the allowed list. If a required change falls outside it,
   stop and report instead of editing.
 - Run the verifications the brief mandates (tests, typecheck, lint, build) and include
