@@ -1,6 +1,6 @@
 ---
 name: graphify-context
-description: Interpret GRAPH_REPORT.md for impact analysis before planning or reviewing. Detects staleness. Degrades gracefully when Graphify is not installed. Never a source of truth — always an accelerator.
+description: Interpret GRAPH_REPORT.md for impact analysis before planning or reviewing. Detects staleness. Degrades gracefully when Graphify is not installed. Never a source of truth — always an accelerator. Not for building a reading list when no graph exists — that is /context-manager.
 triggers:
   - Before `/spec-plan` on medium/large features
   - Before `/spec-analyze`

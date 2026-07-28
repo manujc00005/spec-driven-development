@@ -1,6 +1,6 @@
 ---
 name: spec-plan
-description: Convert an approved SPEC.md into an implementation plan, task list, and decision log.
+description: Convert an approved SPEC.md into an implementation plan, task list, and decision log. Not for validating an existing plan (use /spec-analyze) or exploring architecture before one exists (use /architect-review).
 ---
 
 ## SDD Contract
@@ -35,6 +35,7 @@ Your task is to transform an existing `SPEC.md` into an implementation plan.
 - Every implementation task must map back to one or more acceptance criteria.
 - Keep tasks small enough to be implemented independently.
 - After creating PLAN.md, TASKS.md, and DECISIONS.md, update `Status` in `SPEC.md` from `Draft` to `Ready`.
+- **This skill is the only authorized performer of `Draft` → `Ready`.** No other skill, agent, or manual edit may promote a spec to `Ready`, and this skill promotes only after the three documents exist and every acceptance criterion is covered by a task. See `sdd-guardrails` section 11.
 
 ## Required files
 

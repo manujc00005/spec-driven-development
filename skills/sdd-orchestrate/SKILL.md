@@ -1,6 +1,6 @@
 ---
 name: sdd-orchestrate
-description: Run the SDD workflow as a multi-model orchestrator - classify the task, keep the main context clean, delegate deep reasoning to the deep-reasoner agent (Opus) and mechanical implementation to the fast-worker agent (Sonnet), then review, validate against acceptance criteria, and keep SPEC/PLAN/TASKS/DECISIONS in sync. Accepts a free-form goal. Analysis/audit requests produce a report without implementing.
+description: Run the SDD workflow as a multi-model orchestrator - classify the task, keep the main context clean, delegate deep reasoning to the deep-reasoner agent (Opus) and mechanical implementation to the fast-worker agent (Sonnet), then review, validate against acceptance criteria, and keep SPEC/PLAN/TASKS/DECISIONS in sync. Accepts a free-form goal. Analysis/audit requests produce a report without implementing. Not needed for single-session work — /sdd covers that without delegation overhead.
 ---
 
 ## SDD Contract
@@ -49,6 +49,12 @@ schema/migrations or persistence, treat it as Level 3 minimum (matches `/sdd` fu
 detection).
 
 ## Delegation rules
+
+**Spec status is never the orchestrator's to write.** Keeping SPEC/PLAN/TASKS/DECISIONS in sync
+means their *content*, not their stage: each `Status` transition is performed by its owning skill
+(`/spec-plan` → `Ready`, `/spec-implement` → `In Progress`, `/spec-review` → `In Review`,
+`/spec-close` → `Done`). Neither the orchestrator nor a delegated agent may promote a spec
+directly — run the owning skill instead. See `sdd-guardrails` section 11.
 
 **deep-reasoner (Opus — expensive, read-only).** Use for: architecture, system design,
 complex debugging, root cause, security, concurrency, idempotency, race conditions, data

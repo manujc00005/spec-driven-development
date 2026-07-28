@@ -1,6 +1,6 @@
 ---
 name: refactor-review
-description: Code simplification and cleanup review. Identifies complexity, duplication, and naming issues without changing behavior. Optional step after all reviews pass, before spec-close.
+description: Code simplification and cleanup review. Identifies complexity, duplication, and naming issues without changing behavior. Optional step after all reviews pass, before spec-close. Not a licence to refactor during implementation — for scope discipline while editing, use /scope-keeper.
 ---
 
 ## SDD Contract

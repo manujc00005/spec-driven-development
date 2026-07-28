@@ -307,7 +307,36 @@ v1 → v2 → a final "Option B" architecture decision. In the process:
 
 ---
 
-## 11. Limitations — what stays a manual checklist
+## 11. Spec Status Authority
+
+`SPEC.md`'s `Status` is a gate, not a label. Each transition has exactly **one** authorized
+performer, and each performer must verify its precondition before promoting:
+
+| Transition | Sole authorized performer | Precondition it must verify first |
+|---|---|---|
+| `Draft` → `Ready` | `/spec-plan` | `PLAN.md`, `TASKS.md`, `DECISIONS.md` created; every acceptance criterion covered by a task |
+| `Ready` → `In Progress` | `/spec-implement` | First task actually being implemented (no tasks checked yet) |
+| `In Progress` → `In Review` | `/spec-review` | Review verdict is **Pass**. On `Partial`/`Fail` the status does **not** change |
+| `In Review` → `Done` | `/spec-close` | Status is already `In Review`; open questions resolved; acceptance criteria covered |
+
+Rules:
+
+- **No other skill, agent, or ad-hoc edit may promote a status.** If a step needs a spec to
+  advance, run the owning skill — do not write the string.
+- **Writing the status is not passing the gate.** `In Review` means `/spec-review` returned Pass;
+  a hand-edited `In Review` is a false claim that makes `/spec-close`'s check meaningless. The
+  same applies to `Ready` (no validated plan) and `Done` (no close-out).
+- **Demotion follows the same rule** — reopening a `Done` or `In Review` spec is a decision, not
+  a cleanup; record it in `DECISIONS.md`.
+- **Exception — explicit user instruction.** The rule binds skills and agents, not the human. If
+  the user explicitly asks for a status change, make it and say which gate was skipped.
+
+> This is a convention enforced by skill text, the same way `/spec-implement` refuses a `Draft`
+> spec and `/spec-close` refuses a non-`In Review` one. No hook enforces it: a tool-call hook can
+> see that a `Status` line changed but cannot tell which skill drove the edit, so it could only
+> warn, never authorize.
+
+## 12. Limitations — what stays a manual checklist
 
 This skill helps detect and block contradictions *within the documents*, but it
 cannot fully automate:

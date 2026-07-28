@@ -1,6 +1,6 @@
 ---
 name: spec-analyze
-description: Analyze consistency between SPEC.md, PLAN.md, TASKS.md and DECISIONS.md before implementation. Use this to detect missing coverage, contradictions, weak tasks and readiness issues.
+description: Analyze consistency between SPEC.md, PLAN.md, TASKS.md and DECISIONS.md before implementation. Use this to detect missing coverage, contradictions, weak tasks and readiness issues. Not for producing PLAN/TASKS/DECISIONS — use /spec-plan.
 ---
 
 ## SDD Contract
@@ -27,6 +27,7 @@ Your task is to analyze the SDD documents before implementation.
 
 - Do not implement production code.
 - Do not modify application code unless explicitly requested.
+- **Do not change `SPEC.md`'s `Status`.** This skill returns a readiness verdict; acting on that verdict by promoting `Draft` → `Ready` is `/spec-plan`'s job. A "Ready" verdict here is not a `Ready` status. See `sdd-guardrails` section 11.
 - Read `specs/CONSTITUTION.md` if it exists.
 - Read the target feature folder.
 - Inspect `SPEC.md`, `PLAN.md`, `TASKS.md` and `DECISIONS.md`.

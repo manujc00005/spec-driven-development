@@ -1,6 +1,6 @@
 ---
 name: verifier
-description: Mindset manual for completion claims — "done" means observed working end-to-end, not "it compiles". Use before you write "done", "fixed", or "should work", and before ending any turn that changed runnable code.
+description: Mindset manual for completion claims — "done" means observed working end-to-end, not "it compiles". Use before you write "done", "fixed", or "should work", and before ending any turn that changed runnable code. Not a test-coverage or acceptance review — that is /qa-review.
 ---
 
 ## SDD Contract

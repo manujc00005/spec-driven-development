@@ -1,6 +1,6 @@
 ---
 name: qa-review
-description: Review implementation quality, test coverage, edge cases, regressions, and acceptance criteria before merging.
+description: Review implementation quality, test coverage, edge cases, regressions, and acceptance criteria before merging. Not for spec-conformance review (use /spec-review) or for designing a test strategy up front (use /test-engineer).
 ---
 
 ## SDD Contract

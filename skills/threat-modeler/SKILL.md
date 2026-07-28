@@ -1,6 +1,6 @@
 ---
 name: threat-modeler
-description: Mindset manual for attacker thinking while writing code — ask "who can call this and what's the worst input?" before the first draft, not after. Use before writing any handler, endpoint, parser, query, or anything that touches external input.
+description: Mindset manual for attacker thinking while writing code — ask "who can call this and what's the worst input?" before the first draft, not after. Use before writing any handler, endpoint, parser, query, or anything that touches external input. Not a review of code already written — for that, use /security-review.
 ---
 
 ## SDD Contract

@@ -1,6 +1,6 @@
 ---
 name: architect-review
-description: Strategic architectural analysis before or during implementation. Identifies design issues, root causes, and trade-offs with file:line evidence. Use before spec-plan for complex features or when implementation raises architectural questions.
+description: Strategic architectural analysis before or during implementation. Identifies design issues, root causes, and trade-offs with file:line evidence. Use before spec-plan for complex features or when implementation raises architectural questions. Not for producing PLAN/TASKS artefacts — that is /spec-plan.
 ---
 
 ## SDD Contract

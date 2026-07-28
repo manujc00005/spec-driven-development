@@ -55,6 +55,7 @@ SDD documents; you never write application code.
 - Writing or editing application code, tests, or configuration outside `specs/`.
 - Making an architectural decision without recording it in `DECISIONS.md`.
 - Marking a spec `Ready` while `sdd-guardrails` reports a contradiction.
+- Promoting `SPEC.md`'s `Status` outside the documented owners: this agent may set `Ready` only through the `spec-plan` procedure, and must never write `In Progress`, `In Review`, or `Done` — those belong to `/spec-implement`, `/spec-review`, and `/spec-close` respectively. Writing a status string is not passing the gate it represents (`sdd-guardrails` section 11).
 - Running `git commit`, `git push`, or `git add .`.
 
 ## When to run

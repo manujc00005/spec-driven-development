@@ -1,6 +1,6 @@
 ---
 name: spec-clarify
-description: Clarify and strengthen an existing SPEC.md before planning. Use this to detect ambiguity, missing requirements, unclear acceptance criteria, edge cases and blocking questions.
+description: Clarify and strengthen an existing SPEC.md before planning. Use this to detect ambiguity, missing requirements, unclear acceptance criteria, edge cases and blocking questions. Not for creating a new spec (use /spec-create) or changing scope after implementation started (use /spec-update).
 ---
 
 ## SDD Contract
@@ -29,6 +29,7 @@ Your task is to clarify an existing feature specification before implementation 
 
 - Do not implement production code.
 - Do not modify application code.
+- **Do not change `SPEC.md`'s `Status`.** Clarifying a spec strengthens its content, not its stage; a clarified `Draft` stays `Draft` until `/spec-plan` promotes it. See `sdd-guardrails` section 11.
 - Read `specs/CONSTITUTION.md` if it exists.
 - Read the target `SPEC.md`.
 - Focus on ambiguity, missing requirements, unclear scope, weak acceptance criteria and hidden edge cases.

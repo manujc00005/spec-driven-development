@@ -1,6 +1,6 @@
 ---
 name: sdd
-description: Auto-detect feature complexity and guide the right SDD workflow. Main entry point for any non-trivial feature — replaces sdd-medium and sdd-full.
+description: Auto-detect feature complexity and guide the right SDD workflow. Main entry point for any non-trivial feature — replaces sdd-medium and sdd-full. Not for multi-model delegation across deep-reasoner/fast-worker — that is /sdd-orchestrate.
 ---
 
 ## SDD Contract

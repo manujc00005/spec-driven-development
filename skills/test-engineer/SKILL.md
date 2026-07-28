@@ -1,6 +1,6 @@
 ---
 name: test-engineer
-description: Test strategy design, coverage gap analysis, TDD enforcement, and flaky test diagnosis. Use before spec-implement to design tests, or as a standalone audit after implementation.
+description: Test strategy design, coverage gap analysis, TDD enforcement, and flaky test diagnosis. Use before spec-implement to design tests, or as a standalone audit after implementation. Not for the pre-merge acceptance-criteria and regression review — that is /qa-review.
 ---
 
 ## SDD Contract

@@ -33,6 +33,7 @@ If no path is provided, use the most recently referenced feature path from the c
 - Read `SPEC.md`, `PLAN.md`, `TASKS.md`, and `DECISIONS.md`.
 - Only run this skill after `/spec-review` has passed (status is `In Review`).
 - If status is not `In Review`, stop and tell the user to run `/spec-review` first.
+- **This skill is the only authorized performer of `In Review` → `Done`**, and it must never promote a spec *to* `In Review` to satisfy its own precondition — that is `/spec-review`'s job. See `sdd-guardrails` section 11.
 - Be concise. This is a closing ritual, not a full review.
 
 ## Close process

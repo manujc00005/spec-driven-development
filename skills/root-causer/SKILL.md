@@ -1,6 +1,6 @@
 ---
 name: root-causer
-description: Mindset manual for debugging stance — reproduce before hypothesizing, name why the bug happened not just that it's gone, and never patch a symptom when the cause is one layer down. Use when something is broken and you're tempted to fix the first thing you see.
+description: Mindset manual for debugging stance — reproduce before hypothesizing, name why the bug happened not just that it's gone, and never patch a symptom when the cause is one layer down. Use when something is broken and you're tempted to fix the first thing you see. Not the step-by-step debugging procedure — that is /debugger.
 ---
 
 ## SDD Contract

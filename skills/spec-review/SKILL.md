@@ -1,6 +1,6 @@
 ---
 name: spec-review
-description: Review current code changes against the active specification, plan, tasks, and decision log.
+description: Review current code changes against the active specification, plan, tasks, and decision log. Not for behaviour and regression review (use /qa-review) or for running every applicable review at once (use /review-all).
 ---
 
 ## SDD Contract
@@ -38,6 +38,7 @@ If no path is provided, use the most recently referenced feature path from the c
 - Identify risky abstractions, unnecessary changes, and unclear decisions.
 - Be direct and specific.
 - If the verdict is **Pass**, update `Status` in `SPEC.md` to `In Review`.
+- **This skill is the only authorized performer of `In Progress` → `In Review`.** A spec marked `In Review` by any other means is an unverified claim, and it silently defeats `/spec-close`'s precondition check. See `sdd-guardrails` section 11.
 - If the verdict is **Partial** or **Fail**, do not change the status.
 
 ## Review checklist

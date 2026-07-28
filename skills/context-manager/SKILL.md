@@ -1,6 +1,6 @@
 ---
 name: context-manager
-description: Decide the minimal set of files Claude must read before implementing or reviewing a feature. Reduces token waste on large codebases by producing a bounded reading list instead of scanning everything.
+description: Decide the minimal set of files Claude must read before implementing or reviewing a feature. Reduces token waste on large codebases by producing a bounded reading list instead of scanning everything. Not for interpreting an existing Graphify report — that is /graphify-context.
 triggers:
   - Before `/spec-implement` on medium/large features
   - Before `/spec-review` or any specialized review on multi-module projects

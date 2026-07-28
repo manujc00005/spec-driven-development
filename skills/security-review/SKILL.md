@@ -1,6 +1,6 @@
 ---
 name: security-review
-description: Review code changes for security risks, authentication, authorization, data exposure, injection, file upload, secrets, and compliance issues.
+description: Review code changes for security risks, authentication, authorization, data exposure, injection, file upload, secrets, and compliance issues. Not for attacker-mindset guidance before code is written — that is /threat-modeler.
 ---
 
 ## SDD Contract

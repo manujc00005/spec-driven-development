@@ -1,6 +1,6 @@
 ---
 name: scope-keeper
-description: Mindset manual for scope discipline — do exactly what was asked, minimal diff, no drive-by refactors, code that reads like its neighbors. Use before your first edit and before adding any line the request did not ask for.
+description: Mindset manual for scope discipline — do exactly what was asked, minimal diff, no drive-by refactors, code that reads like its neighbors. Use before your first edit and before adding any line the request did not ask for. Not a cleanup review of code already written — that is /refactor-review.
 ---
 
 ## SDD Contract

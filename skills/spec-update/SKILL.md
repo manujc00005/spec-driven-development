@@ -1,6 +1,6 @@
 ---
 name: spec-update
-description: Update an existing spec mid-implementation. Propagates changes to PLAN.md, TASKS.md, and DECISIONS.md and identifies impacted tasks.
+description: Update an existing spec mid-implementation. Propagates changes to PLAN.md, TASKS.md, and DECISIONS.md and identifies impacted tasks. Not for pre-planning clarification of a Draft spec — use /spec-clarify.
 ---
 
 ## SDD Contract

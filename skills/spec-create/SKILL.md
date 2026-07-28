@@ -1,6 +1,6 @@
 ---
 name: spec-create
-description: Create a structured feature specification before implementation. Use this when the user wants to add, change, or refactor a feature.
+description: Create a structured feature specification before implementation. Use this when the user wants to add, change, or refactor a feature. Not for strengthening an existing spec (use /spec-clarify) or changing one mid-implementation (use /spec-update).
 ---
 
 ## SDD Contract
@@ -38,7 +38,7 @@ Draft → Ready → In Progress → In Review → Done | Archived
 - `Done`: all reviews complete and spec-close run — ready for PR.
 - `Archived`: spec abandoned or superseded.
 
-This skill always sets status to **Draft**.
+This skill always sets status to **Draft**, and it is the only status it may write. Promoting a spec beyond `Draft` belongs to `/spec-plan` (→ `Ready`), `/spec-implement` (→ `In Progress`), `/spec-review` (→ `In Review`), and `/spec-close` (→ `Done`). See `sdd-guardrails` section 11.
 
 ## Core rules
 

@@ -1,6 +1,6 @@
 ---
 name: debugger
-description: 6-phase debugging discipline. Builds a tight feedback loop before hypothesizing. Use when something is broken, throwing, failing, or slow.
+description: 6-phase debugging discipline. Builds a tight feedback loop before hypothesizing. Use when something is broken, throwing, failing, or slow. Not the mindset manual on debugging stance — that is /root-causer.
 ---
 
 ## SDD Contract

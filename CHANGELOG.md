@@ -11,10 +11,32 @@ under `specs/features/` — the framework is developed with its own workflow.
 
 ## [Unreleased]
 
-Specs 016–020 · Installer hooks/lib fix, planned skills shipped, agentic routing layer,
-provider-adapter layer and a first Codex adapter, security-agent hardening.
+Specs 016–021 · Installer hooks/lib fix, planned skills shipped, agentic routing layer,
+provider-adapter layer and a first Codex adapter, security-agent hardening, skill-routing
+and spec-status authority.
 
 ### Added
+- **Spec Status Authority** (spec 021) — `sdd-guardrails` section 11 now states the
+  `SPEC.md` status machine as an authority table: each transition has exactly one
+  authorized performer (`/spec-plan` → `Ready`, `/spec-implement` → `In Progress`,
+  `/spec-review` → `In Review`, `/spec-close` → `Done`) with the precondition each must
+  verify. No other skill, agent, or ad-hoc edit may promote a status, and writing the
+  status string is explicitly not the same as passing the gate it represents — a
+  hand-written `In Review` silently defeats `/spec-close`'s own precondition check. The
+  rule is mirrored into the four owning skills, into `spec-create`/`spec-clarify`/
+  `spec-analyze`/`sdd-orchestrate` as a prohibition, and into
+  `agents/solution-architect.md`'s forbidden actions. Documented honestly as a convention:
+  a tool-call hook can see a `Status` line change but cannot tell which skill drove it, so
+  nothing enforces this mechanically (spec 021 D001).
+- **Negative triggers on confusable skills** (spec 021) — 21 skill descriptions gained a
+  one-sentence `Not for … — use /…` clause naming the correct sibling, covering the pairs
+  that actually overlap at routing time (`spec-create`/`spec-clarify`/`spec-update`,
+  `spec-plan`/`spec-analyze`/`architect-review`, `spec-review`/`qa-review`/`review-all`,
+  `debugger`/`root-causer`, `security-review`/`threat-modeler`, `verifier`/`qa-review`,
+  `scope-keeper`/`refactor-review`, `context-manager`/`graphify-context`,
+  `sdd`/`sdd-orchestrate`). Bounded to documented pairs rather than all 61 skills, since
+  every description is a standing per-session context cost (D003), and kept to one calm
+  sentence rather than block-style ALL-CAPS warnings (D002).
 - **Hardened `security-reviewer` agent** (spec 020) — now the framework's explicit owner of
   vulnerability hunting (named taxonomy: injection, broken authN/authZ and tenant isolation,
   SSRF/CSRF, deserialization, file handling, race/TOCTOU, secrets/crypto, supply chain,

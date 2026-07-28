@@ -61,6 +61,7 @@ Before doing anything else, verify:
 - Run the most relevant tests if possible.
 - If tests cannot be run, explain why.
 - If this is the first task being implemented (no tasks are checked yet), update `Status` in `SPEC.md` from `Ready` to `In Progress`.
+- **This skill is the only authorized performer of `Ready` → `In Progress`**, and only when the first task is actually being implemented. It must never promote a spec to `In Review` or `Done` — those belong to `/spec-review` and `/spec-close`. See `sdd-guardrails` section 11.
 
 ## TDD discipline
 
