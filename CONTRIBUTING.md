@@ -44,6 +44,29 @@ bash scripts/graphify.test.sh            # Graphify hooks + setup script (stubbe
 If you changed counts (new skill/hook/template/profile), run
 `bash scripts/check-consistency.sh --fix` to sync README markers and badges.
 
+### Changing a discipline or mindset skill
+
+Skills are not prose — they are the product. A PR that changes the **content** of a skill whose
+`## SDD Contract` declares `category: mindset` must include an `evals/results/` file produced
+**after** the change:
+
+```bash
+export SKILL_EVAL_RUNNER='claude -p --model <model-id>'
+bash scripts/skill-eval.sh <skill> --reps 5
+```
+
+Commit the result file and set its `manually-read` field to YES only after reading every
+response. Three things make a result worth reading:
+
+- **The control arm is mandatory.** A `NO-BASELINE-FAILURE` verdict means the skill has no
+  demonstrated problem to solve — do not read the treatment arm as a success.
+- **Split results are `INCONCLUSIVE`, never a pass.** When guidance lands, reps converge.
+- **A result without a model identifier is not evidence.**
+
+The static half of this (description length and shape, `SKILL.md` size) is enforced by
+`check-consistency.sh` and needs nothing extra from you. See `evals/README.md` for what those
+checks do and do not prove.
+
 ## Commit conventions
 
 Conventional-commit style, one logical block per commit:

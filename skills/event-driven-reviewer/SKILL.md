@@ -1,6 +1,6 @@
 ---
 name: event-driven-reviewer
-description: Review Kafka/RabbitMQ/ActiveMQ producer and consumer code for delivery-semantics correctness, idempotent consumers, retry/backoff, DLQ and poison-message handling, ordering guarantees, schema evolution, correlation ID/trace propagation, the transactional outbox pattern, and saga/compensation flows. Extends backend-review and database-review, and is consumed by the domain-reviewer agent for Spring Kafka/AMQP idioms.
+description: Review Kafka/RabbitMQ/ActiveMQ producer and consumer code for delivery semantics, idempotent consumers, retry/backoff, DLQ and poison-message handling, ordering guarantees, schema evolution, correlation-ID propagation, transactional outbox, and saga/compensation flows. Extends backend-review and database-review; consumed by the domain-reviewer agent for Spring Kafka/AMQP idioms.
 triggers:
   - After `/backend-review` when Kafka, RabbitMQ, or ActiveMQ producer/consumer code changes
   - When the user asks to "review my Kafka consumer", "check message idempotency", "review the outbox implementation", or "review the saga/compensation flow"

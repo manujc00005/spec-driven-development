@@ -607,6 +607,115 @@ else:
 
 
 # ---------------------------------------------------------------------------
+# spec 022 FR-001: skill form — description length/shape and SKILL.md body size.
+#
+# Two purposes, deliberately not merged (spec 022 D008):
+#   * the length caps enforce CONTEXT ECONOMY — every description loads at
+#     session start, so its length is a standing per-session cost. They apply
+#     to every skill whatever the text is doing.
+#   * the shape proxies target the WORKFLOW-SUMMARY failure — a description
+#     that summarises the workflow gets followed instead of the skill body.
+#
+# The proxies are three mechanical shapes, NOT a judgement engine: a
+# prose-shaped summary under the cap passes (D006). False negatives are
+# expected and documented in evals/README.md.
+#
+# Line-counting convention (D007): body length is `wc -l` semantics — the
+# number of newline-terminated lines — because the 600 boundary must mean the
+# same thing here and in check-consistency.test.sh.
+# ---------------------------------------------------------------------------
+DESC_MAX_CHARS = 400
+BODY_MAX_LINES = 600
+
+SKILL_DESC_RE = re.compile(r"^description:\s*(.*)$")
+ARROW_RE = re.compile(r"(→|->)")
+STEP_SEQ_RE = re.compile(r"\b1\..*\b2\.")
+THEN_RE = re.compile(r"\bthen\b", re.I)
+
+
+def skill_description(text):
+    """Extract the frontmatter description as one logical string.
+
+    Handles quoted, folded and multi-line YAML values; a first-line-only read
+    misreads several shipped skills (spec 022 T001).
+    Returns None when there is no parsable frontmatter description.
+    """
+    lines = text.split("\n")
+    if not lines or lines[0].strip() != "---":
+        return None
+    end = None
+    for i in range(1, len(lines)):
+        if lines[i].strip() == "---":
+            end = i
+            break
+    if end is None:
+        return None
+    val, collecting = None, False
+    for line in lines[1:end]:
+        m = SKILL_DESC_RE.match(line)
+        if m:
+            val, collecting = m.group(1), True
+            continue
+        if collecting:
+            if line.startswith((" ", "\t")) and line.strip():
+                val += " " + line.strip()
+                continue
+            break
+    if val is None:
+        return None
+    val = val.strip()
+    if val.startswith((">", "|")):
+        val = val[1:].strip()
+    if len(val) >= 2 and val[0] == val[-1] and val[0] in "\"'":
+        val = val[1:-1]
+    return val.strip()
+
+
+def wc_l(text):
+    """Line count with `wc -l` semantics: newline-terminated lines only."""
+    return text.count("\n")
+
+
+for skill_name in sorted(disk_skills):
+    path = os.path.join(skills_dir, skill_name, "SKILL.md")
+    try:
+        with open(path, encoding="utf-8") as f:
+            skill_text = f.read()
+    except OSError as e:
+        err("skill-form", skill_name, f"cannot read SKILL.md: {e}")
+        continue
+
+    body_lines = wc_l(skill_text)
+    if body_lines > BODY_MAX_LINES:
+        err("skill-form", skill_name,
+            f"SKILL.md is {body_lines} lines, over the {BODY_MAX_LINES}-line cap — "
+            "move heavy reference into linked sibling files")
+
+    desc = skill_description(skill_text)
+    if desc is None:
+        err("skill-form", skill_name, "no parsable frontmatter 'description'")
+        continue
+
+    if len(desc) > DESC_MAX_CHARS:
+        err("skill-form", skill_name,
+            f"description is {len(desc)} chars, over the {DESC_MAX_CHARS}-char cap "
+            "(context economy — every description loads at session start)")
+
+    shapes = []
+    if ARROW_RE.search(desc):
+        shapes.append("arrow chain")
+    if STEP_SEQ_RE.search(desc):
+        shapes.append("enumerated step sequence")
+    if len(THEN_RE.findall(desc)) >= 3:
+        shapes.append("3+ 'then'-chained clauses")
+    if shapes:
+        err("skill-form", skill_name,
+            f"description summarises the workflow ({', '.join(shapes)}) — describe when to use "
+            "the skill, not what it does; a description that summarises the workflow gets "
+            "followed instead of the skill body")
+
+
+# ---------------------------------------------------------------------------
 # Report
 # ---------------------------------------------------------------------------
 for e in sorted(errors):

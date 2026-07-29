@@ -246,6 +246,66 @@ if [ "$actual_marker" != "9999" ]; then
   FAIL=$((FAIL + 1))
 fi
 
+# --- spec 022 FR-001 / AC-001: skill-form checks ---------------------------
+# One mutation per rule, each on a fresh copy of a real skill. The victim is
+# `verifier` (a short mindset skill) so the mutation is unambiguous.
+#
+# Line-counting convention is `wc -l` (spec 022 D007): the over-long body case
+# below adds 600 lines to a file that already has content, so it clears the cap
+# regardless of the file's original length.
+
+# description over the 400-char cap
+dir="$(fresh_copy skill-form-long-description)"
+python3 - "$dir/skills/verifier/SKILL.md" <<'PY'
+import sys
+p = sys.argv[1]
+text = open(p, encoding="utf-8").read()
+lines = text.split("\n")
+for i, line in enumerate(lines):
+    if line.startswith("description:"):
+        lines[i] = "description: " + ("x" * 401)
+        break
+open(p, "w", encoding="utf-8").write("\n".join(lines))
+PY
+assert_case "skill-form-long-description" 1 "[skill-form] verifier" "$dir"
+
+# description carrying an arrow chain (workflow-summary proxy)
+dir="$(fresh_copy skill-form-arrow-description)"
+python3 - "$dir/skills/verifier/SKILL.md" <<'PY'
+import sys
+p = sys.argv[1]
+text = open(p, encoding="utf-8").read()
+lines = text.split("\n")
+for i, line in enumerate(lines):
+    if line.startswith("description:"):
+        lines[i] = "description: read the code -> run the tests -> report the result"
+        break
+open(p, "w", encoding="utf-8").write("\n".join(lines))
+PY
+assert_case "skill-form-arrow-description" 1 "summarises the workflow" "$dir"
+
+# SKILL.md body over the 600-line cap
+dir="$(fresh_copy skill-form-long-body)"
+python3 - "$dir/skills/verifier/SKILL.md" <<'PY'
+import sys
+p = sys.argv[1]
+with open(p, "a", encoding="utf-8") as f:
+    f.write("\n" + "\n".join("padding line" for _ in range(600)) + "\n")
+PY
+assert_case "skill-form-long-body" 1 "over the 600-line cap" "$dir"
+
+# a clean tree reports no skill-form findings at all
+dir="$(fresh_copy skill-form-clean)"
+out="$("$CHECKER" "$dir" 2>&1)"
+if grep -q "skill-form" <<< "$out"; then
+  echo "[FAIL] skill-form-clean: unmutated tree reported skill-form findings"
+  echo "       output: $out"
+  FAIL=$((FAIL + 1))
+else
+  echo "[PASS] skill-form-clean"
+  PASS=$((PASS + 1))
+fi
+
 echo ""
 echo "$PASS passed, $FAIL failed."
 [ "$FAIL" -eq 0 ]

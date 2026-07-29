@@ -1,6 +1,6 @@
 ---
 name: sdd-orchestrate
-description: Run the SDD workflow as a multi-model orchestrator - classify the task, keep the main context clean, delegate deep reasoning to the deep-reasoner agent (Opus) and mechanical implementation to the fast-worker agent (Sonnet), then review, validate against acceptance criteria, and keep SPEC/PLAN/TASKS/DECISIONS in sync. Accepts a free-form goal. Analysis/audit requests produce a report without implementing. Not needed for single-session work — /sdd covers that without delegation overhead.
+description: Run the SDD workflow as a multi-model orchestrator across the deep-reasoner (Opus) and fast-worker (Sonnet) agents. Use when work is large or risky enough to be worth delegating and the main context must stay clean. Accepts a free-form goal; analysis and audit requests produce a report without implementing. Not needed for single-session work — /sdd covers that without delegation overhead.
 ---
 
 ## SDD Contract

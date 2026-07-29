@@ -1,6 +1,6 @@
 ---
 name: sdd-guardrails
-description: Global consistency guardrails for any Spec-Driven Development workflow (SPEC/PLAN/TASKS/DECISIONS or equivalent — RFCs, design docs, implementation plans). Use before /spec-plan, /spec-implement, /spec-close, or any planning/implementation step, whenever the active feature has more than one decision on record, touches money/units, or touches schema/deployment. Detects contradictions between documents, obsolete plans being implemented, decisions used after being superseded, and ambiguous naming reused across versions.
+description: Global consistency guardrails for any Spec-Driven Development workflow (SPEC/PLAN/TASKS/DECISIONS or equivalent — RFCs, design docs, implementation plans). Use before /spec-plan, /spec-implement, /spec-close, or any planning or implementation step, whenever the active feature has more than one decision on record, touches money or units, or touches schema or deployment.
 ---
 
 ## SDD Contract
