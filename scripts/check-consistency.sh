@@ -629,7 +629,11 @@ BODY_MAX_LINES = 600
 
 SKILL_DESC_RE = re.compile(r"^description:\s*(.*)$")
 ARROW_RE = re.compile(r"(→|->)")
-STEP_SEQ_RE = re.compile(r"\b1\..*\b2\.")
+# Whitespace after the digit-dot is what separates a step sequence ("1. do this
+# 2. do that") from a version string. Without it, "see 1.2.3 for details" was
+# reported as a workflow summary — a false positive that blocks CI, which is
+# worse than the false negatives this proxy already accepts (spec 022 T015).
+STEP_SEQ_RE = re.compile(r"\b1\.\s.*\b2\.\s")
 THEN_RE = re.compile(r"\bthen\b", re.I)
 
 

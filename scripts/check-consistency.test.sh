@@ -294,6 +294,43 @@ with open(p, "a", encoding="utf-8") as f:
 PY
 assert_case "skill-form-long-body" 1 "over the 600-line cap" "$dir"
 
+# a real enumerated step sequence IS still detected after the T015 narrowing
+dir="$(fresh_copy skill-form-step-sequence)"
+python3 - "$dir/skills/verifier/SKILL.md" <<'PY'
+import sys
+p = sys.argv[1]
+lines = open(p, encoding="utf-8").read().split("\n")
+for i, line in enumerate(lines):
+    if line.startswith("description:"):
+        lines[i] = "description: 1. read the code 2. run the tests 3. report the result"
+        break
+open(p, "w", encoding="utf-8").write("\n".join(lines))
+PY
+assert_case "skill-form-step-sequence" 1 "summarises the workflow" "$dir"
+
+# a version string is NOT a step sequence (spec 022 T015 — confirmed false positive:
+# `\b1\..*\b2\.` matched "see 1.2.3 for details")
+dir="$(fresh_copy skill-form-version-string-is-clean)"
+python3 - "$dir/skills/verifier/SKILL.md" <<'PY'
+import sys
+p = sys.argv[1]
+lines = open(p, encoding="utf-8").read().split("\n")
+for i, line in enumerate(lines):
+    if line.startswith("description:"):
+        lines[i] = "description: Use when pinning a dependency to 1.2.3 or checking a version range."
+        break
+open(p, "w", encoding="utf-8").write("\n".join(lines))
+PY
+out="$("$CHECKER" "$dir" 2>&1)"
+if grep -q "skill-form" <<< "$out"; then
+  echo "[FAIL] skill-form-version-string-is-clean: a version string was reported as a step sequence"
+  echo "       output: $out"
+  FAIL=$((FAIL + 1))
+else
+  echo "[PASS] skill-form-version-string-is-clean"
+  PASS=$((PASS + 1))
+fi
+
 # a clean tree reports no skill-form findings at all
 dir="$(fresh_copy skill-form-clean)"
 out="$("$CHECKER" "$dir" 2>&1)"

@@ -118,8 +118,36 @@ fi
 
 TODAY="$(date +%Y-%m-%d)"
 [ -n "$OUT" ] || OUT="$REPO_ROOT/evals/results/${SKILL}-${TODAY}.md"
+
+# Resolve OUT to a real absolute path before guarding it. A plain prefix test
+# on the raw string is bypassed by any relative segment: `--out
+# evals/../skills/x.md` slipped straight through and wrote inside skills/.
+# Walk up to the nearest existing ancestor so a not-yet-created directory still
+# resolves, then let `pwd -P` collapse `..` and symlinks.
+resolve_path() {
+  local target="$1" dir tail="" real
+  dir="$(dirname "$target")"
+  while [ ! -d "$dir" ] && [ "$dir" != "/" ] && [ "$dir" != "." ]; do
+    tail="$(basename "$dir")/$tail"
+    dir="$(dirname "$dir")"
+  done
+  # Fail CLOSED. This function runs inside a command substitution, so `die`
+  # here would exit only the subshell — the script would carry on with an empty
+  # OUT and report success while writing nowhere. Return non-zero instead and
+  # let the caller stop. `cd` (not `-d`) is the check that can actually fail:
+  # the dirname walk always terminates at `/` or `.`, which are always
+  # directories, but either may be unenterable.
+  if ! real="$(cd "$dir" 2>/dev/null && pwd -P)"; then
+    echo "[ERROR] cannot resolve output path (directory not accessible): $target" >&2
+    return 1
+  fi
+  printf '%s/%s%s\n' "$real" "$tail" "$(basename "$target")"
+}
+
+OUT="$(resolve_path "$OUT")" || exit 1
+REPO_REAL="$(cd "$REPO_ROOT" && pwd -P)"
 case "$OUT" in
-  "$REPO_ROOT"/skills/*) die "refusing to write inside skills/ — the harness never mutates a skill" ;;
+  "$REPO_REAL"/skills/*) die "refusing to write inside skills/ — the harness never mutates a skill" ;;
 esac
 mkdir -p "$(dirname "$OUT")"
 
@@ -129,7 +157,7 @@ mkdir -p "$SANDBOX"
 trap 'rm -rf "$WORK"' EXIT
 
 run_arm() {  # $1 = arm name; echoes the hit count
-  local arm="$1" hits=0 i resp
+  local arm="$1" hits=0 i resp status
   for i in $(seq 1 "$REPS"); do
     resp="$WORK/$arm-$i.txt"
     # Run the model from an empty scratch directory, never from the repo.
@@ -142,11 +170,14 @@ run_arm() {  # $1 = arm name; echoes the hit count
       head -5 "$WORK/$arm-$i.err" >&2
       return 2
     fi
+    # Grep once and reuse the result: matching twice let the printed status and
+    # the tally diverge on a transient read error.
+    status="clean"
     if grep -Eqi -- "$PATTERN" "$resp"; then
       hits=$(( hits + 1 ))
-      printf '%s\n' "$i" >> "$WORK/$arm.hits"
+      status="FAILURE EXHIBITED"
     fi
-    echo "  $arm rep $i/$REPS — $(if grep -Eqi -- "$PATTERN" "$resp"; then echo 'FAILURE EXHIBITED'; else echo 'clean'; fi)" >&2
+    echo "  $arm rep $i/$REPS — $status" >&2
   done
   echo "$hits"
 }
@@ -160,12 +191,19 @@ TREATMENT_HITS="$(run_arm treatment)" || exit 2
 # Thresholds mirror evals/README.md. A split treatment result is INCONCLUSIVE,
 # never rounded up: when guidance lands, reps converge.
 BASELINE_MIN=2
-if [ "$CONTROL_HITS" -lt "$BASELINE_MIN" ]; then
-  VERDICT="NO-BASELINE-FAILURE"
-  VERDICT_NOTE="The control exhibited the failure only ${CONTROL_HITS}/${REPS} times (needs ≥ ${BASELINE_MIN}). This skill has no demonstrated problem to solve; the treatment arm must NOT be read as a success."
-elif [ "$TREATMENT_HITS" -gt "$CONTROL_HITS" ]; then
+# HARMFUL is evaluated FIRST, even when the control arm never failed. A skill
+# whose treatment arm exhibits a failure the control did not is the single most
+# important thing this harness can surface; reporting it as merely
+# "no baseline" buried exactly that signal on a real run.
+if [ "$TREATMENT_HITS" -gt "$CONTROL_HITS" ]; then
   VERDICT="HARMFUL"
   VERDICT_NOTE="Treatment exhibited the failure MORE often than control (${TREATMENT_HITS} vs ${CONTROL_HITS}). Prohibition-form guidance applied to an output-shaping failure is the known way to land here — see evals/README.md."
+  if [ "$CONTROL_HITS" -lt "$BASELINE_MIN" ]; then
+    VERDICT_NOTE="$VERDICT_NOTE Note also that the control failed only ${CONTROL_HITS}/${REPS} times (below the ${BASELINE_MIN} baseline), so the scenario does not establish a problem for this skill to solve in the first place."
+  fi
+elif [ "$CONTROL_HITS" -lt "$BASELINE_MIN" ]; then
+  VERDICT="NO-BASELINE-FAILURE"
+  VERDICT_NOTE="The control exhibited the failure only ${CONTROL_HITS}/${REPS} times (needs ≥ ${BASELINE_MIN}). This skill has no demonstrated problem to solve; the treatment arm must NOT be read as a success."
 elif [ "$TREATMENT_HITS" -eq 0 ]; then
   VERDICT="EFFECTIVE"
   VERDICT_NOTE="Control failed ${CONTROL_HITS}/${REPS}, treatment ${TREATMENT_HITS}/${REPS}."

@@ -39,7 +39,11 @@ All of these must pass locally before you open a PR (CI runs them too):
 bash scripts/check-consistency.sh        # manifest/disk/wiring/README alignment
 bash scripts/check-consistency.test.sh   # the checker's own mutation suite
 bash scripts/graphify.test.sh            # Graphify hooks + setup script (stubbed CLI)
+bash scripts/skill-eval.test.sh          # skill-eval harness (stubbed runner, no model calls)
 ```
+
+`skill-eval.test.sh` is **not** wired into `.github/workflows/consistency.yml` — that file is out
+of scope for spec 022 (FR-010), so this one is local-only until a follow-up adds it.
 
 If you changed counts (new skill/hook/template/profile), run
 `bash scripts/check-consistency.sh --fix` to sync README markers and badges.
@@ -54,6 +58,14 @@ Skills are not prose — they are the product. A PR that changes the **content**
 export SKILL_EVAL_RUNNER='claude -p --model <model-id>'
 bash scripts/skill-eval.sh <skill> --reps 5
 ```
+
+> **This gate is not fully in force yet.** Every scenario currently in `evals/scenarios/` is
+> marked **superseded** — the corpus describes repository state the model cannot see, so a sweep
+> run against it produces tallies that look plausible and mean nothing (spec 022, D010). Until
+> spec 023 lands a valid corpus, a result file attached to a PR must come from a scenario that
+> meets the **self-contained** rule in `evals/README.md` — write one for the skill you are
+> changing rather than reusing the superseded file. If you cannot, say so in the PR instead of
+> attaching a result that is not evidence.
 
 Commit the result file and set its `manually-read` field to YES only after reading every
 response. Three things make a result worth reading:

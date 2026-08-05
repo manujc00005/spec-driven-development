@@ -2,7 +2,7 @@
 
 ## Status
 
-In Progress
+In Review
 
 ## Problem
 
@@ -52,18 +52,30 @@ judgement alone, and each one is a standing per-session context cost whether or 
   existing consistency checker so it runs in CI.
 - Give it an **on-demand behavioural harness** that measures a skill against a **no-guidance
   control**, so a skill's effect can be demonstrated rather than asserted.
-- Prove both by applying them to the 9 mindset skills and shipping at least one skill
-  **rewritten because the evidence said so**, not because the author preferred it.
+- Prove the deterministic half end-to-end by fixing every form violation the repository actually
+  has, and prove the behavioural half's *contract* with a stub-runner suite that needs no model.
+- *(Narrowed 2026-07-29 — D011.)* Demonstrating **measured effect** — running the instrument
+  against real models and rewriting a skill because the evidence said so — is **spec 023's** goal,
+  not this one's. This feature ends with a working, tested, documented instrument and zero
+  behavioural evidence, which is the honest state and is recorded as a risk in D011.
 
 ## Non-goals
 
-- **Not all 61 skills.** The behavioural harness is applied to the 9 mindset skills in this
-  feature. The ~40 stack/domain reviewer skills are reference-shaped, have weak incentive to be
-  bypassed, and are deliberately out of scope.
+- **No live sweep, and no evidence-driven skill rewrite** (narrowed 2026-07-29 — D011). This
+  feature delivers the **instrument**: the static lint, the harness, its two test suites, the
+  documented method and the contribution gate. *Running* it against real models to produce
+  committed evidence, and rewriting a skill from that evidence, are spec 023. Two sweeps were run
+  and both were discarded (D009, D010); a third cannot start until the scenario form is settled,
+  and the instrument should not stay unclosed waiting on it.
+- **Not all 61 skills.** The scenario corpus targets the 9 mindset skills. The ~40 stack/domain
+  reviewer skills are reference-shaped, have weak incentive to be bypassed, and are deliberately
+  out of scope.
 - **No behavioural test in CI.** Model calls are non-deterministic, token-costly and
   network-dependent; gating `main` on them would make the build flaky and expensive. Only the
-  static lint runs in CI; the harness is run by hand and its results are committed as dated
-  evidence.
+  static lint runs in CI; the harness is run by hand, and when it is run for real (spec 023) its
+  results are committed as dated evidence. `scripts/skill-eval.test.sh` is deterministic and
+  model-free but is **also** not in CI — `.github/` is out of scope by FR-010, so it stays a
+  local gate listed in `CONTRIBUTING.md` until a follow-up wires it in.
 - **No mass rewrite to a `Use when …` description convention.** All 61 descriptions currently
   use this repo's imperative style; superpowers' `Use when` prefix is a house convention with no
   evidence attached, unlike the no-workflow-summary rule, which has a recorded failure case. Only
@@ -84,7 +96,9 @@ judgement alone, and each one is a standing per-session context cost whether or 
 - **CI** (`.github/workflows/consistency.yml`) — runs the static lint on every push to `main`
   and every PR.
 - **The reviewer of a PR** touching skill prose — reads the committed eval results instead of
-  taking the author's word.
+  taking the author's word. *This role only becomes real once spec 023 delivers a valid corpus;
+  until then the contribution gate can be satisfied but the evidence it produces is not
+  trustworthy — see T025.*
 - Indirectly, every model that loads these skills at session start.
 
 ## Current behavior
@@ -92,9 +106,11 @@ judgement alone, and each one is a standing per-session context cost whether or 
 - `scripts/check-consistency.sh` enforces FR-001..FR-012 of spec 007 (profiles/artifacts/hook
   wiring/README counts). It never opens a `SKILL.md` frontmatter `description`, and never
   measures a `SKILL.md` body.
-- Description lengths range from ~60 to 524 characters with no cap; `sdd-guardrails` (524) and
-  `sdd-orchestrate` (492) both exceed 400.
-- `SKILL.md` bodies range from ~100 to **1.559 lines** (`graphify`), with no cap and no rule
+- Description lengths range from 86 to 522 characters with no cap; **three** exceed 400 —
+  `sdd-guardrails` (522), `sdd-orchestrate` (490) and `event-driven-reviewer` (418). *(Figures
+  re-measured in T001 with a real frontmatter parser; the drafting estimates of "two, 524/492"
+  came from a first-line `awk` that did not strip YAML quotes — D007.)*
+- `SKILL.md` bodies range from 60 to **1.559 lines** (`graphify`), with no cap and no rule
   pushing heavy reference into sibling files — despite that pattern already existing in the repo
   (`docs/_templates/`, `adapters/codex/prompts/`).
 - There is no eval harness, no scenario corpus, no control-arm concept, and no place where a
@@ -111,9 +127,14 @@ judgement alone, and each one is a standing per-session context cost whether or 
   arms — **with** the skill and a **no-guidance control** — N times each, and writes a dated
   result file. A run where the control does not exhibit the failure is reported as
   **"nothing to fix"**, not as a pass.
-- Each of the 9 mindset skills has a committed scenario and a committed baseline result.
-- At least one mindset skill is rewritten in this feature because its measured result demanded
-  it, with the before/after evidence committed alongside.
+- The scenario **format** is defined and documented in `evals/README.md`, including the
+  self-contained rule D010 established, and the 9 mindset skills have format-conformant scenario
+  files on disk — marked superseded, as spec 023's starting point rather than as evidence.
+- The harness's contract — result-file shape, all three refusals, all five cascade verdicts, and
+  leaving `skills/` untouched — is verified by `scripts/skill-eval.test.sh` against a stub runner,
+  with no model call.
+- *(Moved to spec 023 — D011.)* Committed baseline results for the 9 skills, and at least one
+  skill rewritten because its measured result demanded it.
 - `CONTRIBUTING.md` requires eval evidence for changes to discipline/mindset skill content.
 
 ## Functional requirements
@@ -137,20 +158,25 @@ judgement alone, and each one is a standing per-session context cost whether or 
   committed scenario in a **control arm** (scenario only) and a **treatment arm** (scenario +
   the skill's full `SKILL.md`); defaults to **5 reps per arm**; writes every raw response and a
   per-arm tally to a single result file; never mutates any file under `skills/`.
-- **FR-004:** A scenario corpus lives at `evals/scenarios/<skill>.md`, one file per skill,
-  each containing: the failure being tested, the system-prompt context, the user message, and the
-  observable criterion by which a response counts as exhibiting the failure. Scenarios exist for
-  all **9** mindset skills.
+- **FR-004:** *(Moved to spec 023 — D011.)* The scenario corpus's **format** is defined here and
+  documented in `evals/README.md`: each `evals/scenarios/<skill>.md` states the failure being
+  tested, the system-prompt context, the user message, the observable criterion, and the detection
+  pattern. Producing a **valid** corpus for the 9 mindset skills is spec 023's requirement — the
+  nine files on disk are format-conformant but substantively invalid (D010) and are 023's starting
+  point, not this feature's deliverable.
 - **FR-005:** The harness enforces the control-arm rule: if the control arm does not exhibit the
   failure in at least **2 of 5** reps, the result file is marked `NO-BASELINE-FAILURE` and the
   finding is that the skill has no demonstrated problem to solve — the treatment arm result must
   not be reported as success.
-- **FR-006:** Results are committed at `evals/results/<skill>-<YYYY-MM-DD>.md` and include the
-  model identifier, rep count, both arms' tallies, and a one-line verdict. Every flagged match is
-  marked as manually read or not — automated counts alone are not accepted as the verdict.
-- **FR-007:** At least one of the 9 mindset skills is **rewritten as a consequence of its result**
-  (form changed, guidance removed, or skill retired), with the before result, the change, and the
-  after result all committed.
+- **FR-006:** The harness writes results to `evals/results/<skill>-<YYYY-MM-DD>.md` containing the
+  model identifier, rep count, both arms' tallies, and a one-line verdict, and refuses to run at
+  all when no model identifier can be determined. Every flagged match is marked as manually read
+  or not — automated counts alone are not accepted as the verdict. *(The file **contract** is this
+  feature's requirement and is verified by `scripts/skill-eval.test.sh`. Committing real results
+  from a live sweep moves to spec 023 — D011.)*
+- **FR-007:** *(Moved to spec 023 — D011.)* Rewriting at least one mindset skill as a consequence
+  of its measured result requires a valid sweep, which requires the scenario rewrite D010
+  specifies. It cannot be satisfied by anything in this feature's scope.
 - **FR-008:** `CONTRIBUTING.md` states that a PR changing the content of a discipline or mindset
   skill must include an `evals/results/` file produced after the change.
 - **FR-009:** `.github/workflows/consistency.yml` runs the extended checker unchanged in
@@ -192,9 +218,14 @@ None. Markdown and shell only.
 - **Control arm shows no failure.** The skill is solving a problem the model does not have.
   Reported as `NO-BASELINE-FAILURE` (FR-005), and the honest follow-up is retirement, not a
   rewrite — retirement itself stays out of scope here (Non-goals) and becomes a follow-up spec.
-- **Non-deterministic split result** (e.g. 3/5 vs 2/5). Treated as *not binding*: per
-  superpowers' finding, variance is itself the metric — when guidance lands, reps converge.
-  A split result is recorded as `INCONCLUSIVE`, never rounded up to a pass.
+- **Non-deterministic split result** (e.g. control 3/5, treatment 2/5). Treated as *not binding*:
+  variance is itself the metric — when guidance lands, reps converge. Such a result is recorded as
+  `INCONCLUSIVE`, never rounded up to a pass. The implemented cascade resolves the neighbouring
+  cases explicitly, in this order (T016/T018): treatment **above** control is `HARMFUL` — reported
+  first, even with no baseline, because a skill making things worse is the most important thing
+  the harness can surface; then a control below the 2-of-5 floor is `NO-BASELINE-FAILURE`; then
+  treatment at zero is `EFFECTIVE`; then treatment **equal to** control is `INEFFECTIVE`; and only
+  treatment strictly between zero and control is `INCONCLUSIVE`.
 - **A skill whose failure only appears across multiple turns** (`stopper`, `communicator` may
   qualify). Single-turn scenarios cannot reach it; the scenario file must say so explicitly rather
   than substituting a weaker single-turn proxy and calling it covered.
@@ -217,20 +248,25 @@ None. Markdown and shell only.
 - **AC-002:** On the real repository after FR-002, `bash scripts/check-consistency.sh` exits 0
   with no `[SKILL-FORM]` findings; `skills/graphify/SKILL.md` is at most 600 lines, its
   description carries no arrow chain, and every section removed from it is reachable from a
-  linked sibling file. `git diff --name-only` under `skills/` lists only `sdd-guardrails`,
-  `sdd-orchestrate`, `event-driven-reviewer` and `graphify` (plus the one skill rewritten by
-  AC-006). Every spec-021 negative-trigger clause present before the change is still present
-  after it. (FR-001, FR-002)
-- **AC-003:** `bash scripts/skill-eval.sh verifier --reps 5` produces a result file containing
-  both arms, 5 reps each, the model identifier, and a verdict line; `git status` shows no
-  modification under `skills/`. (FR-003, FR-006)
-- **AC-004:** `evals/scenarios/` contains one scenario for each of the 9 mindset skills, and each
-  states its failure, its user message, and its observable criterion. (FR-004)
-- **AC-005:** A scenario whose control arm passes fewer than 2 of 5 reps yields a result file
-  marked `NO-BASELINE-FAILURE`, and the harness does not emit a success verdict for that skill.
-  (FR-005)
-- **AC-006:** At least one mindset skill has two committed result files — one before and one
-  after a change to its content — showing the change was made in response to the first. (FR-007)
+  linked sibling file. `git diff --name-only` under `skills/` lists exactly four skills —
+  `sdd-guardrails`, `sdd-orchestrate`, `event-driven-reviewer` and `graphify` — and no others.
+  Every spec-021 negative-trigger clause present before the change is still present after it.
+  (FR-001, FR-002)
+- **AC-003:** `bash scripts/skill-eval.test.sh` passes, demonstrating with a stub runner that the
+  harness produces a result file carrying both arms, the requested reps, the model identifier and a
+  verdict line; that it refuses to run without a model identifier, without a scenario, or with an
+  output path resolving inside `skills/`; and that a run leaves `skills/` byte-identical.
+  *(Restated by D011: the original wording required one live `claude -p` run, whose artifact was
+  discarded as invalid. A stub suite verifies the same contract deterministically, in CI-able time,
+  and without a model.)* (FR-003, FR-006)
+- **AC-004:** *(Moved to spec 023 — D011.)* A valid scenario corpus for the 9 mindset skills. The
+  format is defined and documented here; the corpus is 023's deliverable.
+- **AC-005:** `scripts/skill-eval.test.sh` pins all five verdicts of the implemented cascade,
+  including that a control arm below the 2-of-5 floor yields `NO-BASELINE-FAILURE` and that
+  `HARMFUL` outranks it when treatment exceeds control. (FR-005)
+- **AC-006:** *(Moved to spec 023 — D011.)* At least one mindset skill rewritten in response to a
+  measured result, with before and after results committed. Unreachable here: it requires a valid
+  sweep, which requires D010's scenario rewrite.
 - **AC-007:** `CONTRIBUTING.md` contains the eval-evidence requirement for discipline/mindset
   skill changes. (FR-008)
 - **AC-008:** `bash scripts/check-consistency.test.sh` passes and covers the new class; `git
@@ -241,11 +277,13 @@ None. Markdown and shell only.
 
 - **Unit:** `scripts/check-consistency.test.sh` cases for each `[SKILL-FORM]` rule, mutating a
   temp copy of the repo (the harness already supports an explicit `repo_root` argument).
-- **Integration:** full `check-consistency.sh` run on the real tree (AC-002); one real
-  `skill-eval.sh` run against `verifier` (AC-003).
+- **Integration:** full `check-consistency.sh` run on the real tree (AC-002);
+  `scripts/skill-eval.test.sh` driving the harness end-to-end against a stub runner (AC-003,
+  AC-005).
 - **E2E:** N/A — no runtime product.
-- **Manual:** read every flagged match in each result file (FR-006 forbids accepting automated
-  counts as the verdict); read the extracted `graphify` siblings to confirm no content was lost.
+- **Manual:** read the extracted `graphify` siblings to confirm no content was lost. *(Reading
+  every flagged match in a result file remains the rule FR-006 states, but there are no live
+  results to read in this feature's scope — that manual pass belongs to spec 023's sweep.)*
 
 ## Assumptions
 
@@ -268,12 +306,14 @@ None. Markdown and shell only.
   (`claude -p --model <id>`, verified present at 2.1.220). No vendored SDK, no API key required by
   the repo, no network code in repository code. The Codex runner ships as documentation only and
   is explicitly not claimed to work — `codex` is not installed here and no one has run it.
-- **OQ-2:** Are multi-turn pressure scenarios (superpowers' `drill`-style harness) worth a later
-  spec, given that `stopper` and `communicator` may not be reachable single-turn? Deferred by
-  Non-goals; revisit after the first sweep shows how many skills come back `INCONCLUSIVE`.
-- **OQ-3:** If a skill returns `NO-BASELINE-FAILURE`, retiring it changes `profiles.json` and the
-  README counts — out of scope here. Should a follow-up "skill retirement" spec be opened
-  pre-emptively, or only if the sweep actually produces one?
+- **OQ-2 — Transferred to spec 023 (D012).** Are multi-turn pressure scenarios (superpowers'
+  `drill`-style harness) worth a later spec, given that `stopper` and `communicator` may not be
+  reachable single-turn? Its trigger — how many skills come back `INCONCLUSIVE` — is produced by
+  023's sweep, so it cannot be answered here and must not be closed here.
+- **OQ-3 — Transferred to spec 023 (D012).** If a skill returns `NO-BASELINE-FAILURE`, retiring it
+  changes `profiles.json` and the README counts. Should a follow-up "skill retirement" spec be
+  opened pre-emptively, or only if a sweep actually produces one? Same reason: the trigger is a
+  sweep result.
 - **OQ-4:** Should `agents/*.md` contracts be covered by the same lint and harness? They are
   behaviour-shaping prose with the same properties, and spec 021's FR-004 already had to widen to
   all write-capable agents mid-flight. Excluded here to keep scope bounded (FR-010).
