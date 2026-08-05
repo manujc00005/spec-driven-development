@@ -2,8 +2,12 @@
 
 > Copy this template into your project as `docs/DEPLOYMENT.md` and fill it in.
 > Claude Code reads this to understand how the application is built, packaged,
-> deployed, and rolled back. Essential for /kubernetes-deployment-reviewer and
-> /spec-implement when changes touch infrastructure or deployment configs.
+> deployed, and rolled back. Essential for /deployment-review, /container-review
+> and /spec-implement when changes touch infrastructure or deployment configs.
+>
+> This file describes the deployment **topology** — what gets built, where it runs.
+> The ordered procedure for actually deploying belongs in `docs/RUNBOOK.md`
+> (see `RUNBOOK.md` in this directory); keeping the two apart is deliberate.
 
 ## Build and packaging
 

@@ -11,6 +11,69 @@ under `specs/features/` — the framework is developed with its own workflow.
 
 ## [Unreleased]
 
+Spec 024 · Delivery-operations profile — the first coverage of what happens after merge.
+
+### Added
+
+- **`delivery-operations` profile** (8th profile) — reviews how code reaches a machine and stays
+  alive there. Optional overlay, combinable with any stack profile:
+  `--profile next-prisma-web,delivery-operations`.
+- **`/deployment-review`** — the deploy *procedure*: step ordering and stated prerequisites,
+  idempotency and what a re-run does after a partial failure, converge vs first boot, rollback
+  including the point of no return, secret placement (`ps` exposure, world-readable windows,
+  fail-closed vs silent degradation), and **procedure fragmentation as a High-severity finding** —
+  an ordered procedure that exists in three documents and in full in none cannot be followed.
+- **`/container-review`** — Dockerfile and Compose: image pinning, running as root, healthcheck
+  semantics, volume lifecycle (what `down -v` destroys), build-arg secrets surviving in image
+  history, multi-stage inheritance, and **port binding as the real perimeter** — Docker inserts
+  iptables rules ahead of the host firewall, so a `ufw` rule is not evidence a published port is
+  closed.
+- **`/pipeline-review`** — what a pipeline actually verifies versus what its job names imply. The
+  canonical case: `lint` + `typecheck` + `test` with no build, on a project whose deployable *is* a
+  build. Also gating vs reporting, migration-drift detection, secret exposure in logs and
+  `pull_request_target`-shaped triggers, artifact provenance, and cache keys that serve stale
+  artifacts.
+- **`/release-readiness`** — a Go/No-go gate, not a review. Records every precondition as
+  *rehearsed* / *written but untested* / *absent*, where "written but untested" never counts as
+  satisfied and an undated "yes" is downgraded. Asks whether the rollback was **executed**, the
+  restore **rehearsed**, and whether anything would surface a *silent* failure.
+- **`docs/_templates/RUNBOOK.md`** — gives the ordered deploy procedure a single home, with dated
+  last-followed/last-rehearsed lines that feed `/release-readiness` directly, plus a
+  **known counter-intuitive details** section for the knowledge that dies when undocumented.
+- `review-all` now detects **Deployment by artifact presence, not spec wording**, and routes to the
+  three artifact reviewers. Verified both ways against scratch fixtures: it fires on a repository
+  with a Dockerfile and a workflow, and stays silent on one with neither.
+
+### Fixed
+
+- **`kubernetes-deployment-reviewer` was referenced in shipped artifacts and never existed.**
+  `skills/spring-security-reviewer/SKILL.md` handed off to it and `docs/_templates/DEPLOYMENT.md`
+  told users to run it. Both repointed; the Kubernetes gap is now named honestly rather than
+  promised.
+- Six unguarded "61 skills" claims in `docs/AGENTIC_ROUTING.md`, `adapters/README.md`,
+  `adapters/claude/README.md`, `adapters/codex/prompts/README.md` and `adapters/codex/PARITY.md`.
+  `check-consistency.sh` guards count claims only inside `README.md`, so these had no gate —
+  extending the checker is recorded as a follow-up (spec 024 OQ-5).
+
+### Not shipped, deliberately
+
+- **`rightsizing-advisor` — the eval said no.** The planned mindset counterweight was written, then
+  measured with `scripts/skill-eval.sh` per `CONTRIBUTING.md`: **control 0/5** on
+  `claude-sonnet-5`, verdict `NO-BASELINE-FAILURE`. Every control rep declined the unjustified
+  Kubernetes upgrade unprompted, so the skill had no demonstrated problem to solve. It moved to
+  `plannedSkills`; the scenario and result are committed
+  (`evals/results/rightsizing-advisor-2026-08-05.md`). This is spec 022's harness used for a real
+  decision for the first time — and it changed the outcome.
+- **`iac-review` and `kubernetes-review`** — declared `plannedSkills`. Neither had an evidence base
+  in this feature, and a Kubernetes reviewer in the profile's first release would read as an
+  endorsement regardless of wording. The four shipped reviewers state plainly that IaC state
+  semantics and manifest semantics are covered by no shipped skill.
+
+### Counts
+
+Skills 61 → 65 · Profiles 7 → 8 · Templates 22 → 23 · Agents 8 (unchanged, no new agent) ·
+Hook families 12 (unchanged).
+
 Specs 016–021 · Installer hooks/lib fix, planned skills shipped, agentic routing layer,
 provider-adapter layer and a first Codex adapter, security-agent hardening, skill-routing
 and spec-status authority.

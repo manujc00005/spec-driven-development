@@ -48,6 +48,19 @@ Run a review section if the spec mentions:
 - **Backend**: services, controllers, business logic, repositories, background jobs
 - **Frontend**: UI components, screens, state management, forms, frontend flows
 
+**Deployment** is detected differently from the six above — **by artifact presence, not by spec
+wording.** Run the Deployment section if the diff or the repository contains any of:
+
+`Dockerfile*` · `Containerfile` · `docker-compose*.y*ml` / `compose*.y*ml` · `.github/workflows/**`
+· `.gitlab-ci.yml` · `Jenkinsfile` · `deploy*.sh` / `deploy*.ps1` · `Makefile` with a deploy target
+· `infra/**` · `k8s/**` · `*.tf` · `ansible/**` · `Procfile` · `fly.toml` · `*.service` (systemd)
+· a runbook or deployment document
+
+**If none of these is present, do not run the Deployment section.** List it under "Skipped
+reviews" with the reason "no deployment artifacts in this repository" and produce no deployment
+findings. A spec that merely mentions deploying, shipping or releasing is **not** a trigger — the
+artifact is. Firing on a project that has none is a defect, not a harmless extra.
+
 ## Stack-specific reviewer routing
 
 After the generic checklists, route to the specialized reviewers below when their skill is
@@ -68,6 +81,13 @@ installed and their condition matches. Do not inline their checklists here — i
 | `/prisma-migration-reviewer` | diff touches `prisma/schema*` or `prisma/migrations/` |
 | `/nextjs-server-actions-reviewer` | diff touches `"use server"` files or App Router route handlers |
 | `/seo-review` + siblings (`/aeo-review`, `/geo-review`, `/ai-visibility-review`) | public pages changed — each only if contracted in `specs/SERVICES.md` (uncontracted → upsell entry, skip) |
+| `/deployment-review` | a deploy **procedure** exists — a deploy script, runbook, `infra/` document, provisioning/bootstrap step, systemd unit, backup/restore script, or deploy steps inlined in a workflow. **A Dockerfile and a test-only pipeline are not a procedure — do not route here for them** |
+| `/container-review` | a `Dockerfile`, `Containerfile` or Compose file is present or changed |
+| `/pipeline-review` | CI/CD configuration is present or changed — `.github/workflows/**`, `.gitlab-ci.yml`, `Jenkinsfile` |
+
+`/release-readiness` is **not** routed from here. It is a release gate, not a diff review: it asks
+what was rehearsed rather than what a diff contains, and it is run once before a release. Invoke it
+directly.
 
 ## Review process
 
@@ -122,6 +142,24 @@ Apply only the sections that are detected as needed.
 - No hardcoded secrets or environment-specific values.
 - Dependencies injected, not hardcoded.
 
+### Deployment checklist
+
+Run only when the artifact-presence rule above matched. Do not inline the specialized reviewers'
+full checklists — this is the triage pass; route to them for depth.
+
+- Deploy steps are ordered, state their preconditions, and say what a re-run does after a partial
+  failure.
+- The ordered procedure lives in **one** document, not scattered across several.
+- A rollback path exists and covers data, not only the application.
+- Secrets are placed in files with stated permissions — not in process arguments, build args, or
+  committed Compose `environment:` blocks.
+- Container images are pinned; published ports are bound deliberately (a published port bypasses
+  the host firewall on Linux).
+- Containers do not run as root without a stated reason.
+- CI actually **builds** what the project deploys — not only lint/typecheck/test — and the checks
+  that matter are gating, not merely reporting.
+- Migrations are gated on a schema-drift check before they run against a real database.
+
 ### Frontend checklist
 - Loading, error, and empty states all handled per spec.
 - No unnecessary re-renders (missing memoization, unstable refs).
@@ -147,7 +185,7 @@ For each finding (grouped by severity, not by review type):
 
 **Critical / High / Medium / Low**
 - Location: `file.ts:line`
-- Type: Database | Security | Performance | API | Backend | Frontend
+- Type: Database | Security | Performance | API | Backend | Frontend | Deployment
 - Issue:
 - Fix:
 

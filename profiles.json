@@ -272,6 +272,42 @@
       "plannedTemplates": [],
       "note": "Overlay profile, not an automatic addition to next-prisma-web. Ships the full SEO family: seo-review (technical on-page SEO + hreflang), aeo-review (answer extraction), geo-review (generative-engine citability), and ai-visibility-review (AI-crawler access policy) — the three reviewers planned in specs/features/008-billable-service-scope DECISIONS D006 were implemented by spec 017. Every skill in this profile is gated on the service being contracted in specs/SERVICES.md (uncontracted runs log an upsell and stop). Install alongside the web profile with the client's contracted services declared in specs/SERVICES.md: '--profile next-prisma-web,seo-geo-addon' (install.sh) or '-Profile next-prisma-web,seo-geo-addon' (install.ps1)."
     },
+    "delivery-operations": {
+      "description": "Deployment procedures, containers (Docker/Compose), CI/CD pipelines, release gating and infrastructure rightsizing. Reviews how code reaches a machine and stays alive there.",
+      "default": false,
+      "skills": [
+        "deployment-review",
+        "container-review",
+        "pipeline-review",
+        "release-readiness"
+      ],
+      "plannedSkills": [
+        "iac-review",
+        "kubernetes-review",
+        "rightsizing-advisor"
+      ],
+      "agentRouting": {
+        "domain-reviewer": {
+          "skills": [
+            "deployment-review",
+            "container-review",
+            "pipeline-review",
+            "release-readiness"
+          ],
+          "note": "All four are also consumed by security-reviewer (secondary) — secret placement in deployment artifacts, port publication as a perimeter decision, and secret exposure in CI logs are security findings. See each skill's SDD Contract secondary_agents."
+        }
+      },
+      "hooks": [],
+      "plannedHooks": [
+        "deploy-artifact-reminder"
+      ],
+      "templates": [
+        "RUNBOOK.md",
+        "DEPLOYMENT.md"
+      ],
+      "plannedTemplates": [],
+      "note": "Overlay profile (spec 024). Combines with any stack profile: '--profile next-prisma-web,delivery-operations' (install.sh) or '-Profile next-prisma-web,delivery-operations' (install.ps1). Ships four artifact/gate reviewers. No skill in this profile may treat orchestration as a maturity milestone (spec 024 NFR); that constraint is carried by each reviewer's own 'infrastructure weight is not this skill's business' section, since the rightsizing-advisor mindset skill was NOT shipped. iac-review (Terraform/Pulumi/Ansible state, drift, destructive plans) and kubernetes-review (manifests/Helm: probes, limits, securityContext, RBAC, PDBs) are declared PLANNED, not shipped: this feature had no IaC or Kubernetes evidence base to write them from, and shipping a Kubernetes reviewer in the profile's first release would read as an endorsement regardless of wording — see specs/features/024-delivery-operations-profile/DECISIONS.md D004 and D005. kubernetes-review supersedes the never-shipped 'kubernetes-deployment-reviewer' that docs/ROADMAP_JAVA_SPRING_CONTEXT.md still lists under the old name. rightsizing-advisor is PLANNED, not shipped: its eval returned NO-BASELINE-FAILURE (control 0/5 on claude-sonnet-5, evals/results/rightsizing-advisor-2026-08-05.md), so under spec 024 FR-011 it must not ship unproven — see D013."
+    },
     "blockchain-crypto": {
       "description": "On-chain/wallet/transaction reviews. DISABLED BY DEFAULT.",
       "default": false,

@@ -116,5 +116,9 @@ annotations, Vault integration, and actuator endpoint exposure.
 
 - Does not review general OWASP vulnerabilities (that's `security-review`).
 - Does not review API contracts (that's `spring-boot-api-reviewer`).
-- Does not review network/infrastructure security (that's `kubernetes-deployment-reviewer`, Phase 3).
+- Does not review container or deployment security — image posture, published ports, and secret
+  placement in deployment artifacts are `container-review` and `deployment-review`
+  (`delivery-operations` profile). Kubernetes manifest semantics (RBAC, `securityContext`, network
+  policy) are not covered by any shipped skill; `kubernetes-review` is declared in that profile's
+  `plannedSkills`.
 - Does not modify code or configuration.
