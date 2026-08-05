@@ -696,7 +696,7 @@ Counted from this repository, not aspirational:
 | Project-context templates | **<!-- count:docs-templates-total -->11<!-- /count -->** | `docs/_templates/` |
 | Agents | **<!-- count:agents-total -->8<!-- /count -->** | 6 lifecycle agents (`codebase-researcher`, `solution-architect`, `implementer`, `security-reviewer`, `domain-reviewer`, `final-conformance-reviewer`) + 2 model-tier agents (`deep-reasoner` Opus read-only, `fast-worker` Sonnet bounded) — see [`agents/README.md`](agents/README.md) |
 | Profiles | **<!-- count:profiles-total -->8<!-- /count -->** | `core`, `java-spring-backend` (default), `messaging-event-driven`, `next-prisma-web`, `seo-geo-addon` (billable overlay), `payments-fintech` (payments overlay), `delivery-operations` (deploy/containers/CI overlay), `blockchain-crypto` (disabled) |
-| Docs | **6 guides** | `INSTALL.md`, `SDD-ORCHESTRATION.md`, `AGENTIC_ROUTING.md`, `PROVIDER_ADAPTERS.md`, `WORKSPACE_SDD.md`, `hooks/README.md` + per-directory READMEs |
+| Docs | **7 guides** | `INSTALL.md`, `SDD-ORCHESTRATION.md`, `AGENTIC_ROUTING.md`, `PROVIDER_ADAPTERS.md`, `TOKEN_ECONOMY.md`, `WORKSPACE_SDD.md`, `hooks/README.md` + per-directory READMEs |
 | Installers | **4 scripts** | `install.ps1/.sh`, `link-project.ps1/.sh` — dry-run, backups, profile-aware |
 | Provider adapters | **2** | Claude Code (primary, shipped — the repo root) + Codex (prompt-based, copy-only installer, unverified against a live CLI). See [`adapters/README.md`](adapters/README.md) |
 
