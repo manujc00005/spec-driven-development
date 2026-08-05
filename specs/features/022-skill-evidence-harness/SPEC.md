@@ -2,7 +2,7 @@
 
 ## Status
 
-In Review
+Done
 
 ## Problem
 
@@ -306,17 +306,17 @@ None. Markdown and shell only.
   (`claude -p --model <id>`, verified present at 2.1.220). No vendored SDK, no API key required by
   the repo, no network code in repository code. The Codex runner ships as documentation only and
   is explicitly not claimed to work — `codex` is not installed here and no one has run it.
-- **OQ-2 — Transferred to spec 023 (D012).** Are multi-turn pressure scenarios (superpowers'
-  `drill`-style harness) worth a later spec, given that `stopper` and `communicator` may not be
-  reachable single-turn? Its trigger — how many skills come back `INCONCLUSIVE` — is produced by
-  023's sweep, so it cannot be answered here and must not be closed here.
-- **OQ-3 — Transferred to spec 023 (D012).** If a skill returns `NO-BASELINE-FAILURE`, retiring it
-  changes `profiles.json` and the README counts. Should a follow-up "skill retirement" spec be
-  opened pre-emptively, or only if a sweep actually produces one? Same reason: the trigger is a
-  sweep result.
-- **OQ-4:** Should `agents/*.md` contracts be covered by the same lint and harness? They are
-  behaviour-shaping prose with the same properties, and spec 021's FR-004 already had to widen to
-  all write-capable agents mid-flight. Excluded here to keep scope bounded (FR-010).
+- **OQ-2 — Deferred, transferred to spec 023 (D012).** Are multi-turn pressure scenarios
+  (superpowers' `drill`-style harness) worth a later spec, given that `stopper` and `communicator`
+  may not be reachable single-turn? Its trigger — how many skills come back `INCONCLUSIVE` — is
+  produced by 023's sweep, so it cannot be answered here.
+- **OQ-3 — Deferred, transferred to spec 023 (D012).** If a skill returns `NO-BASELINE-FAILURE`,
+  retiring it changes `profiles.json` and the README counts. Should a follow-up "skill retirement"
+  spec be opened pre-emptively, or only if a sweep actually produces one? Same reason: the trigger
+  is a sweep result.
+- **OQ-4 — Deferred, not transferred.** Should `agents/*.md` contracts be covered by the same lint
+  and harness? Excluded here to keep scope bounded (FR-010); left for a future spec to pick up
+  since it needs its own scoping, not spec 023's (023 is about the sweep, not the lint's reach).
 
 ## Contracted services
 
