@@ -2,7 +2,7 @@
 
 ## Status
 
-Ready
+Done
 
 > **Numbering note.** This feature was requested as `024`. `024` was already taken by
 > `specs/features/024-delivery-operations-profile/` (in flight at the time of writing), so this
@@ -318,14 +318,19 @@ None. `profiles.json` gains one entry in the existing `core.skills` array; its s
 
 ## Open questions
 
-- **OQ-1** *(non-blocking)* — Should `.sdd-workspace/` eventually be installable via a
-  `scripts/setup-workspace.sh`, mirroring `setup-graphify.sh`? Deferred; the flow writes the files
-  itself today.
-- **OQ-2** *(non-blocking)* — Should a dedicated `workspace-researcher` agent own this flow instead
-  of routing it through `codebase-researcher` in workspace mode? Named as a future phase in D013;
-  no agent is created here.
-- **OQ-3** *(non-blocking)* — Should `check-consistency.sh` validate a *user's* `.sdd-workspace/`
-  tree? No — this repo ships the framework, not a workspace. Out of scope.
+- **OQ-1** *(non-blocking)* — **Deferred.** Should `.sdd-workspace/` eventually be installable via a
+  `scripts/setup-workspace.sh`, mirroring `setup-graphify.sh`? The flow writes the files itself
+  today. D014 raises the stakes: the installer is where this feature's one real defect lived, so a
+  dedicated setup script would need its own install-time verification, not just CI.
+- **OQ-2** *(non-blocking)* — **Deferred.** Should a dedicated `workspace-researcher` agent own this
+  flow instead of routing it through `codebase-researcher` in workspace mode? D013 keeps it a future
+  phase; no agent was created. Revisit once the flow has actually been run.
+- **OQ-3** *(non-blocking)* — **Resolved: no.** `check-consistency.sh` does not validate a *user's*
+  `.sdd-workspace/` tree. This repo ships the framework, not a workspace.
+- **OQ-4** *(raised at close, non-blocking)* — **Deferred.** The flow has never been executed against
+  a real workspace, so AC-016 (token minimisation) is an argued design property, not a measured one.
+  The eval gate does not apply (`category: lifecycle`, not `mindset`), so nothing forces this. First
+  real run should record what it actually cost.
 
 ## Contracted services
 

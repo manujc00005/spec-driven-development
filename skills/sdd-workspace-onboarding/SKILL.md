@@ -82,6 +82,9 @@ others may consume**, **what it appears to consume**.
 
 **Graphify handling**
 
+Graphify is an **optional external tool, adopted per project**. A workspace where no project has it
+onboards fine — the map is smaller and says so. Its absence never blocks this flow.
+
 - Report present → use it. Note its date; if older than the project's newest source, mark **stale**
   and still use it for orientation.
 - Report missing → this project is in **fallback mode**. Say so in `PROJECTS.md`. If the user
@@ -174,11 +177,17 @@ Halt and ask rather than guess:
 - The user has not approved modifying a project (including a Graphify refresh inside it).
 - Two projects claim ownership of the same data.
 - A detected path is ambiguous — a project, or a subdirectory of one?
+- A later feature needs a project that its `IMPACT_MAP.md` does not list as affected. Halt, amend
+  the map, get it re-approved, then resume.
 
 ## Forbidden
 
 - **No implementation.** No application code, config or dependency change, in any project.
 - **No writes outside `.sdd-workspace/`**, except a user-approved Graphify context refresh.
+- **No project outside `IMPACT_MAP.md`.** Once cross-project work begins, only projects that map
+  lists as *affected* may be edited — everything else, including projects it lists as unaffected,
+  is read-only. Reading a non-affected project to understand a contract is expected; writing to one
+  is not.
 - **No `git add .`, no commit, no push** — workspace root or child project.
 - **No secrets.** Never read, copy, print or write `.env` files, tokens or keys. Names only.
 - **No `graph.json` load.**
