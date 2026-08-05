@@ -17,6 +17,7 @@ the same; only the packaging differs (a Codex prompt instead of a `SKILL.md` sla
 | `sdd-spec-review.md` | `skills/spec-review` + `qa-review` | Review the diff against SPEC/PLAN/TASKS. |
 | `sdd-spec-close.md` | `skills/spec-close` | Resolve open questions, confirm coverage, close. |
 | `sdd-guardrails.md` | `skills/sdd-guardrails` | Detect contradictions / obsolete plans before proceeding. |
+| `sdd-workspace-onboarding.md` | `skills/sdd-workspace-onboarding` | Map a folder of related projects into `.sdd-workspace/` before cross-project work. |
 
 ## Installing these as Codex prompts
 

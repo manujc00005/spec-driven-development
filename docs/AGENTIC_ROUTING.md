@@ -59,6 +59,15 @@ are in each agent's own file; this is the summary.
   making architectural or implementation decisions; treating a stale/absent graph as
   authoritative.
 - **When it runs:** first, before planning or review, on any medium-or-larger feature.
+- **Workspace mode:** when the session spans several related projects (see
+  [`WORKSPACE_SDD.md`](WORKSPACE_SDD.md)), the same agent widens its input in a fixed order and
+  stops as soon as the question is answered: **`.sdd-workspace/` documents first**
+  (`PROJECTS.md`, `DEPENDENCY_GRAPH.md`, `INTEGRATION_CONTRACTS.md`), **then each relevant
+  project's `.graphify/GRAPH_REPORT.md`**, **then bounded files** — manifests, README, API
+  descriptors, and finally only the implementation files a feature's `IMPACT_MAP.md` names. The
+  standing exclusions are unchanged and apply per project: no full-project reads, no wholesale
+  `graph.json` load, no cross-project grep without a hypothesis. Graphify remains per project;
+  the workspace layer is a separate, hand-maintained map of project-level edges.
 
 ### `solution-architect`
 

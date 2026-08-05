@@ -52,7 +52,8 @@
         "threat-modeler",
         "scout",
         "decomposer",
-        "root-causer"
+        "root-causer",
+        "sdd-workspace-onboarding"
       ],
       "plannedSkills": [],
       "agents": [

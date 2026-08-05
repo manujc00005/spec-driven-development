@@ -720,6 +720,140 @@ for skill_name in sorted(disk_skills):
 
 
 # ---------------------------------------------------------------------------
+# spec 025: Workspace SDD — artifact existence and claim guards.
+#
+# Two check families, both reported under the 'workspace' category:
+#
+#   * EXISTENCE — the guide, the skill, the ten workspace templates, and (only
+#     when adapters/codex/ exists) the Codex workspace prompt. A workspace layer
+#     with a missing template is a layer that silently stops working.
+#
+#   * CLAIMS — two assertions the whole design depends on must never appear in
+#     shipped prose: that Graphify is required, and that the raw graph file
+#     should be loaded. Both would invert a documented decision (spec 025
+#     D003/D006) while looking like ordinary text.
+#
+# The claim check is deliberately NOT a plain grep. `docs/AGENTIC_ROUTING.md`
+# already carries the *correct* prohibition ("`graph.json` should not be loaded
+# wholesale into context"), and blocking CI on prose that says the right thing
+# is worse than the drift being guarded against. So each document is split into
+# line-and-sentence units, and a match is suppressed when its own unit carries a
+# negator. This accepts FALSE NEGATIVES (a sufficiently convoluted affirmative
+# claim slips through) to avoid FALSE POSITIVES — the same trade-off spec 022
+# D006 made for the skill-form proxies.
+#
+# specs/** is deliberately out of scan scope: a spec has to be able to quote a
+# forbidden claim in order to forbid it.
+# ---------------------------------------------------------------------------
+WORKSPACE_TEMPLATES = (
+    "WORKSPACE_CONTEXT.md", "PROJECTS.md", "DEPENDENCY_GRAPH.md",
+    "INTEGRATION_CONTRACTS.md", "SHARED_DECISIONS.md", "WORKSPACE_GUARDRAILS.md",
+    "WORKSPACE_FEATURE_README.md", "IMPACT_MAP.md", "PROJECT_CHANGES.md",
+    "VALIDATION.md",
+)
+
+
+def require_workspace_file(rel, why):
+    if not os.path.isfile(os.path.join(repo_root, rel)):
+        err("workspace", rel, why)
+
+
+require_workspace_file("docs/WORKSPACE_SDD.md",
+                       "the Workspace SDD guide must exist (spec 025 FR-001)")
+require_workspace_file("skills/sdd-workspace-onboarding/SKILL.md",
+                       "the /sdd-workspace-onboarding flow must exist (spec 025 FR-002)")
+for _tpl in WORKSPACE_TEMPLATES:
+    require_workspace_file(
+        f"docs/_templates/workspace/{_tpl}",
+        "workspace template missing — /sdd-workspace-onboarding instantiates all ten (spec 025 FR-004)")
+
+# Provider parity: only demanded when the Codex adapter is actually present.
+if os.path.isdir(os.path.join(repo_root, "adapters", "codex")):
+    require_workspace_file(
+        "adapters/codex/prompts/sdd-workspace-onboarding.md",
+        "adapters/codex/ exists, so the workspace flow needs its Codex prompt counterpart (spec 025 FR-003)")
+
+CLAIM_PATTERNS = (
+    ("Graphify is optional (spec 025 D006) — it must never be described as required",
+     re.compile(r"\bgraphify\b[^.\n]{0,24}\b(?:required|mandatory|compulsory|obligatory)\b", re.I)),
+    ("Graphify is optional (spec 025 D006) — it must never be described as required",
+     re.compile(r"\brequires?\s+graphify\b", re.I)),
+    ("Graphify is optional (spec 025 D006) — it must never be described as required",
+     re.compile(r"\bgraphify\s+must\s+be\b", re.I)),
+    ("the raw graph file is never loaded wholesale (spec 025 D003) — use GRAPH_REPORT.md or a scoped query",
+     re.compile(r"\b(?:load|loads|loading|read|reads|reading|ingest|ingests|parse|parses|parsing|import|imports)\b[^.\n]{0,40}graph\.json", re.I)),
+    ("the raw graph file is never loaded wholesale (spec 025 D003) — use GRAPH_REPORT.md or a scoped query",
+     re.compile(r"graph\.json[^.\n]{0,40}\b(?:in full|wholesale|into context|in its entirety|entirely)\b", re.I)),
+)
+
+# A unit carrying any of these reads as a prohibition or a degradation note, not
+# as an instruction. Kept broad on purpose — see the false-negative trade-off above.
+NEGATOR_RE = re.compile(
+    r"\b(?:not|never|no|nor|n't|without|avoid|avoids|avoiding|defeat|defeats|"
+    r"forbidden|forbids|prohibited|prohibits|instead|rather|optional|optionally|"
+    r"degrade|degrades|refuse|refuses|skip|skips|exclude|excludes|excluding|"
+    r"unless|absent|missing)\b", re.I)
+
+SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?;])\s+")
+# Markdown in this repo is hard-wrapped at ~95 chars, so a sentence routinely
+# spans four source lines. Scanning line-by-line splits "reading the raw
+# graph.json file in full" away from the "defeats" that negates it, which is
+# exactly the false positive this design exists to avoid. So continuation lines
+# are re-joined into their block first; a new block starts at a blank line or at
+# a structural marker (heading, list item, quote, table row, fence).
+BLOCK_START_RE = re.compile(r"^(?:[-*+>|#]|\d+[.)]\s|```|~~~)")
+
+
+def text_blocks(text):
+    """Yield (first_line_number, unwrapped_block_text) for a markdown document."""
+    block, start = [], 0
+    for lineno, line in enumerate(text.split("\n"), 1):
+        stripped = line.strip()
+        if not stripped:
+            if block:
+                yield start, " ".join(block)
+            block, start = [], 0
+            continue
+        if not block or BLOCK_START_RE.match(stripped):
+            if block:
+                yield start, " ".join(block)
+            block, start = [stripped], lineno
+        else:
+            block.append(stripped)
+    if block:
+        yield start, " ".join(block)
+
+
+def claim_scan_files():
+    yield "README.md"
+    yield "CHANGELOG.md"
+    for base in ("docs", "adapters"):
+        for dirpath, _dirs, fnames in os.walk(os.path.join(repo_root, base)):
+            for fname in sorted(fnames):
+                if fname.endswith(".md"):
+                    yield os.path.relpath(os.path.join(dirpath, fname), repo_root)
+    if os.path.isdir(skills_dir):
+        for skill in sorted(disk_skills):
+            yield os.path.join("skills", skill, "SKILL.md")
+
+
+for _rel in claim_scan_files():
+    _text = file_text(_rel)
+    if _text is None:
+        continue
+    for _lineno, _block in text_blocks(_text):
+        for _unit in SENTENCE_SPLIT_RE.split(_block):
+            if not _unit.strip() or NEGATOR_RE.search(_unit):
+                continue
+            for _why, _pat in CLAIM_PATTERNS:
+                _m = _pat.search(_unit)
+                if _m:
+                    err("workspace-claim", f"{_rel}:{_lineno}",
+                        f"{_why} — found {_m.group(0)!r}")
+                    break
+
+
+# ---------------------------------------------------------------------------
 # Report
 # ---------------------------------------------------------------------------
 for e in sorted(errors):

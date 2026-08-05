@@ -11,9 +11,40 @@ under `specs/features/` — the framework is developed with its own workflow.
 
 ## [Unreleased]
 
+Spec 025 · Workspace SDD — the first coverage of what happens *between* projects.
 Spec 024 · Delivery-operations profile — the first coverage of what happens after merge.
 
 ### Added
+
+- **Workspace SDD design** ([`docs/WORKSPACE_SDD.md`](docs/WORKSPACE_SDD.md)) — a layer above
+  per-project SDD for features that cross repositories. Records what each project owns, how the
+  projects depend on each other and which contracts bind them, in a `.sdd-workspace/` tree at the
+  workspace root. Every relationship carries evidence and a closed-vocabulary confidence marker
+  (`Confirmed` / `Inferred - requires confirmation` / `Unknown - requires confirmation`), so an
+  inference is never recorded as a fact. Cross-project features start with an `IMPACT_MAP.md`, and
+  no project outside that map may be modified. Design and documentation only — no orchestration
+  code, no installer change, no new agent.
+- **`/sdd-workspace-onboarding`** — detects the projects in a workspace folder (by manifest and
+  structure, so monorepos and folders of clones both work), summarises each from bounded sources,
+  derives cross-project edges with cited evidence, and writes the `.sdd-workspace/` layer. Stops
+  for approval before reading deeply, and never writes inside a child project except a
+  user-approved Graphify refresh.
+- **Ten workspace templates** under [`docs/_templates/workspace/`](docs/_templates/workspace/) —
+  `WORKSPACE_CONTEXT`, `PROJECTS`, `DEPENDENCY_GRAPH`, `INTEGRATION_CONTRACTS`,
+  `SHARED_DECISIONS` (seeded with the D001–D010 baseline), `WORKSPACE_GUARDRAILS`,
+  `WORKSPACE_FEATURE_README`, `IMPACT_MAP`, `PROJECT_CHANGES`, `VALIDATION`.
+- **Graphify documented as a per-project accelerator for multi-project work** — the workspace layer
+  consumes each project's bounded `.graphify/GRAPH_REPORT.md` rather than reading repositories in
+  full, and never the raw graph file. There is no merged workspace-wide graph: a super-graph across
+  every repository would be larger than any single report and could not be consumed within a bounded
+  context. Graphify stays optional; its absence marks the context *partial* and never blocks.
+- **`sdd-workspace-onboarding.md` Codex prompt** ([`adapters/codex/prompts/`](adapters/codex/prompts/))
+  — the same procedure in prompt packaging, with no native-agent claim and no global configuration.
+- `scripts/check-consistency.sh` gains a **`workspace` check class**: the guide, the skill and all
+  ten templates must exist, the Codex workspace prompt must exist whenever `adapters/codex/` does,
+  and no shipped document may claim Graphify is required or instruct loading the graph file
+  wholesale. Claim detection is sentence-scoped with negator suppression, so existing correct
+  prohibitions stay clean — covered by a dedicated negative test.
 
 - **`delivery-operations` profile** (8th profile) — reviews how code reaches a machine and stays
   alive there. Optional overlay, combinable with any stack profile:

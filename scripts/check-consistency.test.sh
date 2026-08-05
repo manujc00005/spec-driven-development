@@ -343,6 +343,59 @@ else
   PASS=$((PASS + 1))
 fi
 
+# --- spec 025 FR-013/FR-014: Workspace SDD existence + claim guards ---------
+# Four positive cases (each new guard must actually fire) and one negative case
+# (the existing, correct prohibition in docs/AGENTIC_ROUTING.md must stay clean).
+# The negative case is the point of the whole design: a naive grep reports that
+# line, and blocking CI on prose that says the right thing is worse than the
+# drift being guarded against.
+
+dir="$(fresh_copy workspace-missing-guide)"
+rm -f "$dir/docs/WORKSPACE_SDD.md"
+assert_case "workspace-missing-guide" 1 "[workspace] docs/WORKSPACE_SDD.md" "$dir"
+
+dir="$(fresh_copy workspace-missing-impact-map-template)"
+rm -f "$dir/docs/_templates/workspace/IMPACT_MAP.md"
+assert_case "workspace-missing-impact-map-template" 1 "[workspace] docs/_templates/workspace/IMPACT_MAP.md" "$dir"
+
+dir="$(fresh_copy workspace-missing-skill)"
+rm -rf "$dir/skills/sdd-workspace-onboarding"
+# Also an orphan-free removal: the skill stays declared in profiles.json, so the
+# shipped-skill check fires too. Assert on the workspace-specific finding.
+assert_case "workspace-missing-skill" 1 "[workspace] skills/sdd-workspace-onboarding/SKILL.md" "$dir"
+
+dir="$(fresh_copy workspace-missing-codex-prompt)"
+rm -f "$dir/adapters/codex/prompts/sdd-workspace-onboarding.md"
+assert_case "workspace-missing-codex-prompt" 1 "[workspace] adapters/codex/prompts/sdd-workspace-onboarding.md" "$dir"
+
+dir="$(fresh_copy workspace-claim-graphify-required)"
+printf '\nGraphify is required before any review can run.\n' >> "$dir/docs/WORKSPACE_SDD.md"
+assert_case "workspace-claim-graphify-required" 1 "must never be described as required" "$dir"
+
+dir="$(fresh_copy workspace-claim-load-graph-json)"
+printf '\nAt session start, load the full .graphify/graph.json into context.\n' >> "$dir/docs/WORKSPACE_SDD.md"
+assert_case "workspace-claim-load-graph-json" 1 "never loaded wholesale" "$dir"
+
+# The claim guard must ignore specs/** — a spec has to quote a claim to forbid it.
+dir="$(fresh_copy workspace-claim-ignores-specs)"
+printf '\nGraphify is required and you must load the full graph.json into context.\n' \
+  >> "$dir/specs/features/025-workspace-sdd-graphify-onboarding/SPEC.md"
+assert_case "workspace-claim-ignores-specs" 0 "Consistency check passed" "$dir"
+
+# Negative case: the shipped, hard-wrapped prohibition in AGENTIC_ROUTING.md is
+# NOT a claim. Guards against a regression to line-scoped matching, which splits
+# "reading the raw graph.json file in full" from the "defeats" that negates it.
+dir="$(fresh_copy workspace-claim-negated-prose-is-clean)"
+out="$("$CHECKER" "$dir" 2>&1)"
+if grep -q "workspace-claim" <<< "$out"; then
+  echo "[FAIL] workspace-claim-negated-prose-is-clean: existing negated prose was reported as a claim"
+  echo "       output: $out"
+  FAIL=$((FAIL + 1))
+else
+  echo "[PASS] workspace-claim-negated-prose-is-clean"
+  PASS=$((PASS + 1))
+fi
+
 echo ""
 echo "$PASS passed, $FAIL failed."
 [ "$FAIL" -eq 0 ]
