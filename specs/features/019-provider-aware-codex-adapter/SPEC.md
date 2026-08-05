@@ -2,7 +2,7 @@
 
 ## Status
 
-In Review
+Done
 
 ## Problem
 
@@ -201,9 +201,9 @@ None. No schema, no `profiles.json` change.
 
 ## Open questions
 
-- **OQ-1:** Exact Codex custom-prompt directory and config schema on the current Codex release —
-  resolve by verifying against an installed Codex CLI before advertising the adapter as "verified".
-  Until then the adapter is labeled prompt-based/unverified.
+- **OQ-1 — Deferred.** Exact Codex custom-prompt directory and config schema on the current Codex
+  release — resolve by verifying against an installed Codex CLI before advertising the adapter as
+  "verified". Until then the adapter is labeled prompt-based/unverified.
 
 ## Contracted services
 
