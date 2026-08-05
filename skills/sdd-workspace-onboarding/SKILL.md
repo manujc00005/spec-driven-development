@@ -35,7 +35,7 @@ project in full.
 > **Graphify maps code-level dependencies. Workspace SDD maps project-level dependencies.**
 
 Doctrine, folder contract and rationale: [`docs/WORKSPACE_SDD.md`](../../docs/WORKSPACE_SDD.md).
-Templates for every output file: [`docs/_templates/workspace/`](../../docs/_templates/workspace/).
+Templates for every output file: [`docs/_templates/`](../../docs/_templates/).
 
 This skill writes **only** to `.sdd-workspace/` at the workspace root. It does not implement
 anything, in any project.

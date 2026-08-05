@@ -1,7 +1,7 @@
 # Decisions: Workspace SDD — Graphify-aware multi-project onboarding
 
 D001–D010 are the **workspace doctrine**: they ship verbatim as the baseline of
-`docs/_templates/workspace/SHARED_DECISIONS.md`, so every workspace a user onboards starts from
+`docs/_templates/WORKSPACE_SHARED_DECISIONS.md`, so every workspace a user onboards starts from
 them. D011–D013 are decisions about *this feature's* delivery and stay here.
 
 ## Decision log
@@ -257,3 +257,41 @@ even once would freeze a guess into `profiles.json` and `agents/`. `codebase-res
 owns bounded, graph-first research; a workspace is a wider input to the same job.
 
 **Consequences:** No change to `agents/**` or to any profile's `agents` array in this feature.
+
+---
+
+### D014 — Workspace templates are flat and `WORKSPACE_`-prefixed, not a subdirectory
+
+**Date:** 2026-08-05 · **Status:** Accepted (supersedes the original layout in T002–T004)
+
+**Context:** The ten templates originally shipped under `docs/_templates/workspace/`. That kept
+`templates-total` unchanged and sidestepped the `orphan-template` check, because
+`collect_templates()` enumerates files and never recurses. It passed CI on the first try.
+
+Running the install for real on 2026-08-05 showed what CI could not: `install.sh` copies templates
+**by name** from each profile's `templates` array and never recurses into a subdirectory either.
+The ten files existed in the repository and reached no adopter. The skill's own links
+(`../../docs/_templates/workspace/`) dangled in the installed copy.
+
+**Decision:** Flatten to `docs/_templates/WORKSPACE_*.md` and declare all ten in `profiles.json`
+`core.templates`. `WORKSPACE_CONTEXT.md`, `WORKSPACE_GUARDRAILS.md` and
+`WORKSPACE_FEATURE_README.md` keep their names; the other seven gain the prefix
+(`PROJECTS.md` → `WORKSPACE_PROJECTS.md`, and so on).
+
+**Reasoning:** The prefix is what makes flattening safe — `PROJECTS.md`, `VALIDATION.md` and
+`DECISIONS.md` would otherwise collide with, or be shadowed by, existing entries in
+`specs/_templates/` (which `has_template()` resolves first). Teaching `install.sh` to recurse was
+the alternative; it was rejected because the installer was out of bounds for this feature and
+because a flat, declared template is the convention every other template already follows.
+
+**Consequences:**
+
+- `templates-total` 23 → 33, `docs-templates-total` 11 → 21, `core.templates` 17 → 27. Markers and
+  badge updated by `check-consistency.sh --fix`.
+- The `orphan-template` check now covers these files, which is the real guard: a workspace template
+  that nobody declares is now a CI failure rather than a silent non-install.
+- The original subdirectory layout is gone; every reference in the guide, the skill, the Codex
+  prompt, the checker and its tests was repointed.
+- **The general lesson, worth more than the fix:** structural CI validated the repository's
+  self-consistency and said nothing about whether an adopter would receive the files. Passing
+  `check-consistency.sh` is not evidence that an install works.

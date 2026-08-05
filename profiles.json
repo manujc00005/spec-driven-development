@@ -93,7 +93,17 @@
         "TECH_STACK.md",
         "ARCHITECTURE.md",
         "GRAPHIFY.md",
-        "PROJECT_GRAPH.md"
+        "PROJECT_GRAPH.md",
+        "WORKSPACE_CONTEXT.md",
+        "WORKSPACE_PROJECTS.md",
+        "WORKSPACE_DEPENDENCY_GRAPH.md",
+        "WORKSPACE_INTEGRATION_CONTRACTS.md",
+        "WORKSPACE_SHARED_DECISIONS.md",
+        "WORKSPACE_GUARDRAILS.md",
+        "WORKSPACE_FEATURE_README.md",
+        "WORKSPACE_IMPACT_MAP.md",
+        "WORKSPACE_PROJECT_CHANGES.md",
+        "WORKSPACE_VALIDATION.md"
       ],
       "plannedTemplates": []
     },

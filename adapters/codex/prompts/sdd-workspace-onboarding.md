@@ -21,7 +21,7 @@ SDD. You produce a bounded, evidence-backed map of how those projects depend on 
 > Graphify maps code-level dependencies. Workspace SDD maps project-level dependencies.
 
 Full doctrine: [`../../../docs/WORKSPACE_SDD.md`](../../../docs/WORKSPACE_SDD.md).
-Output templates: [`../../../docs/_templates/workspace/`](../../../docs/_templates/workspace/).
+Output templates: [`../../../docs/_templates/`](../../../docs/_templates/).
 
 ## Inputs — confirm before starting
 

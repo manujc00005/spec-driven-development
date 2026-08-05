@@ -1,7 +1,7 @@
 # Dependency Graph
 
 > Template for `.sdd-workspace/DEPENDENCY_GRAPH.md`. **Project-level** edges only — this is not a
-> code graph. See [`../../WORKSPACE_SDD.md`](../../WORKSPACE_SDD.md).
+> code graph. See [`../WORKSPACE_SDD.md`](../WORKSPACE_SDD.md).
 
 **Last updated:** `YYYY-MM-DD`
 

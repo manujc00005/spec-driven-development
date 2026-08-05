@@ -1,7 +1,7 @@
 # Projects
 
 > Template for `.sdd-workspace/PROJECTS.md`. One row per detected project.
-> See [`../../WORKSPACE_SDD.md`](../../WORKSPACE_SDD.md).
+> See [`../WORKSPACE_SDD.md`](../WORKSPACE_SDD.md).
 
 **Last updated:** `YYYY-MM-DD`
 **Detection basis:** manifest and structure markers (not `.git` presence) — monorepo packages and

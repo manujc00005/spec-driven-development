@@ -1,7 +1,7 @@
 # Shared Decisions
 
 > Template for `.sdd-workspace/SHARED_DECISIONS.md`. Decisions that bind **every** project in the
-> workspace. See [`../../WORKSPACE_SDD.md`](../../WORKSPACE_SDD.md).
+> workspace. See [`../WORKSPACE_SDD.md`](../WORKSPACE_SDD.md).
 
 **Last updated:** `YYYY-MM-DD`
 

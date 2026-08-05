@@ -19,7 +19,7 @@ AI accelerates execution. SDD keeps delivery controlled through specs, plans, de
 
 ![Skills](https://img.shields.io/badge/skills-66-0969da)
 ![Hooks](https://img.shields.io/badge/hook%20families-12-bf3989)
-![Templates](https://img.shields.io/badge/templates-23-8250df)
+![Templates](https://img.shields.io/badge/templates-33-8250df)
 ![Agents](https://img.shields.io/badge/agents-8-1a7f37)
 ![Profiles](https://img.shields.io/badge/profiles-8-d4a72c)
 
@@ -101,7 +101,7 @@ flowchart TD
 
 > **Skills define how to do something. Agents are responsible for producing an outcome.**
 
-The primary **Claude Code adapter** packages **<!-- count:skills-total -->66<!-- /count --> skills**, **<!-- count:hook-families-total -->12<!-- /count --> hook families**, **<!-- count:templates-total -->23<!-- /count --> document templates**, and **<!-- count:agents-total -->8<!-- /count --> agent definitions** behind a profile-aware installer. A second, prompt-based **Codex adapter** ([`adapters/codex/`](adapters/codex/)) packages the same provider-neutral core as an `AGENTS.md` operating guide plus lifecycle prompts — honestly, with no hook/subagent/skill parity claimed. See [Provider adapters](#provider-adapters).
+The primary **Claude Code adapter** packages **<!-- count:skills-total -->66<!-- /count --> skills**, **<!-- count:hook-families-total -->12<!-- /count --> hook families**, **<!-- count:templates-total -->33<!-- /count --> document templates**, and **<!-- count:agents-total -->8<!-- /count --> agent definitions** behind a profile-aware installer. A second, prompt-based **Codex adapter** ([`adapters/codex/`](adapters/codex/)) packages the same provider-neutral core as an `AGENTS.md` operating guide plus lifecycle prompts — honestly, with no hook/subagent/skill parity claimed. See [Provider adapters](#provider-adapters).
 
 ## Agents and skills
 
@@ -398,7 +398,7 @@ Token cost is the reason the layer exists: **Graphify runs per project** (option
 
 > Graphify maps code-level dependencies. Workspace SDD maps project-level dependencies.
 
-Full guide: [`docs/WORKSPACE_SDD.md`](docs/WORKSPACE_SDD.md) · templates in [`docs/_templates/workspace/`](docs/_templates/workspace/).
+Full guide: [`docs/WORKSPACE_SDD.md`](docs/WORKSPACE_SDD.md) · templates in [`docs/_templates/`](docs/_templates/).
 
 ---
 
@@ -475,9 +475,10 @@ spec-driven-development/
 │   ├── AGENTIC_ROUTING.md         # lifecycle-agent reference: skills vs. agents, routing model
 │   ├── PROVIDER_ADAPTERS.md       # SDD Core vs. provider adapters — the provider-neutral/adapter boundary
 │   ├── ROADMAP_JAVA_SPRING_CONTEXT.md  # original phase-planning document (historical)
-│   └── _templates/                # 10 project-context doc templates (PROJECT_CONTEXT, TECH_STACK,
-│                                  #   ARCHITECTURE, TESTING, SECURITY, DEPLOYMENT, MESSAGING,
-│                                  #   MICROSERVICES_PATTERNS, GRAPHIFY, PROJECT_GRAPH)
+│   └── _templates/                # 21 project-context doc templates (PROJECT_CONTEXT, TECH_STACK,
+│                                  #   ARCHITECTURE, TESTING, SECURITY, DEPLOYMENT, RUNBOOK,
+│                                  #   MESSAGING, MICROSERVICES_PATTERNS, GRAPHIFY, PROJECT_GRAPH,
+│                                  #   + 10 WORKSPACE_* templates for the .sdd-workspace/ layer)
 ├── specs/
 │   ├── _templates/                # 12 SDD lifecycle templates (SPEC, PLAN, TASKS, DECISIONS,
 │   │                              #   CONSTITUTION, SERVICES, PR_DESCRIPTION, REVIEW_REPORT_TEMPLATE, …)
@@ -526,7 +527,7 @@ Profiles control which skills, hooks, templates, and agents get installed, decla
 
 | Profile | Status | What it adds |
 |---|---|---|
-| `core` | Always installed | Full SDD lifecycle, guardrails, generic reviews, orchestration (<!-- count:core-skills -->42<!-- /count --> skills, <!-- count:core-hooks -->6<!-- /count --> hooks, <!-- count:core-templates -->17<!-- /count --> templates, <!-- count:core-agents -->8<!-- /count --> agents) |
+| `core` | Always installed | Full SDD lifecycle, guardrails, generic reviews, orchestration (<!-- count:core-skills -->42<!-- /count --> skills, <!-- count:core-hooks -->6<!-- /count --> hooks, <!-- count:core-templates -->27<!-- /count --> templates, <!-- count:core-agents -->8<!-- /count --> agents) |
 | `java-spring-backend` | **Default** | <!-- count:java-spring-backend-skills -->8<!-- /count --> review skills (JPA/transactions, Spring REST, Spring Security, JVM performance, observability, database, API, backend), <!-- count:java-spring-backend-hooks -->3<!-- /count --> hooks, <!-- count:java-spring-backend-templates -->6<!-- /count --> context templates. Maven primary, Gradle fallback |
 | `messaging-event-driven` | Optional | `event-driven-reviewer` (Kafka/RabbitMQ/ActiveMQ, outbox, saga, DLQ) + `microservices-patterns-reviewer` (boundaries, resilience, contracts), <!-- count:messaging-event-driven-templates -->2<!-- /count --> templates |
 | `next-prisma-web` | Optional | Frontend/privacy/database reviews + `prisma-migration-reviewer` (generated-SQL safety) + `nextjs-server-actions-reviewer` (action = public endpoint) + `ts-check`/`eslint-fix`/`prettier-format` hooks (`prisma-migration-guard` hook still planned) |
@@ -693,7 +694,7 @@ Counted from this repository, not aspirational:
 | Skills | **<!-- count:skills-total -->66<!-- /count -->** | Every slash command referenced in this README has a `SKILL.md` in [`skills/`](skills/) |
 | Hook families | **<!-- count:hook-families-total -->12<!-- /count -->** (<!-- count:hook-scripts-total -->24<!-- /count --> scripts) | Each ships as a `.ps1` + `.sh` pair; shared bash JSON helper in `hooks/lib/` |
 | SDD lifecycle templates | **<!-- count:specs-templates-total -->12<!-- /count -->** | `specs/_templates/` |
-| Project-context templates | **<!-- count:docs-templates-total -->11<!-- /count -->** | `docs/_templates/` |
+| Project-context templates | **<!-- count:docs-templates-total -->21<!-- /count -->** | `docs/_templates/` |
 | Agents | **<!-- count:agents-total -->8<!-- /count -->** | 6 lifecycle agents (`codebase-researcher`, `solution-architect`, `implementer`, `security-reviewer`, `domain-reviewer`, `final-conformance-reviewer`) + 2 model-tier agents (`deep-reasoner` Opus read-only, `fast-worker` Sonnet bounded) — see [`agents/README.md`](agents/README.md) |
 | Profiles | **<!-- count:profiles-total -->8<!-- /count -->** | `core`, `java-spring-backend` (default), `messaging-event-driven`, `next-prisma-web`, `seo-geo-addon` (billable overlay), `payments-fintech` (payments overlay), `delivery-operations` (deploy/containers/CI overlay), `blockchain-crypto` (disabled) |
 | Docs | **7 guides** | `INSTALL.md`, `SDD-ORCHESTRATION.md`, `AGENTIC_ROUTING.md`, `PROVIDER_ADAPTERS.md`, `TOKEN_ECONOMY.md`, `WORKSPACE_SDD.md`, `hooks/README.md` + per-directory READMEs |

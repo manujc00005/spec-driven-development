@@ -355,8 +355,8 @@ rm -f "$dir/docs/WORKSPACE_SDD.md"
 assert_case "workspace-missing-guide" 1 "[workspace] docs/WORKSPACE_SDD.md" "$dir"
 
 dir="$(fresh_copy workspace-missing-impact-map-template)"
-rm -f "$dir/docs/_templates/workspace/IMPACT_MAP.md"
-assert_case "workspace-missing-impact-map-template" 1 "[workspace] docs/_templates/workspace/IMPACT_MAP.md" "$dir"
+rm -f "$dir/docs/_templates/WORKSPACE_IMPACT_MAP.md"
+assert_case "workspace-missing-impact-map-template" 1 "[workspace] docs/_templates/WORKSPACE_IMPACT_MAP.md" "$dir"
 
 dir="$(fresh_copy workspace-missing-skill)"
 rm -rf "$dir/skills/sdd-workspace-onboarding"

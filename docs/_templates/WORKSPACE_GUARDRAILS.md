@@ -1,7 +1,7 @@
 # Workspace Guardrails
 
 > Template for `.sdd-workspace/guardrails/WORKSPACE_GUARDRAILS.md`. The hard rules for any agent or
-> human working across this workspace. See [`../../../WORKSPACE_SDD.md`](../../../WORKSPACE_SDD.md).
+> human working across this workspace. See [`../WORKSPACE_SDD.md`](../WORKSPACE_SDD.md).
 
 These are not style preferences. Each one exists because breaking it has a known cost: an
 unbounded blast radius, a context bill that makes the workspace layer pointless, or a contract that

@@ -9,7 +9,7 @@ prompt-template edits — no application code, no installer logic, no telemetry.
 
 ## Related spec
 
-`specs/features/021-token-economy-principle/SPEC.md`
+`specs/features/026-token-economy-principle/SPEC.md`
 
 ## Context budget
 

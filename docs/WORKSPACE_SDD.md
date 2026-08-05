@@ -84,7 +84,7 @@ inside a project.
 ```
 
 Templates for every one of these files ship in
-[`_templates/workspace/`](_templates/workspace/).
+[`_templates/`](_templates/), as the ten `WORKSPACE_*.md` files.
 
 **This does not replace per-project specs.** A change confined to one project keeps using that
 project's own `specs/features/**`. The rule is mechanical: more than one project in the impact set
@@ -168,7 +168,7 @@ presented as fact is how a map becomes actively misleading, so there is no unmar
 
 These are the workspace-scope equivalents of the per-task file boundary that keeps single-project
 work honest. They ship as
-[`_templates/workspace/WORKSPACE_GUARDRAILS.md`](_templates/workspace/WORKSPACE_GUARDRAILS.md).
+[`_templates/WORKSPACE_GUARDRAILS.md`](_templates/WORKSPACE_GUARDRAILS.md).
 
 **Prohibitions**
 

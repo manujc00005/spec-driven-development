@@ -745,11 +745,16 @@ for skill_name in sorted(disk_skills):
 # specs/** is deliberately out of scan scope: a spec has to be able to quote a
 # forbidden claim in order to forbid it.
 # ---------------------------------------------------------------------------
+# Flat, WORKSPACE_-prefixed, and declared in profiles.json — install.sh copies
+# templates by name from the profile manifest and never recurses into a
+# subdirectory, so a docs/_templates/workspace/ tree shipped in the repo but
+# never reached an adopter's install (spec 025 D014).
 WORKSPACE_TEMPLATES = (
-    "WORKSPACE_CONTEXT.md", "PROJECTS.md", "DEPENDENCY_GRAPH.md",
-    "INTEGRATION_CONTRACTS.md", "SHARED_DECISIONS.md", "WORKSPACE_GUARDRAILS.md",
-    "WORKSPACE_FEATURE_README.md", "IMPACT_MAP.md", "PROJECT_CHANGES.md",
-    "VALIDATION.md",
+    "WORKSPACE_CONTEXT.md", "WORKSPACE_PROJECTS.md", "WORKSPACE_DEPENDENCY_GRAPH.md",
+    "WORKSPACE_INTEGRATION_CONTRACTS.md", "WORKSPACE_SHARED_DECISIONS.md",
+    "WORKSPACE_GUARDRAILS.md", "WORKSPACE_FEATURE_README.md",
+    "WORKSPACE_IMPACT_MAP.md", "WORKSPACE_PROJECT_CHANGES.md",
+    "WORKSPACE_VALIDATION.md",
 )
 
 
@@ -764,7 +769,7 @@ require_workspace_file("skills/sdd-workspace-onboarding/SKILL.md",
                        "the /sdd-workspace-onboarding flow must exist (spec 025 FR-002)")
 for _tpl in WORKSPACE_TEMPLATES:
     require_workspace_file(
-        f"docs/_templates/workspace/{_tpl}",
+        f"docs/_templates/{_tpl}",
         "workspace template missing — /sdd-workspace-onboarding instantiates all ten (spec 025 FR-004)")
 
 # Provider parity: only demanded when the Codex adapter is actually present.

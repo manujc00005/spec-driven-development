@@ -1,7 +1,7 @@
 # Integration Contracts
 
 > Template for `.sdd-workspace/INTEGRATION_CONTRACTS.md`. The shared surface between projects.
-> See [`../../WORKSPACE_SDD.md`](../../WORKSPACE_SDD.md).
+> See [`../WORKSPACE_SDD.md`](../WORKSPACE_SDD.md).
 
 **Last updated:** `YYYY-MM-DD`
 

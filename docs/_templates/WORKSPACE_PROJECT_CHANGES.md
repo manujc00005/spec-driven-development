@@ -1,7 +1,7 @@
 # Project Changes: `<feature name>`
 
 > Template for `.sdd-workspace/specs/features/<slug>/PROJECT_CHANGES.md`. What **actually** changed,
-> per project. See [`../../WORKSPACE_SDD.md`](../../WORKSPACE_SDD.md).
+> per project. See [`../WORKSPACE_SDD.md`](../WORKSPACE_SDD.md).
 
 **Feature:** `<NNN>-<slug>`
 **Last updated:** `YYYY-MM-DD`

@@ -29,10 +29,15 @@ Spec 024 · Delivery-operations profile — the first coverage of what happens a
   derives cross-project edges with cited evidence, and writes the `.sdd-workspace/` layer. Stops
   for approval before reading deeply, and never writes inside a child project except a
   user-approved Graphify refresh.
-- **Ten workspace templates** under [`docs/_templates/workspace/`](docs/_templates/workspace/) —
-  `WORKSPACE_CONTEXT`, `PROJECTS`, `DEPENDENCY_GRAPH`, `INTEGRATION_CONTRACTS`,
-  `SHARED_DECISIONS` (seeded with the D001–D010 baseline), `WORKSPACE_GUARDRAILS`,
-  `WORKSPACE_FEATURE_README`, `IMPACT_MAP`, `PROJECT_CHANGES`, `VALIDATION`.
+- **Ten workspace templates** under [`docs/_templates/`](docs/_templates/), all `WORKSPACE_`-prefixed
+  and declared in `profiles.json` so the installer actually ships them: `WORKSPACE_CONTEXT`,
+  `WORKSPACE_PROJECTS`, `WORKSPACE_DEPENDENCY_GRAPH`, `WORKSPACE_INTEGRATION_CONTRACTS`,
+  `WORKSPACE_SHARED_DECISIONS` (seeded with the D001–D010 baseline), `WORKSPACE_GUARDRAILS`,
+  `WORKSPACE_FEATURE_README`, `WORKSPACE_IMPACT_MAP`, `WORKSPACE_PROJECT_CHANGES`,
+  `WORKSPACE_VALIDATION`. They first shipped in a `workspace/` subdirectory, which passed CI and
+  reached no adopter — `install.sh` copies templates by name and does not recurse. Caught by running
+  the install for real; see spec 025 D014, and note that structural CI cannot detect this class of
+  defect.
 - **Graphify documented as a per-project accelerator for multi-project work** — the workspace layer
   consumes each project's bounded `.graphify/GRAPH_REPORT.md` rather than reading repositories in
   full, and never the raw graph file. There is no merged workspace-wide graph: a super-graph across

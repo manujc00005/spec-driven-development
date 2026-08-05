@@ -10,8 +10,8 @@ Four deliverable groups:
 1. **Doctrine** — `docs/WORKSPACE_SDD.md`: what a workspace is, why the layer exists, the folder
    contract, the token order, per-project Graphify usage, the cross-project workflow, the
    guardrails.
-2. **Templates** — ten files under `docs/_templates/workspace/` that the flow instantiates into a
-   user's `.sdd-workspace/`.
+2. **Templates** — ten flat, `WORKSPACE_`-prefixed files under `docs/_templates/`, declared in
+   `profiles.json`, that the flow instantiates into a user's `.sdd-workspace/`.
 3. **Executable flow** — `skills/sdd-workspace-onboarding/SKILL.md` (Claude Code) and
    `adapters/codex/prompts/sdd-workspace-onboarding.md` (prompt-based Codex counterpart).
 4. **Enforcement** — new `workspace` check class in `scripts/check-consistency.sh` plus cases in
@@ -27,7 +27,7 @@ Four deliverable groups:
 | Area | Change | Risk |
 |---|---|---|
 | `docs/WORKSPACE_SDD.md` | New file | None — additive |
-| `docs/_templates/workspace/*.md` (10) | New files in a **subdirectory** | Low — the orphan-template check enumerates only top-level files in `docs/_templates/`, so a subdirectory adds no `templates-total` drift |
+| `docs/_templates/*.md` (10) | New files in a **subdirectory** | Low — the orphan-template check enumerates only top-level files in `docs/_templates/`, so a subdirectory adds no `templates-total` drift |
 | `skills/sdd-workspace-onboarding/SKILL.md` | New skill | Medium — must carry a valid `## SDD Contract`, stay under the 400-char / 600-line caps, and be registered in `profiles.json` or CI fails with `orphan-skill` |
 | `profiles.json` | One string appended to `core.skills` | Medium — see D012; shifts `skills-total` 65→66 and `core-skills` 41→42 |
 | `README.md` | New "Workspace SDD" section, TOC entry, count markers + badge | Low — markers/badge auto-fixed by `check-consistency.sh --fix` |
@@ -132,7 +132,7 @@ while forbidding it (this very PLAN does).
 |---|---|---|---|
 | **Claim-detection regex false-positives on existing prose** | Medium | High (blocks CI) | Sentence-scoped negator suppression; a dedicated test case (TS-7) asserts the existing `AGENTIC_ROUTING.md` line stays clean |
 | Registering the skill drifts README counts | High | Low | `check-consistency.sh --fix` updates markers and badge mechanically |
-| Templates in a subdirectory trip the orphan-template check | Low | Medium | Verified: `collect_templates()` enumerates files only, so `docs/_templates/workspace/` is invisible to it. Asserted by running the checker after creation |
+| Templates in a subdirectory trip the orphan-template check | Low | Medium | Verified: `collect_templates()` enumerates files only, so `docs/_templates/` is invisible to it. Asserted by running the checker after creation |
 | The workspace layer is documented but never used, and rots | Medium | Medium | Enforcement makes rot visible; OQ-1/OQ-2 leave the adoption path open rather than pretending it is settled |
 | Doc set implies more capability than shipped | Medium | Medium | Every artifact states this is a design/documentation phase; no orchestration code is claimed |
 
@@ -153,7 +153,7 @@ No unit-testable product code ships, so verification is structural and adversari
 Every change is additive except three edits (`profiles.json` one line, `README.md` section +
 counts, `docs/AGENTIC_ROUTING.md` one paragraph, `CHANGELOG.md`, and the two scripts). Rollback is:
 
-1. Delete `docs/WORKSPACE_SDD.md`, `docs/_templates/workspace/`,
+1. Delete `docs/WORKSPACE_SDD.md`, `docs/_templates/`,
    `skills/sdd-workspace-onboarding/`, `adapters/codex/prompts/sdd-workspace-onboarding.md`,
    `specs/features/025-workspace-sdd-graphify-onboarding/`.
 2. Revert the `core.skills` entry and re-run `check-consistency.sh --fix` to restore counts.

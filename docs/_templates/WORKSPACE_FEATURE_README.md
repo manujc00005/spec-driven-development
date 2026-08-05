@@ -1,7 +1,7 @@
 # Cross-project features
 
 > Template for `.sdd-workspace/specs/README.md`. Explains the structure every cross-project feature
-> follows. See [`../../WORKSPACE_SDD.md`](../../WORKSPACE_SDD.md).
+> follows. See [`../WORKSPACE_SDD.md`](../WORKSPACE_SDD.md).
 
 ## When a feature belongs here
 

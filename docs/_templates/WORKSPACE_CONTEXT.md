@@ -1,7 +1,7 @@
 # Workspace Context
 
 > Template for `.sdd-workspace/WORKSPACE_CONTEXT.md`. Written by `/sdd-workspace-onboarding`;
-> maintained by hand afterwards. See [`../../WORKSPACE_SDD.md`](../../WORKSPACE_SDD.md).
+> maintained by hand afterwards. See [`../WORKSPACE_SDD.md`](../WORKSPACE_SDD.md).
 
 **Workspace root:** `<absolute or ~-relative path>`
 **Last updated:** `YYYY-MM-DD`

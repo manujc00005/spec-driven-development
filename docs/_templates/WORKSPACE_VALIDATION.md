@@ -1,7 +1,7 @@
 # Validation: `<feature name>`
 
 > Template for `.sdd-workspace/specs/features/<slug>/VALIDATION.md`. Evidence, not intentions.
-> See [`../../WORKSPACE_SDD.md`](../../WORKSPACE_SDD.md).
+> See [`../WORKSPACE_SDD.md`](../WORKSPACE_SDD.md).
 
 **Feature:** `<NNN>-<slug>`
 **Last updated:** `YYYY-MM-DD`

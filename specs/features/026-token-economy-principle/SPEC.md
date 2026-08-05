@@ -4,6 +4,17 @@
 
 Done
 
+> **Renumbered 2026-08-05: was `021`, now `026`.** This feature and
+> `021-skill-routing-and-status-authority` were developed in parallel on two machines and both
+> claimed `021` — neither could see the other's number, since the next number is chosen by looking
+> at the local disk. They met at a rebase on 2026-08-05.
+>
+> This one was renumbered rather than the other because its footprint was smaller: every external
+> reference to this work points at `docs/TOKEN_ECONOMY.md`, not at this folder, so the rename cost
+> three in-folder edits. Renumbering `021-skill-routing-and-status-authority` would have invalidated
+> ~18 references, several of them historical `CHANGELOG.md` prose describing shipped work.
+> `023` was not used: it is reserved for spec 022's deferred evidence sweep (D011 there).
+
 ## Problem
 
 The framework already practices token economy in several disconnected places —
@@ -192,7 +203,7 @@ None.
   - Render README and confirm the principle reads coherently in context.
   - Dry-run `/spec-plan` mentally against the new template: confirm the
     Context budget section is generatable from a SPEC without extra input.
-  - Run `/spec-analyze specs/features/021-token-economy-principle` after
+  - Run `/spec-analyze specs/features/026-token-economy-principle` after
     planning and confirm the new check fires correctly on its own plan.
   - Run `/spec-analyze` against a pre-021 feature (e.g. 019) and confirm the
     missing section produces a warning, not a blocker.

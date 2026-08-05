@@ -1,7 +1,7 @@
 # Impact Map: `<feature name>`
 
 > Template for `.sdd-workspace/specs/features/<slug>/IMPACT_MAP.md`.
-> See [`../../WORKSPACE_SDD.md`](../../WORKSPACE_SDD.md).
+> See [`../WORKSPACE_SDD.md`](../WORKSPACE_SDD.md).
 
 **Feature:** `<NNN>-<slug>`
 **Date:** `YYYY-MM-DD`

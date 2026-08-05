@@ -148,11 +148,14 @@ outside that map may be touched (D005, D008).
 
 **Templates**
 
-- **FR-004** — Ten templates exist under `docs/_templates/workspace/`: `WORKSPACE_CONTEXT.md`,
-  `PROJECTS.md`, `DEPENDENCY_GRAPH.md`, `INTEGRATION_CONTRACTS.md`, `SHARED_DECISIONS.md`,
-  `WORKSPACE_GUARDRAILS.md`, `WORKSPACE_FEATURE_README.md`, `IMPACT_MAP.md`,
-  `PROJECT_CHANGES.md`, `VALIDATION.md`.
-- **FR-005** — `PROJECTS.md` carries the columns
+- **FR-004** — Ten templates exist under `docs/_templates/`, flat and `WORKSPACE_`-prefixed so the
+  installer can copy them by name (D014): `WORKSPACE_CONTEXT.md`,
+  `WORKSPACE_PROJECTS.md`, `WORKSPACE_DEPENDENCY_GRAPH.md`, `WORKSPACE_INTEGRATION_CONTRACTS.md`,
+  `WORKSPACE_SHARED_DECISIONS.md`,
+  `WORKSPACE_GUARDRAILS.md`, `WORKSPACE_FEATURE_README.md`, `WORKSPACE_IMPACT_MAP.md`,
+  `WORKSPACE_PROJECT_CHANGES.md`, `WORKSPACE_VALIDATION.md`. All ten are declared in
+  `profiles.json` so `install.sh` actually ships them.
+- **FR-005** — `WORKSPACE_PROJECTS.md` carries the columns
   `Project | Path | Type | Stack | Owns | Public contracts | Graphify status`.
 - **FR-006** — `DEPENDENCY_GRAPH.md` carries a per-relationship block with
   `From / To / Reason / Contract / Evidence / Confidence / Risk`, plus a Mermaid placeholder.
@@ -296,7 +299,7 @@ None. `profiles.json` gains one entry in the existing `core.skills` array; its s
 |---|---|---|
 | TS-1 | Run `check-consistency.sh` on the unmodified tree | Exit 0 |
 | TS-2 | Delete `docs/WORKSPACE_SDD.md`, re-run | Exit 1, `[workspace]` finding |
-| TS-3 | Delete `docs/_templates/workspace/IMPACT_MAP.md`, re-run | Exit 1, `[workspace]` finding naming the template |
+| TS-3 | Delete `docs/_templates/WORKSPACE_IMPACT_MAP.md`, re-run | Exit 1, `[workspace]` finding naming the template |
 | TS-4 | Inject "Graphify is required" into a shipped doc, re-run | Exit 1, claim finding |
 | TS-5 | Inject "load the full graph.json into context" into a shipped doc, re-run | Exit 1, claim finding |
 | TS-6 | Remove `adapters/codex/prompts/sdd-workspace-onboarding.md` while `adapters/codex/` exists | Exit 1 |
