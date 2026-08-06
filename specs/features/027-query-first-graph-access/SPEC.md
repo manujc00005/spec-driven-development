@@ -2,7 +2,7 @@
 
 ## Status
 
-Ready
+Done
 
 ## Problem
 
@@ -180,11 +180,19 @@ None.
 
 ## Open questions
 
-- **OQ-1** *(non-blocking)* — Should `check-consistency.sh` also assert the ladder's *order* (that
-  `summary` appears before `GRAPH_REPORT.md` in the doctrine files) rather than just the presence of
-  the commands? Presence is what ships; order-checking is brittle against prose.
-- **OQ-2** *(non-blocking)* — The measurement is a point-in-time snapshot on one machine. Worth
-  re-measuring when Graphify's output format changes.
+- **OQ-1** *(non-blocking)* — **Deferred, and sharpened by what review found.** Should the checker
+  assert more than command presence? `/spec-review` caught `docs/TOKEN_ECONOMY.md` stating the
+  ladder without D005's "CLI absent → report is rung 1" condition, and the `graph-ladder` check
+  passed it — presence of commands was never going to catch a missing condition. Asserting the
+  *condition* is more tractable than asserting *order* (a fixed phrase, not a position), so a
+  follow-up should consider that instead of the ordering check originally proposed here.
+- **OQ-2** *(non-blocking)* — **Deferred.** The measurement is a point-in-time snapshot on one
+  machine with CLI 0.17.1. Re-measure when Graphify's output format changes; SPEC records the
+  method so it can be reproduced rather than trusted.
+- **OQ-3** *(raised at close, non-blocking)* — **Deferred.** The inversion is documented but never
+  exercised: no session has yet run `summary`-first on a real task and reported what it cost. The
+  20× ratio is a measurement of CLI output size, not of a workflow. First real use should record
+  whether the cheap rung actually sufficed, or whether agents escalate to rung 4 anyway.
 
 ## Contracted services
 
