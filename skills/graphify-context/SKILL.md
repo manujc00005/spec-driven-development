@@ -52,25 +52,49 @@ it does not replace reading the actual code, running tests, or applying engineer
 
 ## Behavior
 
-**Graph-first doctrine (token saving):** when the report exists, derive the impact
-set from the graph BEFORE any repo-wide Glob/Grep/Read sweep. Heuristic scanning
-is the fallback, never the default.
+**Graph-first doctrine (token saving):** derive the impact set from the graph BEFORE any
+repo-wide Glob/Grep/Read sweep. Heuristic scanning is the fallback, never the default.
 
-### When the Graphify report exists
+### The graph access ladder
 
-1. **Check freshness:**
-   - Compare the report's mtime against the most recently modified source file.
-   - If the graph is older than the newest source by more than 7 days, mark it **stale** and warn.
+Climb only as far as the question requires. **Reading `GRAPH_REPORT.md` in full is rung 4 — the
+exception, not the starting point.** The scoped commands read `graph.json` inside the CLI process
+and return a bounded answer, so the model never pays for the file.
+
+Measured on a 1.650-node graph (`graph.json` 3,2 MB), CLI 0.17.1, 2026-08-06:
+
+| Rung | Command | ~tokens |
+|---|---|---|
+| 1. Orientation | `graphify summary` | **354** |
+| 2. Per-file impact | `graphify review-context <file>` · `review-analysis <file>` · `affected-flows <file>` | **103–1.057** |
+| 3. Targeted traversal | `graphify tree <node>` · `path <a> <b>` · `explain <node>` | small, bounded |
+| 4. **Exception** — full report | read `.graphify/GRAPH_REPORT.md` | **7.101** |
+| 5. Never | load `.graphify/graph.json` | 859.376 |
+
+Rung 4 is correct for genuinely global questions (god nodes, community structure) and whenever
+the CLI is unavailable. It is wrong as a default: orientation via `summary` is **20× cheaper**.
+
+**Three standing conditions:**
+
+- **CLI absent → the report becomes rung 1.** The ladder degrades; it never blocks. Graphify
+  remains optional.
+- **No Bash tool → request the command.** An agent that cannot execute (the read-only lifecycle
+  agents) names the exact command it needs and hands back — it does not silently fall through to
+  the report.
+- **Freshness is checked before any rung.** A query against a stale graph is cheap *and wrong*.
+
+### When a graph exists
+
+1. **Check freshness first:**
+   - Compare the report's mtime against the most recently modified source file, and the commit it
+     was built from (`Built from Git commit:` in the report) against `git rev-parse HEAD`.
+   - If the graph is older than the newest source by more than 7 days, or sits many commits behind
+     HEAD, mark it **stale** and warn.
    - If stale: still use it for broad orientation, but flag that fine-grained edges may be outdated.
-2. **Extract impacted subgraph:**
-   - From the spec's declared changes, identify entry-point nodes in the graph.
-   - Walk direct and transitive dependencies (max depth 3 unless the spec is cross-cutting).
-   - Produce a focused list: impacted modules + their relationships.
-   - If the `graphify` CLI is on PATH, prefer its read-only queries over manual
-     report parsing — they are cheaper than loading the full report into context:
-     - `graphify review-context <file>` — what to read before touching a file.
-     - `graphify affected-flows <file>` — which flows a change ripples into.
-     - `graphify tree <node>` / `graphify path <a> <b>` — dependency walks.
+     Refreshing costs no tokens — `graphify update` is local AST extraction, no LLM.
+2. **Climb the ladder:** `summary` for orientation, then per-file queries for the files the spec
+   names, then targeted traversal. Escalate to the full report only when a query cannot answer the
+   question — and say why when you do.
 3. **Cross-reference with ARCHITECTURE.md:**
    - Check if impacted modules cross a declared boundary (e.g., bounded context, service).
    - If they do, flag it: "This change crosses a service boundary — review communication pattern."
@@ -78,6 +102,7 @@ is the fallback, never the default.
    - Impact summary (which modules, which directions, which boundaries crossed).
    - Recommended reading list (feed into `context-manager`).
    - Staleness warning if applicable.
+   - Which rung answered the question — so the next session knows what was enough.
 
 ### When the Graphify report does NOT exist (graceful degradation)
 

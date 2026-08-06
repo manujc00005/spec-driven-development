@@ -859,6 +859,50 @@ for _rel in claim_scan_files():
 
 
 # ---------------------------------------------------------------------------
+# spec 027: the graph access ladder must stay stated.
+#
+# The doctrine is that a scoped `graphify` query is the default and reading
+# GRAPH_REPORT.md in full is the exception — measured at ~354 vs ~7.101 tokens
+# for the same orientation (spec 027 D001). Before spec 027 every artifact said
+# "read the report first" and named the queries as an optional refinement, so
+# the realistic regression is an edit that drops the commands and quietly
+# restores report-first.
+#
+# This asserts PRESENCE of the command names, not their ORDER (D003). Prose
+# ordering is brittle to match — a heading, a table or a quoted counter-example
+# flips the result — and a false positive blocks CI on correct text. Same
+# trade-off as the spec 022 skill-form proxies and the spec 025 claim guard.
+# ---------------------------------------------------------------------------
+GRAPH_LADDER_FILES = (
+    "skills/graphify-context/SKILL.md",
+    "skills/context-manager/SKILL.md",
+    "skills/sdd-workspace-onboarding/SKILL.md",
+    "agents/codebase-researcher.md",
+    "docs/WORKSPACE_SDD.md",
+    "docs/TOKEN_ECONOMY.md",
+    "adapters/codex/prompts/sdd-workspace-onboarding.md",
+)
+# One orientation command and one per-file command: an artifact that names
+# neither has lost the ladder, whatever else it says.
+LADDER_ORIENT = "graphify summary"
+LADDER_SCOPED = ("review-context", "review-analysis", "affected-flows")
+
+for _rel in GRAPH_LADDER_FILES:
+    _text = file_text(_rel)
+    if _text is None:
+        err("graph-ladder", _rel, "doctrine file not found — it must state the graph access ladder (spec 027 FR-001..FR-008)")
+        continue
+    if LADDER_ORIENT not in _text:
+        err("graph-ladder", _rel,
+            f"must name '{LADDER_ORIENT}' — the ladder's orientation rung; reading GRAPH_REPORT.md "
+            "in full is the exception, not the default (spec 027 D001)")
+    if not any(_c in _text for _c in LADDER_SCOPED):
+        err("graph-ladder", _rel,
+            f"must name at least one scoped query ({', '.join(LADDER_SCOPED)}) — these read "
+            "graph.json inside the CLI process, which is the whole token saving (spec 027 D001)")
+
+
+# ---------------------------------------------------------------------------
 # Report
 # ---------------------------------------------------------------------------
 for e in sorted(errors):

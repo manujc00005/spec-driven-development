@@ -152,10 +152,20 @@ and the exact next step for each.
 The reading ladder — each rung only when the one above is insufficient:
 
 1. Existing `.sdd-workspace/` documents.
-2. Per-project `.graphify/GRAPH_REPORT.md`, only for projects the previous rung named.
-3. Manifests, README, API descriptors, `docs/ARCHITECTURE.md`.
-4. A bounded reading list, written down before anything is opened.
-5. Concrete implementation files — only those on the list.
+2. **`graphify summary` per project**, only for projects the previous rung named. ~354 tokens each
+   against ~4.500 average for reading that project's report — the command reads `graph.json` inside
+   the CLI, so the model never pays for it.
+3. Scoped queries for the files that matter: `graphify review-context <file>`,
+   `review-analysis <file>`, `affected-flows <file>`, `tree`, `path`.
+4. **Exception** — `.graphify/GRAPH_REPORT.md` in full, when a query cannot answer the question or
+   the CLI is unavailable. Say why when you climb here.
+5. Manifests, README, API descriptors, `docs/ARCHITECTURE.md`.
+6. A bounded reading list, written down before anything is opened.
+7. Concrete implementation files — only those on the list.
+
+Measured across a four-project workspace (2026-08-06): four `summary` calls ≈ **1.400 tokens**;
+reading the four reports ≈ **18.269**. Same orientation, 13× the cost. Full ladder and the
+per-rung measurement: `skills/graphify-context/SKILL.md`.
 
 Standing exclusions:
 

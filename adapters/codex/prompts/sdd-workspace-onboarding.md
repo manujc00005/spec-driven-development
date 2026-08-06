@@ -108,10 +108,18 @@ with a summary implying completeness.
 Reading ladder, each rung only when the one above is insufficient:
 
 1. Existing `.sdd-workspace/` documents.
-2. Per-project `GRAPH_REPORT.md`, only for projects the previous rung named.
-3. Manifests, README, API descriptors.
-4. A bounded reading list, written down first.
-5. Concrete implementation files — only those on the list.
+2. **`graphify summary` per project** — only for projects the previous rung named (~354 tokens
+   each; the command reads `graph.json` inside the CLI, so you never pay for the file).
+3. Scoped queries: `graphify review-context <file>`, `review-analysis <file>`,
+   `affected-flows <file>`, `tree <node>`, `path <a> <b>`.
+4. **Exception** — `GRAPH_REPORT.md` in full (~7.101 tokens on a 1.650-node graph), when a query
+   cannot answer the question or the CLI is unavailable. State why when you climb here.
+5. Manifests, README, API descriptors.
+6. A bounded reading list, written down first.
+7. Concrete implementation files — only those on the list.
+
+If the `graphify` CLI is absent, rung 4 becomes rung 1 and the ladder degrades — Graphify is never
+required.
 
 Never read every file in a project or every project; never load `.graphify/graph.json`; never grep
 across every project without a hypothesis; defer implementation files to a feature's

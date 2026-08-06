@@ -35,23 +35,35 @@ agent can act on without re-scanning the repository. You have no editing tools, 
 
 ## Method
 
-1. Check for a graph report first (`.graphify/GRAPH_REPORT.md`, then `GRAPH_REPORT.md`). If
-   present, apply `graphify-context`'s staleness rules to decide whether it is fresh enough
-   to trust; if stale or absent, say so explicitly and fall back to direct `Grep`/`Glob`
-   exploration — never treat a stale graph as ground truth.
-2. If no graph report exists and building one would meaningfully help, say so and hand the
-   request back to the orchestrating session to run the `graphify` skill — do not attempt
-   to invoke Graphify's CLI yourself; you have no Bash tool, by design.
-3. Read only what the task needs. Prefer `context-manager`'s bounded-reading-list discipline
+1. **Ask for a scoped graph query before reading anything.** The cheap path is the `graphify`
+   CLI's read-only commands — `graphify summary` for orientation (~354 tokens), then
+   `review-context <file>` / `review-analysis <file>` / `affected-flows <file>` per file, then
+   `tree` / `path` / `explain`. Reading `.graphify/GRAPH_REPORT.md` in full costs ~7.101 tokens
+   on the same graph and is the **exception**, correct only for genuinely global questions or
+   when the CLI is unavailable. The full ladder is in `skills/graphify-context/SKILL.md`.
+2. **You cannot run those commands — you have no Bash tool, by design.** So name the exact command
+   you want and hand the request back to the orchestrating session, exactly as you already do for
+   graph *generation*. Do **not** silently fall through to reading the report because it is the
+   only thing you can open yourself: say which query you need and why. Falling back to the report
+   is a decision to state, not a default to take.
+3. Apply `graphify-context`'s staleness rules before trusting any graph answer — a query against a
+   stale graph is cheap *and wrong*. If the graph is stale or absent, say so explicitly and fall
+   back to direct `Grep`/`Glob` exploration; never treat a stale graph as ground truth.
+4. If no graph exists at all and building one would meaningfully help, say so and hand the
+   request back to the orchestrating session to run the `graphify` skill — again, do not attempt
+   to invoke Graphify's CLI yourself.
+5. Read only what the task needs. Prefer `context-manager`'s bounded-reading-list discipline
    over broad directory reads.
-4. Distinguish **fact** (observed in the repo), **inference** (derived), and **assumption**
+6. Distinguish **fact** (observed in the repo), **inference** (derived), and **assumption**
    (unverified) in your summary.
 
 ## Allowed actions
 
 - Read, Grep, Glob across the repository.
-- Read and interpret `GRAPH_REPORT.md` / `.graphify/` output.
-- Request that the orchestrating session run `graphify` when a fresh graph would help.
+- Read and interpret `GRAPH_REPORT.md` / `.graphify/` output — as the ladder's exception rung,
+  with the reason stated.
+- Request that the orchestrating session run a scoped `graphify` query, or run `graphify` to
+  generate or refresh a graph.
 
 ## Forbidden actions
 

@@ -396,6 +396,41 @@ else
   PASS=$((PASS + 1))
 fi
 
+# --- spec 027 FR-007/AC-009: the graph access ladder must stay stated ------
+# Presence, not order (D003). One case per audience: the doctrine owner (a
+# skill) and the agent contract, which carries the no-Bash request protocol.
+
+dir="$(fresh_copy graph-ladder-missing-in-doctrine)"
+python3 - "$dir/skills/graphify-context/SKILL.md" <<'PY'
+import sys, pathlib
+p = pathlib.Path(sys.argv[1]); t = p.read_text(encoding="utf-8")
+p.write_text(t.replace("graphify summary", "the graph report"), encoding="utf-8")
+PY
+assert_case "graph-ladder-missing-in-doctrine" 1 "[graph-ladder] skills/graphify-context/SKILL.md" "$dir"
+
+dir="$(fresh_copy graph-ladder-missing-in-agent)"
+python3 - "$dir/agents/codebase-researcher.md" <<'PY'
+import sys, pathlib, re
+p = pathlib.Path(sys.argv[1]); t = p.read_text(encoding="utf-8")
+t = t.replace("graphify summary", "the report")
+for c in ("review-context", "review-analysis", "affected-flows"):
+    t = t.replace(c, "the report")
+p.write_text(t, encoding="utf-8")
+PY
+assert_case "graph-ladder-missing-in-agent" 1 "[graph-ladder] agents/codebase-researcher.md" "$dir"
+
+# A clean tree reports no graph-ladder findings at all.
+dir="$(fresh_copy graph-ladder-clean)"
+out="$("$CHECKER" "$dir" 2>&1)"
+if grep -q "graph-ladder" <<< "$out"; then
+  echo "[FAIL] graph-ladder-clean: unmutated tree reported graph-ladder findings"
+  echo "       output: $out"
+  FAIL=$((FAIL + 1))
+else
+  echo "[PASS] graph-ladder-clean"
+  PASS=$((PASS + 1))
+fi
+
 echo ""
 echo "$PASS passed, $FAIL failed."
 [ "$FAIL" -eq 0 ]

@@ -11,7 +11,34 @@ under `specs/features/` — the framework is developed with its own workflow.
 
 ## [Unreleased]
 
+Spec 027 · Query-first graph access — the framework's own default was the expensive path.
 Spec 025 · Workspace SDD — the first coverage of what happens *between* projects.
+
+### Changed
+
+- **The graph access ladder is inverted (spec 027).** Every Graphify-aware artifact used to say
+  "check `GRAPH_REPORT.md` first" and mention the CLI's scoped queries as an optional refinement.
+  Measured on a 1.650-node graph (`graph.json` 3,2 MB, CLI 0.17.1): `graphify summary` costs **354
+  tokens**, `review-analysis <file>` 222–262, `review-context <file>` 103–1.057 — against **7.101**
+  for reading the report in full. **Orientation via `summary` is 20× cheaper**, because the scoped
+  commands resolve the graph file inside the CLI process and it never enters context. Across a
+  four-project workspace, four `summary` calls cost ~1.400 tokens against ~18.269 for the four
+  reports.
+  The ladder is now `summary` → per-file queries → targeted traversal → **full report as the
+  documented exception** → never `graph.json`, stated identically in `graphify-context`,
+  `context-manager`, `sdd-workspace-onboarding`, `agents/codebase-researcher.md`,
+  `docs/WORKSPACE_SDD.md`, `docs/TOKEN_ECONOMY.md` and the Codex prompt.
+- **`codebase-researcher` gets a request protocol, not the ladder.** It declares
+  `tools: Read, Grep, Glob` and has no Bash tool by design, so it *cannot* run a query. Telling it
+  to "query first" would be an instruction violated on every invocation. Instead it names the exact
+  command it needs and hands back — and must not silently fall through to reading the report just
+  because that is the only thing it can open (spec 027 D002).
+- Graphify remains optional at every rung: CLI absent → the report becomes rung 1, both absent →
+  `Grep`/`Glob` with the context marked partial. `check-consistency.sh` gains a `graph-ladder`
+  presence check over the seven doctrine artifacts, plus three test cases. It asserts the commands
+  are *named*, not their order — prose ordering is brittle to match and a false positive blocks CI
+  on correct text (D003).
+
 Spec 024 · Delivery-operations profile — the first coverage of what happens after merge.
 
 ### Added

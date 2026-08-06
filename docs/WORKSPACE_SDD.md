@@ -102,13 +102,32 @@ insufficient:
 
 1. **`.sdd-workspace/` documents.** Cheapest and most specific. `PROJECTS.md` and
    `DEPENDENCY_GRAPH.md` usually answer "which projects are involved" outright.
-2. **Per-project `.graphify/GRAPH_REPORT.md`.** A bounded summary of one project's internals — read
-   only for the projects the previous rung identified.
-3. **Manifests, README, API descriptors.** `package.json`, `pom.xml`, `pyproject.toml`,
+2. **`graphify summary` per project** — only for the projects the previous rung identified.
+3. **Scoped queries** for the files that matter: `graphify review-context <file>`,
+   `review-analysis <file>`, `affected-flows <file>`, `tree <node>`, `path <a> <b>`.
+4. **Exception: `.graphify/GRAPH_REPORT.md` in full**, when a query cannot answer the question or
+   the CLI is unavailable.
+5. **Manifests, README, API descriptors.** `package.json`, `pom.xml`, `pyproject.toml`,
    `composer.json`, `openapi.yaml`, `*.proto`, `docs/ARCHITECTURE.md` where a project was already
    SDD-onboarded.
-4. **A bounded reading list.** Named files, written into `IMPACT_MAP.md` before anything is opened.
-5. **Concrete implementation files.** Only those on the list, only for projects named as affected.
+6. **A bounded reading list.** Named files, written into `IMPACT_MAP.md` before anything is opened.
+7. **Concrete implementation files.** Only those on the list, only for projects named as affected.
+
+**Why the report is rung 4 and not rung 2.** Measured on a 1.650-node project (`graph.json`
+3,2 MB), CLI 0.17.1, 2026-08-06:
+
+| Access path | ~tokens into context |
+|---|---|
+| `graphify summary` | **354** |
+| `graphify review-analysis <file>` | 222–262 |
+| `graphify review-context <file>` | 103–1.057 |
+| `GRAPH_REPORT.md` in full | **7.101** |
+| `graph.json` | 859.376 |
+
+The scoped commands read `graph.json` inside the CLI process and return a bounded answer, so the
+model never sees the file. Across the four-project workspace measured the same day, four `summary`
+calls cost ~1.400 tokens against ~18.269 for the four reports — **13× for the same orientation**.
+The report keeps a real role: genuinely global questions, and every case where the CLI is absent.
 
 Standing exclusions at every rung:
 
@@ -127,10 +146,12 @@ it when it is not.
 - **It runs per project.** Each project keeps its own `.graphify/`; see
   [`_templates/GRAPHIFY.md`](_templates/GRAPHIFY.md) and `scripts/setup-graphify.sh` for adopting
   it in a project.
-- **Workspace SDD consumes the reports**, resolved as `.graphify/GRAPH_REPORT.md` (canonical) or a
-  legacy root `GRAPH_REPORT.md`.
-- **Going deeper uses scoped queries**, never a bulk read: `graphify review-context <file>`,
-  `graphify affected-flows <file>`, `graphify tree <node>`, `graphify path <a> <b>`.
+- **Workspace SDD queries the graph**, it does not read it. `graphify summary` orients;
+  `review-context <file>`, `review-analysis <file>`, `affected-flows <file>`, `tree <node>` and
+  `path <a> <b>` answer specific questions. Reading `.graphify/GRAPH_REPORT.md` (canonical, or a
+  legacy root `GRAPH_REPORT.md`) in full is the exception — see the ladder above.
+- **Refreshing is free in tokens.** `graphify update` is local AST extraction with no LLM call, so
+  a stale graph is worth refreshing before a serious session rather than reasoning around.
 - **A project with `graph.json` but no report counts as "report missing".** The JSON is not a
   fallback — propose `graphify update` instead.
 - **When Graphify is absent**, fall back to bounded `Read`/`Grep`/`Glob` over manifests, README and

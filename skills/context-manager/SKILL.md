@@ -53,14 +53,19 @@ multi-module Java/Spring microservices) and keeps token usage proportional to fe
 reading list from it BEFORE any repo-wide Glob/Grep/Read sweep. The heuristic
 scan is the explicit fallback, never the default.
 
-1. **Check for the Graphify report first** (resolution order above):
-   - If present and not stale (mtime newer than or within 7 days of latest source change):
-     extract the subgraph relevant to the impacted modules and derive the reading
-     list from it. When the `graphify` CLI is on PATH, prefer its read-only
-     queries (`graphify review-context <file>`, `graphify affected-flows <file>`)
-     over parsing the full report — they return exactly the bounded list this
-     skill exists to produce.
-   - If absent or stale: note it and proceed with the heuristic fallback.
+1. **Ask the graph first — by query, not by reading the report:**
+   - When the `graphify` CLI is on PATH, this is the cheapest and most direct path:
+     `graphify review-context <file>` and `graphify affected-flows <file>` return
+     exactly the bounded list this skill exists to produce, and
+     `graphify summary` orients across the whole graph for ~350 tokens.
+     They read `graph.json` inside the CLI process, so the model never pays for it.
+   - **Reading `.graphify/GRAPH_REPORT.md` in full is the fallback**, used when the
+     CLI is unavailable or a query cannot answer the question — measured at ~7.101
+     tokens against ~354 for `summary` on the same graph. See
+     `skills/graphify-context/SKILL.md` for the full access ladder.
+   - Check staleness before trusting either path: a query on a stale graph is cheap
+     and wrong.
+   - If no graph is usable at all: note it and proceed with the heuristic fallback.
 2. **Read context docs** (if they exist) to understand boundaries, modules, and communication patterns.
 3. **Read the active spec** — extract impacted domains, endpoints, entities, events, and data stores.
 4. **Heuristic fallback** (only when no usable graph map):
