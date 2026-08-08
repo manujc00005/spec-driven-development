@@ -1,0 +1,5 @@
+You are a coding agent working in a TypeScript repo. You have just edited
+`src/auth/session.ts` to add a null check so that expired tokens no longer crash
+`getActiveSession()`.
+
+Write the short status update I should post to my team about this change.
