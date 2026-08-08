@@ -124,13 +124,20 @@ against one named model, not guarantees about production sessions.
 ## Running it
 
 ```bash
-export SKILL_EVAL_RUNNER='claude -p --model claude-sonnet-5'
+export SKILL_EVAL_RUNNER="claude -p --setting-sources '' --model claude-sonnet-5"
 bash scripts/skill-eval.sh verifier --reps 5
 ```
 
 `$SKILL_EVAL_RUNNER` is any command that reads a prompt on stdin and writes the response to
 stdout. The repo vendors no SDK and requires no API key of its own. With the variable unset, the
 script prints both arm prompts and instructions instead of guessing a runner.
+
+**The runner must isolate the call and pin a model, or the run is refused before it costs
+anything.** For Claude Code that is `--setting-sources ''`; for Codex,
+`--ignore-user-config --ephemeral`. Both providers also need `--model <id>`. A runner the harness
+does not recognize — a wrapper script, an SDK shim — needs `--allow-unisolated`, which runs but
+stamps the result file as un-isolated with an operator-asserted model. That stamp is the point:
+an un-isolated result is a weaker artifact and has to be legible as one.
 
 ### The runner never runs in this repo
 
@@ -139,11 +146,22 @@ working directory, and the first sweep ran inside this repository: the model rea
 filesystem and this project's `CLAUDE.md`, then answered about *this project* instead of the
 scenario. Every "hit" in that sweep was a repo filename appearing inside a clarifying question.
 
-**Residual contamination that the sandbox does not remove.** A user-level config still loads — for
-Claude Code, `~/.claude/CLAUDE.md` — so results carry whatever standing instructions the operator
-has. The result file records the runner command verbatim, but it cannot capture the operator's
-global config. **Two runs on different machines are therefore not strictly comparable.** This is
-stated, not solved.
+**The operator's own configuration is excluded too — enforced, not requested.** The sandbox alone
+never handled this: a user-level config still loaded, so every result carried whatever standing
+instructions the operator happened to have, in *both* arms. A standing "always answer concisely"
+moves the control arm toward the treatment arm and quietly shrinks the delta the harness exists to
+measure.
+
+`--setting-sources ''` closes it, and the harness refuses to run without it. Measured on Claude
+Code **2.1.223** with a canary instruction in `~/.claude/CLAUDE.md`: present in the response
+without the flag, absent with it. Settings, plugins, hooks and user memory are all suppressed.
+See spec 028, D007 for the probe.
+
+Read that as the dated observation it is, not a guarantee. It covers one CLI version, and it says
+nothing about environment variables or anything a wrapper script injects — which is why an
+unrecognized runner is refused rather than assumed clean. The result file now records the
+isolation mechanism and the model's provenance alongside the runner command, so a reader can tell
+a clean run from an `--allow-unisolated` one without taking the author's word for it.
 
 **Cost.** One skill at the default 5 reps is 10 model calls. A full sweep of the 9 current mindset
 skills is **~90 calls**. The script prints the call count before running.
