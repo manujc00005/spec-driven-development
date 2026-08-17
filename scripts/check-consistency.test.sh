@@ -246,6 +246,32 @@ if [ "$actual_marker" != "9999" ]; then
   FAIL=$((FAIL + 1))
 fi
 
+# --- Regression: --fix must not key on the rendered message text ------------
+# Found by the /python-reviewer calibration pass (spec 029 OQ-2). --fix used to
+# drop resolved findings with `f"[readme-count] {key}" not in e`, so control
+# flow depended on how err() happened to format a human-readable string. A
+# reworded message stopped matching, and --fix then printed [FIXED] while
+# STILL exiting 1 -- CI failing on a repository it had just repaired.
+#
+# The guard has to change the wording, because a same-wording run passes either
+# way. It runs a copy of the checker whose Err.__str__ renders "category: item"
+# instead of "[category] item"; findings are now records filtered on .category
+# and .key, so the outcome must not move.
+dir="$(fresh_copy fix-wording-independent)"
+sed_inplace "s/<!-- count:skills-total -->${SKILLS_NOW}<!-- \\/count -->/<!-- count:skills-total -->9999<!-- \\/count -->/" "$dir/README.md"
+reworded_checker="${dir}.reworded-checker.sh"
+cp "$CHECKER" "$reworded_checker"
+sed_inplace 's|f"\[{self\.category}\] {self\.item}|f"{self.category}: {self.item}|' "$reworded_checker"
+if grep -qF '[{self.category}]' "$reworded_checker"; then
+  echo "[FAIL] fix-wording-independent: the rewording sed did not apply — the guard would pass vacuously"
+  FAIL=$((FAIL + 1))
+else
+  CHECKER_ORIGINAL="$CHECKER"
+  CHECKER="$reworded_checker"
+  assert_case_fix "fix-wording-independent" 0 "marker(s) fixed" "$dir" "skills-total"
+  CHECKER="$CHECKER_ORIGINAL"
+fi
+
 # --- spec 022 FR-001 / AC-001: skill-form checks ---------------------------
 # One mutation per rule, each on a fresh copy of a real skill. The victim is
 # `verifier` (a short mindset skill) so the mutation is unambiguous.

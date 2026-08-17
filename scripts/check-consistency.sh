@@ -43,6 +43,7 @@ import json
 import os
 import re
 import sys
+from typing import NamedTuple
 
 repo_root = sys.argv[1]
 fix_mode = sys.argv[2].lower() == "true"
@@ -50,8 +51,28 @@ errors = []
 fixed_markers = []
 
 
-def err(category, item, message):
-    errors.append(f"[{category}] {item} — {message}")
+class Err(NamedTuple):
+    """One finding.
+
+    Kept as a record rather than a formatted string on purpose: --fix has to
+    remove the findings it just resolved, and matching on rendered human text
+    means a reworded message silently stops matching. The failure mode is the
+    bad one -- --fix would print [FIXED] and still exit 1, so CI fails on a
+    repository it has just repaired. `key` carries the bare marker/badge name
+    so that filtering never depends on wording.
+    """
+
+    category: str
+    item: str
+    message: str
+    key: str = ""
+
+    def __str__(self):
+        return f"[{self.category}] {self.item} — {self.message}"
+
+
+def err(category, item, message, key=""):
+    errors.append(Err(category, item, message, key))
 
 
 # ---------------------------------------------------------------------------
@@ -538,7 +559,7 @@ else:
             continue
         expected = computed[key]
         if value != expected:
-            err("readme-count", f"{key} (line {line_no})", f"expected {expected}, found {value}")
+            err("readme-count", f"{key} (line {line_no})", f"expected {expected}, found {value}", key=key)
 
     for key in sorted(REQUIRED_MARKERS - seen_keys):
         err("readme-count", key, "required count marker missing from README.md")
@@ -565,13 +586,13 @@ else:
         expected = computed[key]
         if value != expected:
             line_no = readme_text.count("\n", 0, m.start()) + 1
-            err("readme-badge", f"{slug} (line {line_no})", f"expected {expected}, found {value}")
+            err("readme-badge", f"{slug} (line {line_no})", f"expected {expected}, found {value}", key=slug)
 
     # If --fix mode and no non-auto-fixable violations, update markers in README.
     if fix_mode and readme_text:
         non_readme_errors = [
             e for e in errors
-            if not e.startswith("[readme-count]") and not e.startswith("[readme-badge]")
+            if e.category not in ("readme-count", "readme-badge")
         ]
 
         if not non_readme_errors:
@@ -587,14 +608,16 @@ else:
                         updated_readme = re.sub(pattern, replacement, updated_readme)
                         fixed_markers.append(f"[FIXED] readme {key} — updated from {old_value} to {new_value}")
                         # Remove readme-count error for this key from errors list.
-                        errors = [e for e in errors if f"[readme-count] {key}" not in e]
+                        errors = [e for e in errors
+                                  if not (e.category == "readme-count" and e.key == key)]
 
             for slug, (old_value, badge_re) in sorted(found_badges.items()):
                 new_value = computed[BADGES[slug]]
                 if old_value != new_value:
                     updated_readme = badge_re.sub(rf"\g<1>{new_value}\g<3>", updated_readme)
                     fixed_markers.append(f"[FIXED] readme-badge {slug} — updated from {old_value} to {new_value}")
-                    errors = [e for e in errors if f"[readme-badge] {slug}" not in e]
+                    errors = [e for e in errors
+                              if not (e.category == "readme-badge" and e.key == slug)]
 
             # Write the updated README.md if any markers were fixed.
             if fixed_markers:
@@ -905,7 +928,10 @@ for _rel in GRAPH_LADDER_FILES:
 # ---------------------------------------------------------------------------
 # Report
 # ---------------------------------------------------------------------------
-for e in sorted(errors):
+# Sorted by RENDERED text, not by field order: sorting the tuple would order
+# by (category, item, ...) and silently change the output ordering that the
+# test suite and every reader are used to. str() is the previous behaviour.
+for e in sorted(errors, key=str):
     print(e)
 
 for e in sorted(fixed_markers):
