@@ -108,8 +108,16 @@ surfaces profiles added since their install.
   resolved from the diff, not when several profiles are installed.
 - FR-003: `docs/AGENTIC_ROUTING.md` carries the same multi-profile framing, replacing the singular
   "the active profile" language.
-- FR-004: reviewer selection is stated in terms of a resolvable signal (changed file paths and
-  extensions, plus each skill's `triggers`), not left to unaided inference.
+- FR-004: reviewer selection is driven by **changed file paths matched against each skill's
+  `description`** — the only per-skill text that is in context when the selection is made.
+  `triggers:` must **not** be the selector. It sits inside the frontmatter block but no tooling
+  reads it (verified: zero consumers in `scripts/`, `install.sh`, `hooks/`), and it is only visible
+  once the skill file is open — which is the decision selection exists to make. Selecting by
+  `triggers` across 71 installed skills would mean opening all 71 to decide which one to open.
+  `triggers` stays as human documentation of intent.
+- FR-004b: because `description` becomes the routing signal, every reviewer description must name
+  the artifact it applies to. The five skills from spec 029 already do; this must be verified across
+  the reviewer catalogue and stated as a rule, not left to chance.
 - FR-005: a skill whose scope is genuinely language-neutral (today: `database-performance-reviewer`)
   states how it coexists with a stack-specific sibling that overlaps it (today:
   `java-performance-reviewer` on N+1 and connection pools), so both do not report the same finding
@@ -131,18 +139,23 @@ surfaces profiles added since their install.
 - FR-014: `agents/README.md` carries the same multi-profile framing as `agents/domain-reviewer.md`
   and `docs/AGENTIC_ROUTING.md` — its `domain-reviewer` row states *"the active profile ships"* in
   the singular today and would otherwise contradict the change.
-- FR-015: whatever replaces "the active profile" must be **resolvable inside an adopted project**.
-  Today's stated sources do not resolve there: `profiles.json` lives in the framework clone and is
-  absent from an adopted repository, and "the project's installed skills" is a symlink to the
-  central directory holding **every** installed skill, so it cannot distinguish one profile from
-  another. See OQ-6 — this is the requirement the routing half stands or falls on.
+- FR-015: **"active profile" is removed as a review-time concept and nothing replaces it.** No
+  project-level profile state is introduced — no new file, no `CONSTITUTION.md` section, no reading
+  of the machine-level `.sdd-install.json`. The installed skill set is the ceiling; the diff is the
+  selector. This is the adopted answer to OQ-6, option (a).
+- FR-015b: the documentation states the resulting architecture plainly — **a profile is a packaging
+  decision, not a runtime one.** It controls what lands on disk at install time and stops there.
+  An adopter who installs every profile has, by design, made the profile concept irrelevant to
+  their reviews, and that is a supported configuration rather than a misuse.
 - FR-016: the review output names which reviewers ran and which changed files selected them, so a
   reviewer that silently did not fire is visible.
 
 ## Non-functional requirements
 
-- **Performance:** reviewer selection must not require reading every installed skill to decide
-  which apply — the decision comes from paths, `triggers` and the profile manifest.
+- **Performance:** reviewer selection must cost **zero extra file reads**. It uses the skill
+  descriptions already in context at session start — which is why they carry a 400-character cap
+  (spec 022) and why spec 026 made context cost a first-class principle. Any design that opens
+  skill files to decide which skill to open is disqualified, however elegant.
 - **Security:** FR-010 is the security-adjacent requirement — a blanket install must not silently
   turn on a billable reviewer or any profile the adopter did not ask for.
 - **Observability:** the review output must name which profiles were active and which reviewers ran,
@@ -155,16 +168,26 @@ surfaces profiles added since their install.
 
 ## API / Interface changes
 
-- One new installer flag or sentinel value for "all enabled profiles", on both `install.sh` and
-  `install.ps1`. Exact spelling is an open question.
+- **`--all-profiles`** (bash) / **`-AllProfiles`** (PowerShell): installs every enabled,
+  non-billable profile. A flag rather than `--profile all`, because `all` as a profile *name* would
+  collide the day someone adds a real profile called that, and the installer's existing behaviour on
+  an unknown profile name is a hard error — a collision would be silent instead.
+- **`billable: true`** in `profiles.json` — a new optional key, defaulting to absent/false, carried
+  today only by `seo-geo-addon`. `--all-profiles` skips billable profiles and says so in its output;
+  naming one explicitly still installs it.
+- New reporting output in `update.sh` (additive; no flag, no behaviour change).
+- No new slash command. No skill added or removed.
 - New reporting output in `update.sh` (additive; no flag, no behaviour change).
 - No new slash command. No skill added or removed.
 
 ## Data model changes
 
-None expected. `.sdd-install.json` is read as it is; the new report is derived, not stored. If
-FR-011 turns out to need a "profiles the adopter declined" marker, that is a schema change and must
-be raised as a decision rather than added silently.
+- `profiles.json` gains one optional key, `billable`, on profile objects. Additive and backward
+  compatible: an installer reading an older manifest sees no billable profiles and behaves as
+  today. Whether this warrants a manifest `version` bump is a planning decision.
+- `.sdd-install.json` is **unchanged** — read as it is, and the new report is derived rather than
+  stored. The "adopter permanently declined a profile" marker considered under OQ-3 is deliberately
+  not added.
 
 ## Edge cases
 
@@ -212,10 +235,16 @@ be raised as a decision rather than added silently.
   diffing `install.sh --profile java-spring-backend --dry-run` output captured **before** the change
   against the same command after it — byte-identical apart from any deliberate new reporting line.
 - AC-012: `docs/INSTALL.md` documents the multi-stack flow.
-- AC-014: no artifact still instructs an agent to determine a single active profile — checked
-  across `agents/domain-reviewer.md`, `agents/README.md` and `docs/AGENTIC_ROUTING.md`.
 - AC-013: `bash scripts/check-consistency.sh`, `check-consistency.test.sh`, `update.test.sh` and
   `graphify.test.sh` all pass.
+- AC-014: no artifact still instructs an agent to determine a single active profile — checked
+  across `agents/domain-reviewer.md`, `agents/README.md` and `docs/AGENTIC_ROUTING.md`.
+- AC-015: no shipped artifact names `triggers:` as the reviewer-selection mechanism, and the
+  routing documentation states that selection uses skill `description` text.
+- AC-016: every reviewer skill's `description` names the artifact or file type it applies to
+  (FR-004b), verified across the reviewer catalogue.
+- AC-017: `--all-profiles` reports the billable profiles it skipped by name, rather than omitting
+  them silently.
 
 ## Test scenarios
 
@@ -225,7 +254,10 @@ be raised as a decision rather than added silently.
   and a corrupt manifest (AC-010).
 - **Integration:** `install.sh --dry-run` with the blanket request — asserts every enabled profile
   present, `blockchain-crypto` absent, `seo-geo-addon` absent (AC-006, AC-007, AC-008).
-- **Integration:** `install.sh --dry-run` single-profile — output unchanged from today (AC-011).
+- **Integration:** `install.sh --dry-run` single-profile — output byte-compared against a baseline
+  captured before the change (AC-011).
+- **Static:** grep the reviewer catalogue for descriptions that name no artifact or file type
+  (AC-016), and for any artifact still presenting `triggers:` as the selector (AC-015).
 - **Manual:** a real diff touching a `.java` file and a `.py` file in a repository with both
   profiles installed, reviewed end to end without the agent asking which profile applies (AC-003).
   **This is the acceptance test that matters** — the rest are structural.
@@ -254,15 +286,24 @@ be raised as a decision rather than added silently.
 
 ## Open questions
 
-- OQ-1 **(blocking FR-008 wording only, not the design):** how is "all enabled profiles" spelled —
-  `--profile all`, a separate `--all-profiles` flag, or a sentinel in `profiles.json`? `all` as a
-  profile name risks colliding with a future real profile of that name.
-- OQ-2 **(blocking FR-010):** should a blanket install exclude every billable add-on as a class, or
-  only the ones flagged as such in `profiles.json`? There is no `billable` key today —
-  `seo-geo-addon` is identified by prose in its `note`. Adding the key is a schema change.
-- OQ-3 **(blocking FR-011 scope):** should an adopter be able to permanently decline a profile so
-  `update.sh` stops reporting it? That needs somewhere to persist the refusal, which is a
-  `.sdd-install.json` schema change.
+> **All blocking questions are resolved.** OQ-1, OQ-2, OQ-3, OQ-6 and OQ-7 were adopted from the
+> recommended defaults during the second `/spec-clarify` pass, and the reasoning is recorded below
+> rather than only in a chat transcript. Each is a **default, not a mandate** — any of them can be
+> reversed in `/spec-plan` by recording a decision, which is cheaper than leaving the spec blocked.
+
+- ~~OQ-1: how is "all enabled profiles" spelled?~~ **Resolved: `--all-profiles` / `-AllProfiles`,
+  a flag.** `--profile all` would make `all` a reserved profile name, and the day someone adds a
+  real profile called that, the collision is silent — whereas the installer's current behaviour on
+  an unknown profile name is a deliberate hard error. A flag keeps the name space clean.
+- ~~OQ-2: how are billable add-ons excluded from a blanket install?~~ **Resolved: an explicit
+  `billable: true` key in `profiles.json`.** Identifying a billable add-on by prose inside a `note`
+  field is not something an installer can act on, and "exclude everything that looks billable" is
+  the kind of guess this installer refuses to make everywhere else. Additive and backward
+  compatible.
+- ~~OQ-3: can an adopter permanently decline a profile?~~ **Resolved: no, not in this feature.**
+  Repeating a one-line report on each update is cheap; persisting a refusal means a
+  `.sdd-install.json` schema change and a new state to keep truthful. Revisit only if the report
+  proves genuinely annoying in practice.
 - ~~OQ-4: does FR-006 hold for every skill shipped today?~~ **Resolved before planning.** Checked
   every routed skill in every profile against its contract's `primary_agent`: **0 mismatches**. The
   suspected candidates were clean — `next-prisma-web` routes `nextjs-server-actions-reviewer` and
@@ -271,23 +312,24 @@ be raised as a decision rather than added silently.
   grandfathering clause.
 - OQ-5 **(non-blocking):** should the "reviewers run" line of FR-016 be a requirement on
   `domain-reviewer` alone, or on every review skill's output format?
-- OQ-6 **(BLOCKING — this is the design question):** where does "which profiles apply" live for an
-  adopted project? Verified today: **nowhere**. `agents/domain-reviewer.md:27` names two sources and
-  neither resolves inside an adopted repository — `profiles.json` is not shipped to adopters, and
-  `.claude/skills` is a symlink to the central directory containing every installed skill. The
-  adopted project in front of us (`.claude/` here) holds only `settings.local.json`. Three ways out:
-  **(a)** drop "active profile" as a review-time concept entirely and select purely from changed
-  files against installed skills' `triggers` — the installed set becomes the ceiling and the diff
-  the selector; **(b)** declare applicable profiles in the project, e.g. in `specs/CONSTITUTION.md`
-  or a new `.sdd-profiles` file, which adds an artifact adopters must maintain and keep truthful;
-  **(c)** read the machine-level `.sdd-install.json`, which is the wrong granularity — it says what
-  this *machine* installed, not what this *repository* is. The answer changes FR-001, FR-004 and
-  FR-015 materially.
-- OQ-7 **(blocking the definition of done, not the design):** AC-003 is a behavioural claim about an
-  agent, which is the class the framework says needs an eval — spec 022 built `evals/` for exactly
-  this, and spec 024 refused to ship `rightsizing-advisor` on a failed one. Spec 029 D006 exempted
-  *reviewer checklists*, not *agent behaviour*. Is one executed polyglot run enough evidence, or
-  does this need an `evals/scenarios/` entry with a control arm?
+- ~~OQ-6: where does "which profiles apply" live for an adopted project?~~ **Resolved: option (a) —
+  nowhere, because the concept is removed.** Verified that it lives nowhere today either:
+  `agents/domain-reviewer.md:27` names two sources and neither resolves inside an adopted
+  repository. Option (b) would add an artifact adopters must keep truthful, and a stale one is
+  worse than none. Option (c) is the wrong granularity — it says what this *machine* installed, not
+  what this *repository* is. Option (a) removes the unresolvable concept instead of finding it a
+  home: the installed set is the ceiling, the diff is the selector. See FR-015 and FR-015b.
+- ~~OQ-7: does AC-003 need an eval?~~ **Resolved: one executed polyglot run now, an eval scenario
+  as a follow-up.** This is an agent behaviour claim, which is the class spec 022 built `evals/`
+  for — spec 029 D006 exempted *reviewer checklists*, not *agent behaviour*, and that distinction
+  holds. But building a control-arm scenario for a routing agent is a feature in its own right, and
+  blocking this one behind it trades a real improvement for a process. The executed run with an
+  attached transcript is honest evidence; it is simply weaker than an eval, and the spec says so
+  rather than implying otherwise.
+- OQ-8 **(new, non-blocking):** FR-004b requires every reviewer description to name its artifact,
+  but nothing enforces it. Should `check-consistency.sh` gain a proxy check, or does that repeat the
+  false-positive problem spec 022 D006 documented for the skill-form proxies? Leaning towards no
+  check — the NFR caps this feature at exactly one new rule.
 
 ## Contracted services
 
