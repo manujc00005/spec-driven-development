@@ -215,9 +215,14 @@ None. `profiles.json` gains one profile object under the existing manifest schem
 
 ## Open questions
 
-- OQ-1: `install.sh --profile python-sql-data --dry-run` passes on macOS — the profile resolves and
-  all five skills are reported as new. A **writing** install has not been run, and
-  `install.ps1 -Profile python-sql-data` has not been run on Windows at all.
+- OQ-1: **macOS half closed with evidence (2026-08-17).** A writing install ran:
+  `./install.sh --profile python-sql-data --force --link-user-claude` at `v0.5.0-42-gda85166`.
+  Verified afterwards: the five skills are present in the central directory and resolvable through
+  `~/.claude/skills`; the central skill count matches the repository (71 = 71), so nothing was
+  displaced; `.sdd-install.json` accumulated `python-sql-data` onto the seven existing profiles
+  rather than replacing them, confirming the additive model this spec assumed; and the five skills
+  loaded as live commands in the session that followed. **`install.ps1 -Profile python-sql-data`
+  remains unrun on Windows** — the same standing gap as `update.ps1`.
 - OQ-2: the five skills have not yet been run against a real Python + SQL diff. Their value is
   unproven until they are, and the first real use should be treated as a calibration pass.
 
