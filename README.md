@@ -17,11 +17,11 @@ AI accelerates execution. SDD keeps delivery controlled through specs, plans, de
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Status](https://img.shields.io/badge/status-active-success)
 
-![Skills](https://img.shields.io/badge/skills-66-0969da)
+![Skills](https://img.shields.io/badge/skills-71-0969da)
 ![Hooks](https://img.shields.io/badge/hook%20families-12-bf3989)
 ![Templates](https://img.shields.io/badge/templates-33-8250df)
 ![Agents](https://img.shields.io/badge/agents-8-1a7f37)
-![Profiles](https://img.shields.io/badge/profiles-8-d4a72c)
+![Profiles](https://img.shields.io/badge/profiles-9-d4a72c)
 
 [Quickstart](#-quickstart) · [How it works](#how-it-works) · [Agents and skills](#agents-and-skills) · [Profiles](#️-profiles) · [Provider adapters](#provider-adapters) · [Current support](#current-support)
 
@@ -101,7 +101,7 @@ flowchart TD
 
 > **Skills define how to do something. Agents are responsible for producing an outcome.**
 
-The primary **Claude Code adapter** packages **<!-- count:skills-total -->66<!-- /count --> skills**, **<!-- count:hook-families-total -->12<!-- /count --> hook families**, **<!-- count:templates-total -->33<!-- /count --> document templates**, and **<!-- count:agents-total -->8<!-- /count --> agent definitions** behind a profile-aware installer. A second, prompt-based **Codex adapter** ([`adapters/codex/`](adapters/codex/)) packages the same provider-neutral core as an `AGENTS.md` operating guide plus lifecycle prompts — honestly, with no hook/subagent/skill parity claimed. See [Provider adapters](#provider-adapters).
+The primary **Claude Code adapter** packages **<!-- count:skills-total -->71<!-- /count --> skills**, **<!-- count:hook-families-total -->12<!-- /count --> hook families**, **<!-- count:templates-total -->33<!-- /count --> document templates**, and **<!-- count:agents-total -->8<!-- /count --> agent definitions** behind a profile-aware installer. A second, prompt-based **Codex adapter** ([`adapters/codex/`](adapters/codex/)) packages the same provider-neutral core as an `AGENTS.md` operating guide plus lifecycle prompts — honestly, with no hook/subagent/skill parity claimed. See [Provider adapters](#provider-adapters).
 
 ## Agents and skills
 
@@ -127,6 +127,7 @@ The existing multi-model orchestration path uses a separate model-tier pair: `de
 | Java/Spring backend profile | **Default** |
 | Messaging/event-driven, payments/fintech, Next/Prisma, and SEO/GEO profiles | **Optional** |
 | Delivery/operations profile (deploy procedure, containers, CI/CD, release gating) | **Optional overlay.** Four reviewers shipped; `iac-review`, `kubernetes-review` and `rightsizing-advisor` declared **planned, not shipped** |
+| Python/SQL/data profile (Python scripts, SQL correctness, database cost, data loads, pytest) | **Optional overlay.** Five reviewers shipped. Review only — replaces no tool, and is not data-engineering coverage |
 | Blockchain/crypto profile | **Disabled placeholder** |
 | Graphify integration | **Optional; Graphify itself is external** |
 | Codex adapter | **Shipped as an additive, prompt-based adapter** (operating guide + lifecycle prompts + copy-only installer). Unverified against a live Codex CLI; no parity claimed — see [`adapters/codex/PARITY.md`](adapters/codex/PARITY.md) |
@@ -464,7 +465,7 @@ spec-driven-development/
 ├── install-all.ps1 / .sh          # convenience wrapper — installs both adapters by calling each installer in order
 ├── link-project.ps1 / .sh         # link one project's .claude/ to the central dir
 ├── adapters/                      # provider-adapter layer — claude/ (pointer to this root) + codex/ (prompt-based adapter)
-├── skills/                        # 65 skills — one folder per slash command
+├── skills/                        # 71 skills — one folder per slash command
 ├── hooks/                         # 12 hook families × (.ps1 + .sh) = 24 scripts
 │   ├── README.md                  # per-hook trigger, effect, and activation guide
 │   └── lib/claude-json.sh         # dependency-free JSON helper for .sh hooks (no jq, no python)
@@ -534,6 +535,7 @@ Profiles control which skills, hooks, templates, and agents get installed, decla
 | `seo-geo-addon` | Optional overlay, billable | Full SEO family: `seo-review` (technical on-page + hreflang), `aeo-review` (answer extraction), `geo-review` (generative-engine citability), `ai-visibility-review` (AI-crawler access policy). Every skill gates on the service being contracted in `specs/SERVICES.md`. Install only when SEO/GEO/AEO/AI-visibility is a contracted service |
 | `payments-fintech` | Optional overlay | `stripe-payments-reviewer` (webhooks, idempotency keys, minor units, key hygiene) + `payment-idempotency-reviewer` (processor-agnostic exactly-once effects). `stripe-review-reminder` hook still planned |
 | `delivery-operations` | Optional overlay | <!-- count:delivery-operations-skills -->4<!-- /count --> skills covering how code reaches a machine and stays alive there: `deployment-review` (step ordering, idempotency, re-run after partial failure, rollback), `container-review` (image pinning, port binding as the real perimeter, root, volumes, build-arg secrets), `pipeline-review` (what CI verifies vs what its job names imply), `release-readiness` (a Go/No-go gate asking what was *rehearsed*, not what exists) + <!-- count:delivery-operations-templates -->2<!-- /count --> templates (`RUNBOOK.md`, `DEPLOYMENT.md`). `iac-review`, `kubernetes-review` and `rightsizing-advisor` are declared **planned, not shipped** — see spec 024 D004/D005/D013 |
+| `python-sql-data` | Optional overlay | <!-- count:python-sql-data-skills -->5<!-- /count --> review skills for Python + SQL work: `python-reviewer` (structure, failing loudly, config/IO separation), `sql-query-reviewer` (join fan-out, NULL semantics, parameterization), `database-performance-reviewer` (index coverage, N+1, locks, the write cost of a new index), `data-pipeline-reviewer` (idempotency, partial failure, watermarks, timezones), `python-testing-reviewer` (pytest determinism and isolation). Review only — it replaces no tool (`ruff`, `mypy`, `pytest`, `sqlfluff`, `EXPLAIN`) and is not data-engineering coverage. See [`docs/PYTHON_SQL_PROFILE.md`](docs/PYTHON_SQL_PROFILE.md) |
 | `blockchain-crypto` | **Disabled** | Placeholder. The installer refuses to install it — requesting it explicitly is a hard error by design |
 
 Rules the installers enforce:
@@ -691,12 +693,12 @@ Counted from this repository, not aspirational:
 
 | Category | Count | Detail |
 |---|---|---|
-| Skills | **<!-- count:skills-total -->66<!-- /count -->** | Every slash command referenced in this README has a `SKILL.md` in [`skills/`](skills/) |
+| Skills | **<!-- count:skills-total -->71<!-- /count -->** | Every slash command referenced in this README has a `SKILL.md` in [`skills/`](skills/) |
 | Hook families | **<!-- count:hook-families-total -->12<!-- /count -->** (<!-- count:hook-scripts-total -->24<!-- /count --> scripts) | Each ships as a `.ps1` + `.sh` pair; shared bash JSON helper in `hooks/lib/` |
 | SDD lifecycle templates | **<!-- count:specs-templates-total -->12<!-- /count -->** | `specs/_templates/` |
 | Project-context templates | **<!-- count:docs-templates-total -->21<!-- /count -->** | `docs/_templates/` |
 | Agents | **<!-- count:agents-total -->8<!-- /count -->** | 6 lifecycle agents (`codebase-researcher`, `solution-architect`, `implementer`, `security-reviewer`, `domain-reviewer`, `final-conformance-reviewer`) + 2 model-tier agents (`deep-reasoner` Opus read-only, `fast-worker` Sonnet bounded) — see [`agents/README.md`](agents/README.md) |
-| Profiles | **<!-- count:profiles-total -->8<!-- /count -->** | `core`, `java-spring-backend` (default), `messaging-event-driven`, `next-prisma-web`, `seo-geo-addon` (billable overlay), `payments-fintech` (payments overlay), `delivery-operations` (deploy/containers/CI overlay), `blockchain-crypto` (disabled) |
+| Profiles | **<!-- count:profiles-total -->9<!-- /count -->** | `core`, `java-spring-backend` (default), `messaging-event-driven`, `next-prisma-web`, `seo-geo-addon` (billable overlay), `payments-fintech` (payments overlay), `delivery-operations` (deploy/containers/CI overlay), `python-sql-data` (Python/SQL/data review overlay), `blockchain-crypto` (disabled) |
 | Docs | **7 guides** | `INSTALL.md`, `SDD-ORCHESTRATION.md`, `AGENTIC_ROUTING.md`, `PROVIDER_ADAPTERS.md`, `TOKEN_ECONOMY.md`, `WORKSPACE_SDD.md`, `hooks/README.md` + per-directory READMEs |
 | Installers | **4 scripts** | `install.ps1/.sh`, `link-project.ps1/.sh` — dry-run, backups, profile-aware |
 | Provider adapters | **2** | Claude Code (primary, shipped — the repo root) + Codex (prompt-based, copy-only installer, unverified against a live CLI). See [`adapters/README.md`](adapters/README.md) |

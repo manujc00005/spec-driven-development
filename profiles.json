@@ -319,6 +319,35 @@
       "plannedTemplates": [],
       "note": "Overlay profile (spec 024). Combines with any stack profile: '--profile next-prisma-web,delivery-operations' (install.sh) or '-Profile next-prisma-web,delivery-operations' (install.ps1). Ships four artifact/gate reviewers. No skill in this profile may treat orchestration as a maturity milestone (spec 024 NFR); that constraint is carried by each reviewer's own 'infrastructure weight is not this skill's business' section, since the rightsizing-advisor mindset skill was NOT shipped. iac-review (Terraform/Pulumi/Ansible state, drift, destructive plans) and kubernetes-review (manifests/Helm: probes, limits, securityContext, RBAC, PDBs) are declared PLANNED, not shipped: this feature had no IaC or Kubernetes evidence base to write them from, and shipping a Kubernetes reviewer in the profile's first release would read as an endorsement regardless of wording — see specs/features/024-delivery-operations-profile/DECISIONS.md D004 and D005. kubernetes-review supersedes the never-shipped 'kubernetes-deployment-reviewer' that docs/ROADMAP_JAVA_SPRING_CONTEXT.md still lists under the old name. rightsizing-advisor is PLANNED, not shipped: its eval returned NO-BASELINE-FAILURE (control 0/5 on claude-sonnet-5, evals/results/rightsizing-advisor-2026-08-05.md), so under spec 024 FR-011 it must not ship unproven — see D013."
     },
+    "python-sql-data": {
+      "description": "Python scripts and internal automation, relational SQL, database access cost, data loads/ETL-style processes, and pytest suites. Review-only: no linter, no query planner, no database tooling.",
+      "default": false,
+      "skills": [
+        "python-reviewer",
+        "sql-query-reviewer",
+        "database-performance-reviewer",
+        "data-pipeline-reviewer",
+        "python-testing-reviewer"
+      ],
+      "plannedSkills": [],
+      "agentRouting": {
+        "domain-reviewer": {
+          "skills": [
+            "python-reviewer",
+            "sql-query-reviewer",
+            "database-performance-reviewer",
+            "data-pipeline-reviewer",
+            "python-testing-reviewer"
+          ],
+          "note": "All five are primary-owned by domain-reviewer. security-reviewer consumes python-reviewer, sql-query-reviewer and data-pipeline-reviewer as SECONDARY \u2014 string-interpolated SQL, credentials in source, personal data in logs/extracts, and over-privileged database accounts are security findings, not domain ones. A skill is listed under exactly one agentRouting target, the one that owns it; secondary consumption is carried by each skill's SDD Contract secondary_agents (spec 029 D002)."
+        }
+      },
+      "hooks": [],
+      "plannedHooks": [],
+      "templates": [],
+      "plannedTemplates": [],
+      "note": "Overlay profile (spec 029). Combines with any stack profile, e.g. '--profile java-spring-backend,python-sql-data'. Ships five review skills and nothing else \u2014 no hooks, no templates, no agents. Scope is REVIEW of Python/SQL/data work in a diff; it is not data-engineering coverage (no orchestration design, data modelling, warehouse architecture, lineage or streaming semantics \u2014 see skills/data-pipeline-reviewer/SKILL.md). It replaces no tool: ruff, mypy, pytest, coverage.py, sqlfluff, EXPLAIN and database monitoring all remain the source of truth for what they measure. Engine-agnostic: engine-specific SQL rulings must be stated as assumptions (spec 029 D003)."
+    },
     "blockchain-crypto": {
       "description": "On-chain/wallet/transaction reviews. DISABLED BY DEFAULT.",
       "default": false,
