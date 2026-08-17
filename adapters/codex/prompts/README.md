@@ -4,7 +4,7 @@ The **portable lifecycle spine** of SDD Core, packaged as Codex prompts. Each fi
 its Claude Code skill counterpart under [`../../../skills/`](../../../skills/) — the *procedure* is
 the same; only the packaging differs (a Codex prompt instead of a `SKILL.md` slash command).
 
-> **Curated spine, not the full catalogue.** The Claude adapter ships 65 skills. This adapter ports
+> **Curated spine, not the full catalogue.** The Claude adapter ships 71 skills. This adapter ports
 > only the provider-neutral core lifecycle (see `PARITY.md` and DECISIONS D004). Stack-specific
 > reviewers and Claude-specific mindset manuals are intentionally not included in v1.
 

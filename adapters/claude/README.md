@@ -19,7 +19,7 @@ See `specs/features/019-provider-aware-codex-adapter/DECISIONS.md` D001 for the 
 
 | Adapter piece | Location | Notes |
 |---|---|---|
-| Lifecycle & review skills | [`../../skills/`](../../skills/) | 65 skills, one folder per slash command, each with a `## SDD Contract`. |
+| Lifecycle & review skills | [`../../skills/`](../../skills/) | 71 skills, one folder per slash command, each with a `## SDD Contract`. |
 | Lifecycle & model-tier agents | [`../../agents/`](../../agents/) | 6 lifecycle agents + `deep-reasoner`/`fast-worker`. |
 | Guardrail hooks | [`../../hooks/`](../../hooks/) | 12 families × `.sh` + `.ps1`; wired via settings templates. |
 | Profile manifest | [`../../profiles.json`](../../profiles.json) | The installer's source of truth for profile → skills/hooks/templates/agents. |
