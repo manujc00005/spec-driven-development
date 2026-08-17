@@ -57,6 +57,11 @@ surfaces profiles added since their install.
   for the adopter is not — that would install unrequested content on a silent update.
 - **No change to `profiles.json` schema version** unless a requirement below genuinely needs a new
   key.
+- **No Codex adapter port of the installer half.** `adapters/codex/install-codex.sh` has **no
+  profile concept at all** (verified: zero occurrences of "profile"), so FR-008..FR-012 have no
+  Codex counterpart to change. The routing half is prose in `adapters/codex/AGENTS.md` and is in
+  scope only to the extent that its role descriptions carry the same singular framing. Recorded as
+  an honest gap, same treatment as spec 029 D008.
 - **No downstream project changes.**
 
 ## Users / Actors
@@ -123,6 +128,16 @@ surfaces profiles added since their install.
 - FR-012: `update.sh` does **not** install those profiles by itself.
 - FR-013: `docs/INSTALL.md` documents the multi-stack case end to end: install several profiles,
   what `update.sh` will and will not do afterwards.
+- FR-014: `agents/README.md` carries the same multi-profile framing as `agents/domain-reviewer.md`
+  and `docs/AGENTIC_ROUTING.md` — its `domain-reviewer` row states *"the active profile ships"* in
+  the singular today and would otherwise contradict the change.
+- FR-015: whatever replaces "the active profile" must be **resolvable inside an adopted project**.
+  Today's stated sources do not resolve there: `profiles.json` lives in the framework clone and is
+  absent from an adopted repository, and "the project's installed skills" is a symlink to the
+  central directory holding **every** installed skill, so it cannot distinguish one profile from
+  another. See OQ-6 — this is the requirement the routing half stands or falls on.
+- FR-016: the review output names which reviewers ran and which changed files selected them, so a
+  reviewer that silently did not fire is visible.
 
 ## Non-functional requirements
 
@@ -176,9 +191,11 @@ be raised as a decision rather than added silently.
   and its stop condition no longer fires on multiple installed profiles.
 - AC-002: `docs/AGENTIC_ROUTING.md` describes multi-profile activation, with no remaining singular
   "the active profile" instruction.
-- AC-003: given a diff containing both a `.java` and a `.py` file with both profiles active, the
-  documented selection rule yields the Java reviewers for the first and the Python reviewers for
-  the second, in one review, without asking the user.
+- AC-003: given a diff containing both a `.java` and a `.py` file, a real `domain-reviewer` run
+  reports findings from **both** stacks' reviewers in one pass, names which reviewers ran (FR-016),
+  and does not ask the user which profile applies. **Verified by an executed run against a real
+  polyglot diff, with the transcript attached** — not by asserting that the documentation says so.
+  See OQ-7 on whether this also warrants an eval scenario.
 - AC-004: `check-consistency.sh` **fails** when a skill is routed under an agent that is not its
   contract `primary_agent`, and passes on the repository as shipped.
 - AC-005: `scripts/check-consistency.test.sh` contains a positive and a negative case for AC-004,
@@ -191,8 +208,12 @@ be raised as a decision rather than added silently.
   command to add it, and does not install it.
 - AC-010: `update.sh` with a missing or corrupt `.sdd-install.json` reports that it cannot compare,
   rather than listing every profile as new.
-- AC-011: a single-profile install produces the same result as before this change.
+- AC-011: a single-profile install produces the same result as before this change, verified by
+  diffing `install.sh --profile java-spring-backend --dry-run` output captured **before** the change
+  against the same command after it — byte-identical apart from any deliberate new reporting line.
 - AC-012: `docs/INSTALL.md` documents the multi-stack flow.
+- AC-014: no artifact still instructs an agent to determine a single active profile — checked
+  across `agents/domain-reviewer.md`, `agents/README.md` and `docs/AGENTIC_ROUTING.md`.
 - AC-013: `bash scripts/check-consistency.sh`, `check-consistency.test.sh`, `update.test.sh` and
   `graphify.test.sh` all pass.
 
@@ -212,6 +233,12 @@ be raised as a decision rather than added silently.
 
 ## Assumptions
 
+- **The mechanism already exists in this repository and does not need inventing.**
+  `skills/review-all/SKILL.md` routes to stack-specific reviewers by *condition*, not by profile —
+  *"Java/Spring project and Backend was detected"*, *"diff touches `prisma/schema*`"* — and its
+  deployment section fires on **artifact presence**, explicitly warning that firing without the
+  artifact *"is a defect, not a harmless extra"*. `domain-reviewer` is the outlier that still
+  thinks in profiles. FR-004 aligns it with the precedent rather than introducing a second model.
 - Reviewer selection can be driven by changed file paths plus each skill's `triggers` frontmatter.
   `triggers` is a repository convention consulted by the agent, **not** a mechanism any tool
   enforces — so this remains guidance the agent follows, at the same strength as every other
@@ -242,8 +269,25 @@ be raised as a decision rather than added silently.
   `privacy-compliance-review` under `security-reviewer` because both genuinely declare it as
   primary. FR-006 lands green on the repository as shipped, so it needs no migration and no
   grandfathering clause.
-- OQ-5 **(non-blocking):** should the review output's "profiles active / reviewers run" line be a
-  requirement on `domain-reviewer` alone, or on every review skill's output format?
+- OQ-5 **(non-blocking):** should the "reviewers run" line of FR-016 be a requirement on
+  `domain-reviewer` alone, or on every review skill's output format?
+- OQ-6 **(BLOCKING — this is the design question):** where does "which profiles apply" live for an
+  adopted project? Verified today: **nowhere**. `agents/domain-reviewer.md:27` names two sources and
+  neither resolves inside an adopted repository — `profiles.json` is not shipped to adopters, and
+  `.claude/skills` is a symlink to the central directory containing every installed skill. The
+  adopted project in front of us (`.claude/` here) holds only `settings.local.json`. Three ways out:
+  **(a)** drop "active profile" as a review-time concept entirely and select purely from changed
+  files against installed skills' `triggers` — the installed set becomes the ceiling and the diff
+  the selector; **(b)** declare applicable profiles in the project, e.g. in `specs/CONSTITUTION.md`
+  or a new `.sdd-profiles` file, which adds an artifact adopters must maintain and keep truthful;
+  **(c)** read the machine-level `.sdd-install.json`, which is the wrong granularity — it says what
+  this *machine* installed, not what this *repository* is. The answer changes FR-001, FR-004 and
+  FR-015 materially.
+- OQ-7 **(blocking the definition of done, not the design):** AC-003 is a behavioural claim about an
+  agent, which is the class the framework says needs an eval — spec 022 built `evals/` for exactly
+  this, and spec 024 refused to ship `rightsizing-advisor` on a failed one. Spec 029 D006 exempted
+  *reviewer checklists*, not *agent behaviour*. Is one executed polyglot run enough evidence, or
+  does this need an `evals/scenarios/` entry with a control arm?
 
 ## Contracted services
 
