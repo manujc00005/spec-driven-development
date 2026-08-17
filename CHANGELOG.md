@@ -11,6 +11,7 @@ under `specs/features/` — the framework is developed with its own workflow.
 
 ## [Unreleased]
 
+Spec 029 · Python/SQL/data profile — review coverage for script-and-query work.
 Spec 027 · Query-first graph access — the framework's own default was the expensive path.
 Spec 025 · Workspace SDD — the first coverage of what happens *between* projects.
 
@@ -43,6 +44,31 @@ Spec 024 · Delivery-operations profile — the first coverage of what happens a
 
 ### Added
 
+- **`python-sql-data` profile (spec 029)** — an optional overlay for projects built out of Python
+  and relational SQL rather than around a framework: internal scripts, scheduled automation,
+  reporting extracts, data validation and load processes. Combines with any stack profile
+  (`--profile java-spring-backend,python-sql-data`). Ships five review skills and nothing else —
+  no hooks, no templates, and **no new agents**: all five are primary-owned by the existing
+  `domain-reviewer`, with `security-reviewer` as secondary on the three that surface injection,
+  credentials or personal data. Guide: [`docs/PYTHON_SQL_PROFILE.md`](docs/PYTHON_SQL_PROFILE.md).
+- **Five review skills** — `python-reviewer` (module structure, logic/IO/config separation,
+  failing loudly instead of exiting 0 on partial failure, resource handling, dependency creep),
+  `sql-query-reviewer` (join fan-out and duplicate rows, `NULL` semantics, `GROUP BY`/`HAVING`,
+  window frames, CTEs, and parameterization versus string interpolation),
+  `database-performance-reviewer` (index coverage, N+1, pagination, lock and transaction duration,
+  batch size, and the write cost of adding an index), `data-pipeline-reviewer` (idempotency,
+  partial failure, retries, incremental watermarks and late-arriving rows, timezone-explicit
+  timestamps, file format contracts, traceability, reconciliation), `python-testing-reviewer`
+  (pytest determinism and isolation, fixture scope, patch location, parametrization, how scripts
+  and SQL get tested at all).
+- **Scope stated in the skills, not just the docs.** These are reviews, not tooling: each skill
+  carries an explicit "does NOT replace" section for `ruff`, `mypy`, `pytest`, `coverage.py`,
+  `sqlfluff`, `EXPLAIN` and database monitoring. `database-performance-reviewer` labels every
+  finding **structural** (true from the text) or **conditional** (depends on volume — "run
+  `EXPLAIN` and check X"), because a static reviewer has no query plan. `sql-query-reviewer` is
+  engine-agnostic and must state engine-specific rulings as assumptions. The profile is **not**
+  data-engineering coverage — no orchestration design, data modelling, warehouse architecture,
+  lineage or streaming semantics.
 - **Workspace SDD design** ([`docs/WORKSPACE_SDD.md`](docs/WORKSPACE_SDD.md)) — a layer above
   per-project SDD for features that cross repositories. Records what each project owns, how the
   projects depend on each other and which contracts bind them, in a `.sdd-workspace/` tree at the
