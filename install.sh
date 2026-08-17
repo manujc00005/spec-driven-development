@@ -156,6 +156,24 @@ if not requested:
     default_profile = data.get("defaults", {}).get("profile")
     if default_profile:
         requested = [default_profile]
+    else:
+        # No --profile and no defaults.profile to fall back to. Without this
+        # branch the run continues with an empty request and installs core
+        # only, exiting 0 - a silent near-empty install that looks like a
+        # success, contradicting the stated contract at the top of this file:
+        # a profile-aware repo either resolves correctly or refuses.
+        #
+        # NOTE: keep single quotes BALANCED in this heredoc. bash 3.2 (the
+        # macOS default) does not skip heredoc bodies when scanning for the
+        # closing paren of $(...), so an odd number of apostrophes here is
+        # read as an unterminated string and breaks the whole script.
+        print(
+            "FATAL_ERROR:no profile requested and profiles.json declares no "
+            "'defaults.profile' to fall back to. Refusing to continue with a core-only "
+            "install that would look like a success - pass --profile <name>, or repair "
+            "defaults.profile in profiles.json."
+        )
+        sys.exit(1)
 
 profiles = data.get("profiles", {})
 valid_names = list(profiles.keys())

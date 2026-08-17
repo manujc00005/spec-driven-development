@@ -146,6 +146,15 @@ if (Test-Path $ProfilesFile) {
         foreach ($p in $Profile) { $requestedProfiles += ($p -split ',') | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' } }
     } elseif ($profilesData.defaults.profile) {
         $requestedProfiles = @($profilesData.defaults.profile)
+    } else {
+        # No -Profile and no defaults.profile to fall back to. Without this
+        # branch the run continues with an empty request and installs core
+        # only, exiting 0 - a silent near-empty install that looks like a
+        # success. Mirrors the same guard in install.sh.
+        Write-Host ""
+        Write-Host "[ERROR]   no profile requested and profiles.json declares no 'defaults.profile' to fall back to." -ForegroundColor Red
+        Write-Host "[ERROR]   Refusing to continue with a core-only install that would look like a success  - pass -Profile <name>, or repair defaults.profile in profiles.json." -ForegroundColor Red
+        exit 1
     }
 
     # --- Hard validation: unknown profile name or explicit disabled request ---
