@@ -55,9 +55,16 @@ Skills are not prose — they are the product. A PR that changes the **content**
 **after** the change:
 
 ```bash
-export SKILL_EVAL_RUNNER='claude -p --model <model-id>'
+export SKILL_EVAL_RUNNER="claude -p --setting-sources '' --model <model-id>"
 bash scripts/skill-eval.sh <skill> --reps 5
 ```
+
+The runner must isolate the call from your own agent configuration and pin a model; the harness
+refuses to run otherwise. `--setting-sources ''` keeps your plugins, hooks, memory and saved
+settings out of **both** arms, and `--model` makes the identifier in the result file traceable to
+the command that produced it rather than a claim about it. For Codex, the equivalent is
+`codex exec --ignore-user-config --ephemeral --model <model-id>`. A runner the harness does not
+recognize needs `--allow-unisolated`, which runs but stamps the result as un-isolated.
 
 > **This gate is not fully in force yet.** Every scenario currently in `evals/scenarios/` is
 > marked **superseded** — the corpus describes repository state the model cannot see, so a sweep
