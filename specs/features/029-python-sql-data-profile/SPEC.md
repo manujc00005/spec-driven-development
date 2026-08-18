@@ -223,8 +223,18 @@ None. `profiles.json` gains one profile object under the existing manifest schem
   rather than replacing them, confirming the additive model this spec assumed; and the five skills
   loaded as live commands in the session that followed. **`install.ps1 -Profile python-sql-data`
   remains unrun on Windows** — the same standing gap as `update.ps1`.
-- OQ-2: the five skills have not yet been run against a real Python + SQL diff. Their value is
-  unproven until they are, and the first real use should be treated as a calibration pass.
+- OQ-2: **`python-reviewer` calibrated against real code (2026-08-17); the other four still
+  unproven.** The pass ran over the 885-line Python heredoc in `scripts/check-consistency.sh` and
+  the two blocks in `install.sh`, and produced two defects in code that was passing CI green:
+  `--fix` keying control flow on rendered message text (fixed in `36c3b04`, with a regression case
+  that fails against the pre-fix code) and both installers silently completing a core-only install
+  when no profile resolves (fixed in `51a5b73`). Neither was noise, and neither was style.
+  The pass also produced two corrections **to the skill**, applied in `1f18894`: it was calibrated
+  for standalone modules, so it would have reported `print()` as a missing logger and module-scope
+  execution as an import-time side effect, when in a shell heredoc both are the architecture.
+  **Still open:** `sql-query-reviewer`, `database-performance-reviewer`, `data-pipeline-reviewer`
+  and `python-testing-reviewer` have run against nothing. This repository has no SQL, no data
+  pipeline and no pytest suite, so closing their half needs a real Python + SQL codebase.
 
 ## Contracted services
 
