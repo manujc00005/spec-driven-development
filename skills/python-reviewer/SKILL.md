@@ -53,7 +53,24 @@ structure before tests usually reads better.
   with no re-raise and no non-zero exit.
 - A script whose exit code is 0 on partial failure. If 900 of 1000 rows loaded, what does the
   caller see?
-- `print()` used as error reporting, so nothing lands in a log the scheduler can read.
+- `print()` used as error reporting, so nothing lands in a log the scheduler can read — unless
+  the script is embedded in shell, where `print()` is the interface (see the section below).
+
+### Control flow that depends on formatted text
+
+Does any decision read a string that was built for a human to look at?
+
+- Errors, results or statuses accumulated as **formatted strings** and later filtered, counted or
+  matched by substring. The message is presentation; the moment it also carries meaning, rewording
+  it changes behaviour — and nothing near the edit hints that it will.
+- The failure shape is the dangerous one: the match silently stops matching, the code takes the
+  "nothing to do" branch, and it reports success. Nothing raises.
+- `if "ERROR" in output` or `startswith("[warn]")` over another command's stdout — the same defect
+  across a process boundary, where the other side is free to reword at any time.
+- Regex over a log line or a CLI banner to recover a value the tool also exposes as JSON, a field,
+  or an exit code.
+- The fix is always the same: keep the **record** (a `NamedTuple`, a dataclass, a dict with stable
+  keys) and render text only at the boundary where a human reads it.
 
 ### Typing
 
@@ -106,6 +123,9 @@ structure before tests usually reads better.
 
 ### Logging
 
+Skip this section entirely for Python embedded in a shell heredoc — there `print()` is the
+interface, not a missing logger.
+
 - Is there any log line that would let someone reconstruct what a scheduled run did?
 - Log level used as decoration — everything at `INFO`, or errors at `WARNING`.
 - f-strings in log calls versus lazy `%s` args (cost only matters in hot loops; correctness of the
@@ -120,6 +140,28 @@ structure before tests usually reads better.
 - Version pinning: does the project pin, and does this change respect that convention?
 - A heavyweight import (pandas, requests, a database driver) pulled into a module that does not
   need it, paid on every import.
+
+## Python embedded in shell scripts
+
+Python inside a `python3 - <<'EOF'` heredoc is a normal shape in automation repositories, and
+several checks above must be read differently there. State which mode you are reviewing in.
+
+- **`print()` is the interface, not sloppy logging.** The block talks to its caller through stdout,
+  so each `print()` is a protocol frame. Do not report it as "should use logging".
+- **Review the protocol instead.** Are emitted values validated before they are written — no
+  embedded newline, no delimiter collision, no unescaped separator? An unvalidated value in a
+  line-oriented `KEY:value` protocol corrupts the parse on the other side.
+- **The exit code carries more weight than usual**, because the caller branches on it rather than
+  on the text.
+- **Module-scope execution is inherent, not a defect** — there is no import to protect. Say so, and
+  name the consequence: the block cannot be unit-tested in Python, so its tests live at the shell
+  level or nowhere.
+- **Heredoc quoting changes the program.** `<<'EOF'` blocks shell expansion; `<<EOF` lets `$` and
+  backticks expand *before* Python sees them, silently rewriting the source under review.
+- **Old bash mangles heredocs inside `$(...)`.** bash 3.2, still the macOS default, does not skip
+  heredoc bodies when scanning for the closing paren. An odd number of single quotes in the block —
+  one apostrophe in a comment is enough — reads as an unterminated string and breaks the script at
+  a line far from the edit.
 
 ## What this skill does NOT do
 
@@ -141,6 +183,8 @@ structure before tests usually reads better.
 ## Python Review — <module or script>
 
 **Verdict:** PASS | PASS WITH NOTES | FAIL
+
+**Mode:** standalone module | script | embedded in shell heredoc
 
 ### Findings
 
