@@ -50,8 +50,9 @@ Spec 024 · Delivery-operations profile — the first coverage of what happens a
   circuit and returns only when it is done or genuinely stuck. It refuses to start unless six
   conditions hold (spec `Ready`, no blocking open decision, runnable tasks, a non-default branch, a
   clean tree, and a baseline suite that passes *without* dirtying the tree), and each refusal names
-  the condition and its fix. **Status: in progress** — the protocol and agent contracts have landed;
-  calibration and both provider smoke runs are still open, so it is not yet closure-ready.
+  the condition and its fix. **Status: in progress** — the protocol, agent contracts and calibration have
+  landed on both providers; the one remaining closure requirement is a maintainer's real,
+  non-seeded run (T023).
   Guide: [`docs/SDD-ORCHESTRATION.md`](docs/SDD-ORCHESTRATION.md).
 - **Structured verdict and completion blocks** — `security-reviewer`, `domain-reviewer` and
   `final-conformance-reviewer` now end an autonomous report with a fenced YAML `verdict:
