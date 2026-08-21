@@ -17,7 +17,7 @@ Runs are ordered riskiest-assumption-first (PLAN, "Proposed approach"), not by c
 
 ## Phase 2: Implementation
 
-- [ ] T002 - Seeded run: a single finding alternating REJECT/APPROVE past `max-iterations` must
+- [x] T002 - Seeded run: a single finding alternating REJECT/APPROVE past `max-iterations` must
   abort on the per-finding REJECT total while no per-reviewer no-progress streak ever reaches the
   cap. Fixture must produce at least `max-iterations + 1` rejects of the same
   `<reviewer>:<finding-id>` with an approval between them. Done when the record shows both counter
@@ -30,30 +30,30 @@ Runs are ordered riskiest-assumption-first (PLAN, "Proposed approach"), not by c
   progress-carrying REJECT and a terminal DONE, proving caps measure stagnation and not workload.
   Covers: AC-004.
 
-- [ ] T004 - Seeded run: a reviewer that allocates a fresh finding id every round while drifting to
+- [x] T004 - Seeded run: a reviewer that allocates a fresh finding id every round while drifting to
   a new concern. Observe whether the progress rule reads the drift as progress and what ultimately
   bounds the run. Done when AC-007 has a written verdict — a recorded tolerance with its reasoning,
   or a specified mitigation — backed by this run's counters.
   Covers: AC-007.
 
-- [ ] T005 - Seeded run: a non-autonomous `sdd-orchestrate` invocation behaves exactly as before
+- [x] T005 - Seeded run: a non-autonomous `sdd-orchestrate` invocation behaves exactly as before
   autonomous mode existed, and the default-branch refusal fires on Claude Code. Done when the
   record shows the refusal block verbatim and a non-autonomous run producing no
   `ORCHESTRATION.md`.
   Covers: AC-005.
 
-- [ ] T006 - Seeded run: a non-lifecycle production change made after the implementation freeze
+- [x] T006 - Seeded run: a non-lifecycle production change made after the implementation freeze
   invalidates final conformance and returns the loop to REVIEW, while lifecycle-only writes do not.
   Done when the record shows both arms — the seeded production edit invalidating the frozen
   fingerprint, and a lifecycle-only write leaving it intact.
   Covers: AC-006.
 
-- [ ] T007 - Seeded run: exhaust the delegation budget and observe a recoverable abort naming the
+- [x] T007 - Seeded run: exhaust the delegation budget and observe a recoverable abort naming the
   budget and the count. Fixture sized so the floor budget of 25 is reached; the record must be
   unambiguously distinguishable from a non-convergence abort and state which fired first.
   Covers: AC-001.
 
-- [ ] T008 - Re-entry after T007's budget abort: refuse an omitted cap, refuse an equal cap, refuse
+- [x] T008 - Re-entry after T007's budget abort: refuse an omitted cap, refuse an equal cap, refuse
   a lower cap, and resume only on an explicit increase. Done when the record shows all four
   outcomes, every counter preserved across re-entry, and the cap change appended before any work.
   Depends on T007 having produced a resumable abort.
@@ -61,13 +61,13 @@ Runs are ordered riskiest-assumption-first (PLAN, "Proposed approach"), not by c
 
 ## Phase 3: Tests
 
-- [ ] T009 - Run `./scripts/check-consistency.sh`; it must exit 0 and leave `git status --porcelain`
+- [x] T009 - Run `./scripts/check-consistency.sh`; it must exit 0 and leave `git status --porcelain`
   exactly as it found it. Confirm 031's evidence matrix lost no criterion it had already closed as
   PASS. Covers: AC-008.
 
 ## Phase 4: Review
 
-- [ ] T010 - Update 031's evidence matrix so no criterion it closed as PARTIAL remains PARTIAL
+- [x] T010 - Update 031's evidence matrix so no criterion it closed as PARTIAL remains PARTIAL
   without a reason that outlived this spec, citing each 032 run that closed it. Append; never
   rewrite a 031 run record. Covers: AC-008.
 
