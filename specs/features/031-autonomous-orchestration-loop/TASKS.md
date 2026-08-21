@@ -82,16 +82,16 @@
 
 ## Phase 5: User-facing documentation
 
-- [ ] T018 - Add an autonomous-mode section to `docs/SDD-ORCHESTRATION.md` next to the existing
+- [x] T018 - Add an autonomous-mode section to `docs/SDD-ORCHESTRATION.md` next to the existing
   invocation examples: the `--autonomous` form and its cap overrides, the six entry conditions in
   plain language, what the loop decides alone versus what it escalates, what the two cap kinds mean
   after D017, and how to resume a `PAUSED` or recoverable-`ABORTED` run. Covers: AC-012.
-- [ ] T019 - Add the `CHANGELOG.md` entry for spec 031 following the format the recent feature
+- [x] T019 - Add the `CHANGELOG.md` entry for spec 031 following the format the recent feature
   entries use. Covers: AC-012.
 
 ## Phase 6: Verification and review
 
-- [ ] T015 - Run `bash scripts/check-consistency.sh` and
+- [x] T015 - Run `bash scripts/check-consistency.sh` and
   `bash scripts/check-consistency.test.sh` after all contract edits; record actual exit codes and
   resolve only in-scope regressions. Covers: AC-003, AC-007.
 - [ ] T016 - Perform final SPEC → PLAN → TASKS → diff → calibration-evidence conformance review,

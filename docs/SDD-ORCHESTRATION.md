@@ -177,6 +177,49 @@ Do not modify code.
 ```
 Expected: orchestrator → deep-reasoner → prioritized report. Nothing implemented.
 
+### Autonomous mode
+
+The invocations above report back to you between phases. Autonomous mode instead runs the whole
+implement → review → fix circuit on an already-approved feature and only comes back when it is
+finished or genuinely stuck:
+
+```
+/sdd-orchestrate --autonomous specs/features/<nnn>-<name> [--max-iterations N] [--max-delegations N]
+```
+
+It starts only if six conditions hold: the spec is `Ready` (or the run is a validated resume), no
+open decision blocks a task, `TASKS.md` has runnable work, you are **not** on the default branch,
+the working tree is clean, and the PLAN's verification suite passes at baseline without dirtying
+the tree. A refusal names the exact condition and the command that fixes it, so an unmet gate is a
+one-line fix rather than a mystery.
+
+Inside the loop, workers and reviewers communicate through structured blocks rather than prose, and
+every decision, delegation, verdict, and escalation is written to `ORCHESTRATION.md` in the feature
+folder. That file — not the conversation — is the source of truth, which is what lets a compacted
+or killed session resume exactly where it stopped.
+
+**What it decides alone vs. what it escalates.** A blocker is resolved autonomously only when it is
+purely technical, reversible, inside the approved spec, and outside every human-gated domain; the
+resolution is recorded in `DECISIONS.md` as orchestrator-decided, so you can audit or reverse it.
+Anything touching product or UX behavior the spec does not settle, money, personal data, a public
+contract, a destructive operation, or evidence that contradicts the spec waits for you. Independent
+tasks keep running while a question is pending, and the run pauses only when nothing else can
+progress.
+
+**What the caps mean.** They bound disagreement, not effort. A reviewer can review as many times as
+the work requires; what is capped is a reviewer rejecting repeatedly without resolving anything
+(`max-iterations` consecutive no-progress rejections) and a single finding being rejected more than
+`max-iterations` times overall. The delegation budget, which defaults to `max(25, 6 × unchecked
+tasks)`, is the global ceiling on total cost.
+
+**Resuming.** A `PAUSED` run resumes once you record the answer in `DECISIONS.md` and re-invoke the
+same command. A recoverable `ABORTED` run resumes after its stated remediation; if it stopped on an
+exhausted cap you must raise that cap explicitly, since counters never reset. A run that aborted on
+ambiguous provenance is deliberately non-resumable and hands control back to you.
+
+The loop never commits, pushes, merges, or sets a spec status by hand — it invokes the owning
+lifecycle skills and leaves you a reviewed working tree plus a PR description.
+
 ### When to use Opus (deep-reasoner)
 
 Architecture, root cause, security, concurrency/idempotency/races, data consistency,

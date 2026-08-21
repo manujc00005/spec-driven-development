@@ -11,6 +11,7 @@ under `specs/features/` — the framework is developed with its own workflow.
 
 ## [Unreleased]
 
+Spec 031 · Autonomous orchestration — the loop closes without a human in the middle.
 Spec 029 · Python/SQL/data profile — review coverage for script-and-query work.
 Spec 027 · Query-first graph access — the framework's own default was the expensive path.
 Spec 025 · Workspace SDD — the first coverage of what happens *between* projects.
@@ -44,6 +45,37 @@ Spec 024 · Delivery-operations profile — the first coverage of what happens a
 
 ### Added
 
+- **Autonomous orchestration mode (spec 031)** — `/sdd-orchestrate --autonomous
+  specs/features/<nnn>-<name>` runs an approved feature through the whole implement → review → fix
+  circuit and returns only when it is done or genuinely stuck. It refuses to start unless six
+  conditions hold (spec `Ready`, no blocking open decision, runnable tasks, a non-default branch, a
+  clean tree, and a baseline suite that passes *without* dirtying the tree), and each refusal names
+  the condition and its fix. **Status: in progress** — the protocol and agent contracts have landed;
+  calibration and both provider smoke runs are still open, so it is not yet closure-ready.
+  Guide: [`docs/SDD-ORCHESTRATION.md`](docs/SDD-ORCHESTRATION.md).
+- **Structured verdict and completion blocks** — `security-reviewer`, `domain-reviewer` and
+  `final-conformance-reviewer` now end an autonomous report with a fenced YAML `verdict:
+  APPROVE | REJECT` block plus per-finding id/severity/`path:line`/required action, and
+  `implementer`/`fast-worker` with `status: DONE | BLOCKED`. Prose stays for the human, but control
+  flow reads **only** the block — the same class of mistake `36c3b04` had to undo when `--fix`
+  keyed on rendered message text. The schema lives in the orchestrator skill; the agent files
+  reference it rather than restating it.
+- **`ORCHESTRATION.md` per-feature run state** — attempts, findings registry, delegation log,
+  escalations, cap changes and closure delta, written before each step so a compacted or killed
+  session resumes from the file instead of from conversation memory. Approvals are bound to a diff
+  fingerprint, so any implementation change invalidates every stale approval rather than only the
+  rejecting reviewer's.
+- **Escalation classifier** — a blocker is resolved autonomously only when it is technical,
+  reversible, in scope and outside every human-gated domain (product/UX, money, personal data,
+  public contracts, destructive operations, anything contradicting the spec). Autonomous
+  resolutions are recorded in `DECISIONS.md` as orchestrator-decided and stay auditable and
+  reversible. Independent tasks continue while a question waits.
+- **Caps that measure stagnation, not effort (D017)** — a reviewer may review as many times as the
+  work requires. What is capped is a reviewer rejecting repeatedly while resolving nothing, and a
+  single finding rejected more than `max-iterations` times; the delegation budget, defaulting to
+  `max(25, 6 × unchecked tasks)`, is the global ceiling. The first design gated *every* reviewer
+  invocation, which aborted any feature with more tasks than the cap — caught in audit before it
+  shipped, with the calibration evidence recorded in the spec.
 - **`python-sql-data` profile (spec 029)** — an optional overlay for projects built out of Python
   and relational SQL rather than around a framework: internal scripts, scheduled automation,
   reporting extracts, data validation and load processes. Combines with any stack profile

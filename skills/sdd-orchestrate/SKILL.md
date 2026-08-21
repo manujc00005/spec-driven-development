@@ -30,8 +30,11 @@ ARGUMENTS: either a free-form description of the goal, or:
 --autonomous specs/features/<nnn>-<name> [--max-iterations N] [--max-delegations N]
 ```
 
-Both overrides must be positive integers. Defaults: `max-iterations=3` per reviewer and
-`max-delegations=25` for the whole run. Reject unknown flags, missing paths, duplicate overrides,
+Both overrides must be positive integers. Defaults: `max-iterations=3`, applied to the two
+non-convergence counters defined below, and `max-delegations` computed once at first entry as
+`max(25, 6 × unchecked tasks in TASKS.md)` — the budget must absorb a whole feature's re-approvals,
+so it scales with the queue rather than being a flat number. Record the computed value and its
+inputs in `ORCHESTRATION.md`. Reject unknown flags, missing paths, duplicate overrides,
 and non-positive/non-integer values before reading or writing feature state. On first entry the
 chosen values become the effective caps. On authenticated re-entry, omitted overrides preserve
 them; explicit overrides may only increase them. Refuse a decrease, never reset counters, and log
@@ -167,8 +170,8 @@ findings:
 ```
 
 For a worker, two invalid completion blocks become `BLOCKED` with the exact validation errors and
-follow the escalation classifier. A synthetic reviewer REJECT consumes the current reviewer's
-iteration and therefore cannot bypass convergence caps.
+follow the escalation classifier. A synthetic reviewer REJECT closes no finding, so it always
+increments that reviewer's no-progress counter and cannot bypass the convergence caps below.
 
 ## Autonomous mode — implement/review/fix circuit
 
@@ -209,6 +212,34 @@ same-context owning-skill calls are logged but do not consume it.
 The loop continues until the termination or abort contract below fires. Findings are never marked
 resolved merely because a worker says it changed code; only a subsequent structured APPROVE closes
 their gate.
+
+## Autonomous mode — convergence caps
+
+Caps exist to detect **stagnation**, never to bound how much work a feature contains. Getting this
+backwards is a known defect (D017): gating every reviewer invocation against one counter aborts any
+feature with more tasks than the cap, because `domain-reviewer` runs on each implemented diff and
+D015 re-runs stale reviewers after every change. A reviewer that keeps approving must never run a
+run out of budget.
+
+Track three numbers per reviewer and one per finding:
+
+- **No-progress streak (gates, cap `max-iterations`).** Increment on a `REJECT` — synthetic ones
+  included — that resolves none of that reviewer's open findings. Reset to zero on an `APPROVE`,
+  and equally on a `REJECT` that resolves at least one previously open finding of that reviewer,
+  even when it raises new ones. A reviewer legitimately finding a different real defect each round
+  is converging, and iterates as long as the delegation budget allows.
+- **Total invocations (audit only, never gates).** Every call, including re-approvals forced by
+  another reviewer's fix.
+- **Clean re-approval (gates nothing).** A review scheduled only because the fingerprint moved
+  consumes the delegation budget and nothing else.
+- **Per-finding REJECT total (gates, cap `max-iterations`).** Count REJECTs carrying the same
+  `<reviewer>:<finding-id>` in its registry row. Monotonic per finding; this is what catches a
+  flip-flop, which a streak reset by intervening approvals would miss.
+
+Before a reviewer call, pre-check only whether that call *could* exceed a gating cap; an over-cap
+call is never made or counted. The single format-correction re-request consumes a delegation but no
+gating counter. The delegation budget remains the sole global monotonic backstop against an
+unbounded run.
 
 ## Autonomous mode — escalation protocol
 
@@ -255,8 +286,8 @@ Initialize it with this canonical scaffold (replace angle-bracket values; do not
 - Mode: `autonomous`
 - Started at: `<ISO-8601>`
 - Updated at: `<ISO-8601>`
-- Effective max iterations per reviewer: `<N>`
-- Effective max delegations: `<N>`
+- Effective max iterations (no-progress streak and per-finding rejects): `<N>`
+- Effective max delegations: `<N>` (`max(25, 6 × <unchecked tasks at first entry>)` unless overridden)
 
 ## State
 
@@ -267,7 +298,8 @@ Initialize it with this canonical scaffold (replace angle-bracket values; do not
 - Delegations used: `<N>`
 - Attributed dirty paths: `<sorted paths or none>`
 - Baseline verification: `<commands and PASS evidence>`
-- Reviewer iterations: `security=<N>, domain=<N>, final-conformance=<N>`
+- No-progress streaks (gating): `security=<N>, domain=<N>, final-conformance=<N>`
+- Total invocations (audit only): `security=<N>, domain=<N>, final-conformance=<N>`
 - Approvals: `<reviewer=fingerprint or none>`
 - Frozen implementation fingerprint: `<fingerprint or none>`
 
@@ -278,8 +310,8 @@ Initialize it with this canonical scaffold (replace angle-bracket values; do not
 
 ## Findings
 
-| Reviewer:finding | Task | Severity | Required action | Status | First seen | Last seen | Resolving verdict/fingerprint |
-|---|---|---|---|---|---|---|---|
+| Reviewer:finding | Task | Severity | Required action | Status | REJECTs | First seen | Last seen | Resolving verdict/fingerprint |
+|---|---|---|---|---|---|---|---|---|
 
 ## Delegation log
 
@@ -315,9 +347,9 @@ Append attempt, finding, delegation, and cap-change history; never rewrite it to
 attempt. State is only the current machine-readable summary. Before any agent call, first evaluate
 `Delegations used + 1`; if it exceeds the effective budget, abort without allocating an attempt or
 incrementing the counter. Otherwise allocate/persist the attempt and increment exactly once. Before
-a reviewer call, apply the same pre-check to `reviewer iterations + 1`; an over-cap call is never
-made or counted. The one format-correction re-request is a new attempt and consumes a delegation but
-not another reviewer iteration.
+a reviewer call, apply the gating pre-checks defined in Convergence caps — the reviewer's
+no-progress streak and, when the reviewer would re-report a known finding, that finding's REJECT
+total. Total invocations and clean re-approvals are recorded but never block a call.
 
 On re-entry, reconcile any active `PLANNED`, `DISPATCHED`, or `RESPONDED` attempt before selecting
 work. If the current fingerprint equals its pre-fingerprint, close it as `FAILED` (interrupted with
@@ -364,10 +396,11 @@ and returns to REVIEW (or `/spec-update` if requirements changed). Persist `Run 
 after the observed delta contains no unexpected change. If an owning skill refuses, remain PAUSED or
 recoverably ABORTED with its exact reason; never write the status on its behalf.
 
-Stop before the next action when a reviewer would exceed `max-iterations`, a delegation would
-exceed `max-delegations`, two structured-output attempts fail as defined above and cannot be
-classified safely, verification remains red outside the current task's scope, or human-gated work
-blocks every remaining task. `PAUSED` is reserved for a concrete maintainer answer. Cap exhaustion,
+Stop before the next action when a reviewer's no-progress streak or a single finding's REJECT total
+would exceed `max-iterations`, a delegation would exceed `max-delegations`, two structured-output
+attempts fail as defined above and cannot be classified safely, verification remains red outside
+the current task's scope, or human-gated work blocks every remaining task. A non-convergence abort
+names the reviewer or the finding that failed to converge, never merely the counter value. `PAUSED` is reserved for a concrete maintainer answer. Cap exhaustion,
 provider-format failure, and remediable verification failure persist `ABORTED, resumable: yes` with
 the exact counter/failure and required remediation. Corrupt or mismatched state and unexplained
 out-of-scope writes persist/refuse as `ABORTED, resumable: no`; never guess provenance. Every stop
@@ -375,7 +408,10 @@ records open findings/tasks/escalations and last green verification.
 
 Re-entry from a recoverable abort first proves its remediation. Cap exhaustion requires an explicit
 higher override; omitted, equal, or lower caps refuse. Accepted increases update the effective cap
-and append `Cap changes` before work. All counters and reviewer iterations remain monotonic.
+and append `Cap changes` before work. The delegation budget, total invocations, and per-finding
+REJECT totals remain monotonic across re-entry and are never reset. A no-progress streak keeps its
+recorded value on re-entry and continues to reset only through the progress rule above — re-entry
+is not a way to clear it.
 
 At every exit—DONE, PAUSED, or ABORTED—assert from the attempt/delegation/command log that the loop did not
 run `git commit`, `git push`, `git merge`, apply a real migration, edit secrets, or directly change
