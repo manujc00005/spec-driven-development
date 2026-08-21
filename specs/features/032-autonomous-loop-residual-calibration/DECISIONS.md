@@ -164,3 +164,35 @@ The counter itself is unchanged; only the claim made about it is. It remains che
 against degraded agents, and this spec now asserts about it only what it can demonstrate. The
 amended criterion is closeable by the same run that closes AC-004, since both need a fixture of
 independent defects revealed one per round.
+
+### D007 - DEFECT-001 is scoped as a follow-up, and this spec continues
+
+**Date:** 2026-08-21
+
+**Status:** Accepted
+
+**Context:**
+
+T012 round 3 found the first genuine protocol defect of this calibration: the per-finding REJECT
+total counts every re-report of a finding, including re-reports of a finding the loop has never
+dispatched a repair for. A converging run whose first review raises more findings than
+`max-iterations` will abort spuriously, blaming a finding that was merely queued.
+
+**Decision:**
+
+Record it, scope the fix, and continue calibrating. Do not patch
+`skills/sdd-orchestrate/SKILL.md` inside this run.
+
+**Reasoning:**
+
+The SPEC's non-goals forbid protocol redesign here and require a defect to become a scoped fix with
+its own decision record. Its R1 stop rule triggers on **two or more** genuine defects; this is one.
+Patching mid-run would also void the run that found it, since the fixture would then be exercising
+a different protocol than the one under calibration.
+
+**Consequences:**
+
+AC-004 cannot close until the fix lands - not because the criterion is wrong, but because the
+counter it would have exercised is known-broken, and evidence gathered against a broken counter
+would assert nothing. AC-004 is re-run after the fix. If a second genuine defect appears before
+then, R1 fires and this spec stops and re-plans rather than continuing to calibrate.

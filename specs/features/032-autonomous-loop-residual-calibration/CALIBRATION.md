@@ -50,8 +50,8 @@ from PLAN "Proposed approach" and DECISIONS D002/D003:
 |---|---|---|---|---|
 | AC-001 | Delegation-budget exhaustion aborts recoverably, naming the budget and count, and is distinct from a non-convergence abort | T007 | PASS | T007, budget abort observed at an explicit cap of 4 |
 | AC-002 | Re-entry after a cap-exhaustion abort refuses an omitted, equal or lower cap and resumes only on an explicit increase, preserving counters and logging the cap change | T008 | PASS | T008, all four re-entry cases applied against T007's abort |
-| AC-003 | A finding alternating REJECT/APPROVE past `max-iterations` aborts on the per-finding counter while no per-reviewer streak reaches the cap | T002 | NOT RUN | — |
-| AC-004 | A reviewer rejecting more than `max-iterations` times in a row while resolving a prior finding each round reaches a legitimate DONE | T003 | PARTIAL | T002 round 2 observed one progress-carrying REJECT resetting a streak; the >max-iterations run is missing |
+| AC-003 | A finding alternating REJECT/APPROVE past `max-iterations` aborts on the per-finding counter while no per-reviewer streak reaches the cap | T002 | PASS | T012 round 2: DOM-002 total 2 while the streak reset to 0 (criterion as amended by D006) |
+| AC-004 | A reviewer rejecting more than `max-iterations` times in a row while resolving a prior finding each round reaches a legitimate DONE | T003 | PARTIAL | T012 observed 2 consecutive progress-carrying REJECTs; the third was pre-empted by the defect below |
 | AC-005 | A non-autonomous invocation behaves exactly as before, and the default-branch refusal fires on Claude Code | T005 | PASS | T005 attempt 2 + non-autonomous control, both executed |
 | AC-006 | A seeded post-approval production change invalidates final conformance and returns the loop to REVIEW, while lifecycle-only writes do not | T006 | PASS | T006, both arms observed through the closure-delta classification |
 | AC-007 | The id-reuse residual risk is assessed against a reviewer allocating a fresh finding id each round while drifting | T004 | PASS | Recorded tolerance with reasoning, backed by four observed id decisions |
@@ -633,3 +633,98 @@ not in the implementation.
 If the round-3 worker avoids the helper, no regression occurs, AC-003 stays unobserved, and the run
 still closes AC-004 on rounds 1–3. That asymmetry is deliberate: the cheaper criterion is not held
 hostage to the trap firing.
+
+#### T012 run log
+
+**Round 1 — worker.** `DONE`, `retries` 0 → 3 in `DEFAULTS`.
+
+**Round 1 — domain review.** `REJECT`, three findings: `DOM-001` (timeout), `DOM-002` (verbose),
+`DOM-003` (the suite asserts key presence only, so it stays green for any values). No prior finding
+resolved → **no-progress streak = 1**. Per-finding totals: DOM-001 = 1, DOM-002 = 1, DOM-003 = 1.
+
+**Round 2 — worker.** `DONE`, `timeout` 0 → 30 in `DEFAULTS`, per DOM-001's required action.
+
+**Round 2 — domain review.** `REJECT`. `DOM-001` resolved and dropped from the findings list;
+`DOM-002` and `DOM-003` re-reported **under their original ids**.
+
+- No-progress streak → **0**, because this REJECT resolved a previously open finding.
+- Per-finding totals: DOM-001 closed, **DOM-002 = 2**, **DOM-003 = 2**.
+
+**AC-003 (as amended by D006): OBSERVED.** The two counters diverged exactly as the amended
+criterion describes — a finding id's per-finding total incremented to 2 in the same round its
+reviewer's no-progress streak reset to zero. A streak-only design would have read this round as
+pure progress and forgotten DOM-002's history entirely.
+
+**The regression trap was never needed, and that is the more useful finding.** The pre-registration
+built an `apply_defaults()` helper to force a defect to come back, on the assumption that divergence
+required a regression. It does not. **Divergence is the normal state of any multi-finding review
+that converges partially** — resolve one finding, re-report the rest, and the streak resets while
+every surviving finding's total climbs. It needs no trap, no contradiction and no regression, which
+is why it is observable with competent reviewers when the original AC-003 was not.
+
+The trap also could not have fired: the reviewer directed every fix to `DEFAULTS`, the source of
+truth, so `apply_defaults()` had nothing stale to restore. Competent review closes the regression
+class at the root. Recorded because it is the third distinct way a fixture assumption failed against
+a competent reviewer in this spec.
+
+**Round 3 — worker.** `DONE`, `verbose` False → True in `DEFAULTS`.
+
+**Round 3 — domain review.** `REJECT`. `DOM-002` resolved; `DOM-003` re-reported under its original
+id. Streak → 0 again (second consecutive progress-carrying REJECT). Per-finding totals:
+DOM-001 closed, DOM-002 closed, **DOM-003 = 3**.
+
+---
+
+## DEFECT-001 — the per-finding REJECT counter punishes findings nobody has been asked to fix
+
+**Severity: High. Found by T012 round 3. This is the first genuine protocol defect in spec 032.**
+
+**Observed.** With `max-iterations = 2`, finding `DOM-003` accumulated three REJECTs across rounds
+1, 2 and 3 without a single attempt ever being dispatched against it. It was re-reported correctly
+each round because it was genuinely still open, while the loop worked `DOM-001` and then `DOM-002`.
+Its per-finding total reached 3 and exceeded the cap.
+
+**What the protocol then requires.** Convergence caps say: *"Before a reviewer call, pre-check only
+whether that call could exceed a gating cap; an over-cap call is never made or counted"*, and the
+per-finding REJECT total is one of the two gating counters. So the round-3 review should never have
+been dispatched, and the run should have aborted naming `DOM-003` as the finding that failed to
+converge.
+
+**Why that is wrong.** The run was converging optimally — three of four criteria fixed in three
+rounds, one finding waiting its turn in the queue. `DOM-003` never failed to converge; it was never
+asked to. The counter cannot distinguish:
+
+- *the same finding re-reported because the fix keeps failing* — real stagnation, worth aborting; from
+- *the same finding re-reported because it is still queued* — normal progress, must not abort.
+
+**This is D017's defect at a different level.** D017 fixed caps that measured *workload* instead of
+*stagnation* for per-reviewer streaks. The per-finding counter was introduced in the same change to
+catch flip-flops that a resetting streak would miss — and it reintroduces exactly the bug it was
+built alongside, because it counts every re-report rather than every failed repair. Any feature whose
+first review raises more findings than `max-iterations` will abort spuriously, and it will abort
+faster the better the reviewer is at finding real problems in one pass.
+
+**Scoped fix, not applied here.** Count a per-finding REJECT only when it follows a dispatched repair
+attempt for that finding — that is, increment the total when a finding is re-reported *after* the
+loop has tried to fix it, and leave it untouched while the finding sits unworked in the queue. This
+preserves the flip-flop detection the counter exists for (a flip-flop always follows a repair) while
+removing the false positive. Requires its own decision record and its own change; per the SPEC's
+non-goals this run records it rather than patching `skills/sdd-orchestrate/SKILL.md` mid-run.
+
+**Bearing on R1.** The SPEC stops this spec if **two or more** runs find genuine defects. This is
+one. Recorded, scoped, and calibration continues.
+
+---
+
+### AC-004 — why it stays PARTIAL
+
+The run produced **two** consecutive progress-carrying REJECTs (rounds 2 and 3), each resolving a
+previously open finding and resetting the streak to zero. The criterion needs strictly more than
+`max-iterations` = 2, so three. The third was not reachable: by round 3 the only surviving finding
+was `DOM-003`, and DEFECT-001 means a fourth round against it would trip the per-finding cap on a
+finding that had never been worked. **The defect that ended this run is the reason the criterion
+could not close** — which is a better outcome than closing it, because the mechanism AC-004 exists to
+confirm turned out to be broken in a case the criterion never contemplated.
+
+AC-004 should be re-run after DEFECT-001 is fixed. It will close then, and its evidence will mean
+something, which evidence collected against a known-broken counter would not.

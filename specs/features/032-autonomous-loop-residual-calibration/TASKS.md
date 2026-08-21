@@ -77,8 +77,13 @@ Runs are ordered riskiest-assumption-first (PLAN, "Proposed approach"), not by c
 
 ## Phase 5: Amended criteria (D006)
 
-- [ ] T012 - Single seeded run closing both AC-003 (as amended) and AC-004: a fixture of independent
+- [x] T012 - Single seeded run closing both AC-003 (as amended) and AC-004: a fixture of independent
   defects revealed one per round, where one previously-resolved defect regresses mid-run. Done when
   the record shows more than `max-iterations` consecutive progress-carrying REJECTs reaching a
   legitimate DONE, and, at the regression round, one finding id's per-finding total incrementing
   while its reviewer's no-progress streak resets to zero. Covers: AC-003, AC-004.
+
+- [ ] T013 - (from DEFECT-001, per D007) Fix the per-finding REJECT counter so it increments only
+  when a finding is re-reported after a dispatched repair attempt for that finding, leaving it
+  untouched while the finding sits unworked in the queue. Own decision record required. Covers: AC-003.
+- [ ] T014 - Re-run AC-004 after T013 lands. Covers: AC-004.
