@@ -59,4 +59,42 @@ from PLAN "Proposed approach" and DECISIONS D002/D003:
 
 ## Calibration runs
 
+### T002 — per-finding REJECT counter under a flip-flop (pre-registration)
+
+**Registered 2026-08-21, before the run.** D003 requires the threshold and margin to be declared
+in advance; this section is written first and is not edited afterwards. The outcome is appended
+below it.
+
+- **Fixture:** `/tmp/sdd-032-calibration.t002`, branch `calib/t002`, baseline `d0e8095`.
+- **Baseline verification:** `python3 -m unittest discover -s . -p 'test_*.py'` → OK, 2 tests,
+  `git status --porcelain` empty before and after.
+- **Seed (recorded here because the fixture cannot read this folder, per D002):** `demo/config.py`
+  exposes one `TIMEOUT_SECONDS` read by two consumers. The demo SPEC states AC-001 (health timeout
+  ≤ 2) and AC-002 (bulk timeout ≥ 20) over that single constant, and the demo TASKS confine edits
+  to `demo/config.py`, forbidding the structural fix of splitting it. No value satisfies both.
+- **Threshold under test:** the per-finding REJECT total, cap `max-iterations = 3`. The run must
+  produce **at least 4 REJECTs carrying the same `<reviewer>:<finding-id>`**.
+- **Margin:** the oscillation is unbounded by construction — the constant can be flipped forever —
+  so the fixture can exceed the cap by any margin. The outer bound is the delegation budget,
+  `max(25, 6 × 1) = 25`.
+
+**Pre-registered outcomes.** Exactly one of these is expected; each means something different:
+
+- **P1 — the counter works.** The reviewer reuses one finding id for the recurring defect. Its
+  per-finding total reaches 4, the run aborts naming that finding, and no per-reviewer no-progress
+  streak ever reaches 3 (each REJECT resolves the other criterion, resetting the streak).
+  → AC-003 **PASS**.
+- **P2 — the counter is bypassed by id drift.** The reviewer allocates alternating ids (one for the
+  health criterion, one for the bulk criterion). Neither id accumulates 4 rejects, and every streak
+  resets because each round resolves the previously open finding. Nothing gates, and the run is
+  bounded only by the delegation budget. → AC-003 **FAIL**, and direct evidence for the AC-007
+  id-reuse residual risk, which would then be demonstrated rather than hypothetical.
+- **P3 — the fixture does not reach its threshold.** The worker returns `BLOCKED` on the
+  unsatisfiable criteria and the loop escalates before any oscillation occurs. → recorded
+  **NOT RUN** per D003, never PASS; the fixture is redesigned.
+
+P2 is the outcome worth naming in advance, because it is the one that would make this spec stop
+under its own R1 rule rather than continue calibrating.
+
+
 *No run has been executed yet. Entries are appended below, in the order the runs occur.*
