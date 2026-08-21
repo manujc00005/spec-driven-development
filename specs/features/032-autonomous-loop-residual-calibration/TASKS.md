@@ -17,7 +17,7 @@ Runs are ordered riskiest-assumption-first (PLAN, "Proposed approach"), not by c
 
 ## Phase 2: Implementation
 
-- [x] T002 - Seeded run: a single finding alternating REJECT/APPROVE past `max-iterations` must
+- [x] T002 - (superseded by T012 per D006) Seeded run: a single finding alternating REJECT/APPROVE past `max-iterations` must
   abort on the per-finding REJECT total while no per-reviewer no-progress streak ever reaches the
   cap. Fixture must produce at least `max-iterations + 1` rejects of the same
   `<reviewer>:<finding-id>` with an approval between them. Done when the record shows both counter
@@ -74,3 +74,16 @@ Runs are ordered riskiest-assumption-first (PLAN, "Proposed approach"), not by c
 - [ ] T011 - Run `/spec-review` and `/qa-review` on this feature, then `/spec-close`. If any run in
   Phase 2 found a genuine defect, this task stops and routes it to a scoped follow-up instead of
   closing. Covers: AC-001, AC-002, AC-003, AC-004, AC-005, AC-006, AC-007, AC-008.
+
+## Phase 5: Amended criteria (D006)
+
+- [x] T012 - Single seeded run closing both AC-003 (as amended) and AC-004: a fixture of independent
+  defects revealed one per round, where one previously-resolved defect regresses mid-run. Done when
+  the record shows more than `max-iterations` consecutive progress-carrying REJECTs reaching a
+  legitimate DONE, and, at the regression round, one finding id's per-finding total incrementing
+  while its reviewer's no-progress streak resets to zero. Covers: AC-003, AC-004.
+
+- [ ] T013 - (from DEFECT-001, per D007) Fix the per-finding REJECT counter so it increments only
+  when a finding is re-reported after a dispatched repair attempt for that finding, leaving it
+  untouched while the finding sits unworked in the queue. Own decision record required. Covers: AC-003.
+- [ ] T014 - Re-run AC-004 after T013 lands. Covers: AC-004.

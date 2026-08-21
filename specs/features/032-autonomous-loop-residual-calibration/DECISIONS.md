@@ -123,3 +123,76 @@ recorded tolerance that makes the question moot.
 Planning proceeds with the question open by design. If T004 concludes a mitigation is required, its
 location is decided then, with the run's evidence in hand, and scoped as a follow-up rather than
 implemented inside this spec.
+
+### D006 - AC-003 is rewritten to test counter divergence, not the abort
+
+**Date:** 2026-08-21
+
+**Status:** Accepted
+
+**Context:**
+
+AC-003 as written required observing the per-finding abort fire: three REJECTs of one finding id.
+Two independent fixture designs (T002 attempts 1 and 2) failed to produce it. Both failed the same
+way: a competent reviewer that sees the same finding recur reasons about it and escalates rather
+than re-litigating. Producing three re-reports of one id requires a reviewer that fails to notice
+its own repetition, and this spec's methodology forbids simulating one - fixtures must use real
+subagents, never mocked ones. The criterion was therefore unobservable by construction, not by bad
+luck.
+
+**Decision:**
+
+AC-003 now requires observing the two counters **diverge** under a regression: the same finding id
+re-reported after an intervening round resolved a different finding, so its per-finding total
+increments while the no-progress streak resets to zero.
+
+**Reasoning:**
+
+The abort is arithmetic; the behaviour is the divergence. What the per-finding counter defends
+against is a streak-only design, which would silently forgive a recurring defect because every
+intervening approval resets the streak. Observing total=2 against streak=0 proves the two counters
+are independent and that the per-finding one is monotonic across an approval. Whether it then fires
+at 3 or 4 follows from the cap, and needs no separate evidence.
+
+Crucially this is observable with competent reviewers, because a **regression** is not a
+contradiction. A defect that was fixed and came back is re-reported with its original id as ordinary
+review work - no escalation, which is exactly what blocked both earlier attempts.
+
+**Consequences:**
+
+The counter itself is unchanged; only the claim made about it is. It remains cheap insurance
+against degraded agents, and this spec now asserts about it only what it can demonstrate. The
+amended criterion is closeable by the same run that closes AC-004, since both need a fixture of
+independent defects revealed one per round.
+
+### D007 - DEFECT-001 is scoped as a follow-up, and this spec continues
+
+**Date:** 2026-08-21
+
+**Status:** Accepted
+
+**Context:**
+
+T012 round 3 found the first genuine protocol defect of this calibration: the per-finding REJECT
+total counts every re-report of a finding, including re-reports of a finding the loop has never
+dispatched a repair for. A converging run whose first review raises more findings than
+`max-iterations` will abort spuriously, blaming a finding that was merely queued.
+
+**Decision:**
+
+Record it, scope the fix, and continue calibrating. Do not patch
+`skills/sdd-orchestrate/SKILL.md` inside this run.
+
+**Reasoning:**
+
+The SPEC's non-goals forbid protocol redesign here and require a defect to become a scoped fix with
+its own decision record. Its R1 stop rule triggers on **two or more** genuine defects; this is one.
+Patching mid-run would also void the run that found it, since the fixture would then be exercising
+a different protocol than the one under calibration.
+
+**Consequences:**
+
+AC-004 cannot close until the fix lands - not because the criterion is wrong, but because the
+counter it would have exercised is known-broken, and evidence gathered against a broken counter
+would assert nothing. AC-004 is re-run after the fix. If a second genuine defect appears before
+then, R1 fires and this spec stops and re-plans rather than continuing to calibrate.

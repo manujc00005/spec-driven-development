@@ -107,8 +107,10 @@ None.
   and its record is unambiguously distinct from a non-convergence abort (FR-001).
 - AC-002: A recorded run shows re-entry refused for omitted, equal and lower caps, and accepted for
   a higher one with counters preserved and the cap change logged (FR-002).
-- AC-003: A recorded run shows the per-finding abort firing while every per-reviewer streak stays
-  below the cap (FR-003).
+- AC-003: A recorded run shows the per-finding REJECT total and the per-reviewer no-progress
+  streak **diverging** under a regression: the same `<reviewer>:<finding-id>` is re-reported after an
+  intervening round resolved a different finding, so its per-finding total increments while the
+  streak resets to zero (FR-003). Amended from the original wording by D006.
 - AC-004: A recorded run shows a reviewer exceeding `max-iterations` consecutive rejections and
   still reaching DONE because each round resolved a prior finding (FR-004).
 - AC-005: A recorded run shows a non-autonomous invocation unchanged and the default-branch refusal
