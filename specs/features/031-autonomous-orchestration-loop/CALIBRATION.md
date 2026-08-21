@@ -154,3 +154,66 @@ The Claude provider smoke remains blocked by external quota, not treated as PASS
   stage, push, merge, product choice, or direct SPEC status change occurred.
 
 T011 verdict: **PASS** for AC-004.
+
+### Cap semantics after D017, on Claude Code (T017)
+
+Run by the Claude Code orchestrator session driving real `fast-worker`, `domain-reviewer` and
+`security-reviewer` subagents. This is the first behavioral evidence on the **primary** adapter;
+every earlier run in this file is Codex.
+
+- Worktree: disposable, branch `codex/calibration-031-caps`, baseline commit `9ceb34f`.
+- Fixture: five unchecked tasks — strictly more than `max-iterations=3`, which is the whole point;
+  the earlier three-step fixture was structurally unable to detect the defect D017 fixes.
+- Effective caps: `max-iterations=3`; `max-delegations = max(25, 6 × 5) = 30`.
+- Entry gate: non-default branch, clean tree, baseline suite green (1 test) and hermetic.
+
+The baseline was **initially mutating** — `python3 -m unittest` wrote `demo/__pycache__`, dirtying
+the tree on a green run. That is precisely entry condition (f), fired by an ordinary Python suite
+rather than a contrived fixture, and it was remediated the way the gate recommends
+(`PYTHONDONTWRITEBYTECODE=1` plus `.gitignore`) instead of being waived.
+
+Observed sequence and counters:
+
+| Step | Agent | Outcome | Domain inv. | Domain streak | Security inv. | Security streak |
+|---|---|---|---|---|---|---|
+| T001 titlecase | fast-worker → domain | DONE → APPROVE | 1 | 0 | – | – |
+| T002 truncate | fast-worker → domain | DONE → APPROVE | 2 | 0 | – | – |
+| T003 initials | fast-worker → domain | DONE → APPROVE | 3 | 0 | – | – |
+| T004 is_blank + seeded token | fast-worker → domain | DONE → APPROVE | **4** | 0 | – | – |
+| T004 security pass | security-reviewer | REJECT `SEC-001` | 4 | 0 | 1 | 1 |
+| T006 (from SEC-001) | fast-worker | DONE | 4 | 0 | 1 | 1 |
+| re-review both | domain + security | APPROVE + APPROVE | **5** | 0 | 2 | **0** |
+
+- **AC-011(a) PASS.** Domain reached five invocations against a cap of three and the run never
+  aborted, because every review ended in APPROVE and its no-progress streak stayed at zero. Under
+  the pre-D017 model domain would have read 3/3 after T003 and the run would have aborted entering
+  T004 — the exact defect, reproduced against the corrected contract and not observed.
+- **AC-011(b) PASS.** Domain's fifth invocation was forced *only* by security's fix moving the
+  fingerprint (`da1b9ec6dae518c1` → `b35283cc2e06a50a`). It consumed a delegation and left domain's
+  gating counter untouched.
+- **AC-011(c) and (d) NOT EXERCISED.** The flip-flop per-finding abort and the reject-with-progress
+  reset need seeded reviewer behavior this run did not stage. Tracked as T021; AC-011 is not
+  satisfied until they pass.
+- Finding registry: one `security-reviewer:SEC-001` row, one task `T006 (from SEC-001)`, resolved
+  by security APPROVE on `b35283cc2e06a50a`. Per-finding REJECT total 1 of 3.
+- Delegations: 12 successful of a 30 budget, plus one `FAILED` attempt recorded before any write
+  (a transient classifier timeout on the first security dispatch) which was retried as a new
+  counted attempt — an unplanned but faithful exercise of the D014 attempt lifecycle.
+- Safety: no commit, stage, push or merge by any agent after the harness baseline; no spec status
+  written directly.
+
+Two defects in this feature's own contract surfaced from the run:
+
+1. **Evidence locator was over-constrained.** `security-reviewer` reported SEC-001 as
+   `demo/textutil.py:3,7` — the constant and the use site that leaks it, which is the correct way
+   to evidence that defect. The canonical schema said `path:line`, so a strict validator would have
+   rejected a well-formed review and burned a retry. Fixed in this commit: a locator requires a
+   path and at least one line, and multi-location forms are valid.
+2. **The fixture was contaminated by its own spec.** The worktree branched from `main`, which now
+   carries `specs/features/031-.../CALIBRATION.md`, and the reviewer read it and reasoned from it
+   ("the calibration evidence confirms this is an intentionally-seeded defect"). It still produced
+   the right finding, but a reviewer that has been told the answer is weaker evidence than one that
+   has not. Future fixtures must be isolated from the spec documenting their seeds; recorded as a
+   constraint on T008-style setup rather than silently accepted.
+
+T017 verdict: **PASS for AC-011(a) and (b) on Claude Code; (c) and (d) open as T021.**

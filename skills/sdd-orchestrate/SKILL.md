@@ -154,8 +154,12 @@ evidence stays in the worker's prose report and is copied into the delegation lo
 
 ### Malformed or missing blocks
 
-Validate enum values, required keys, list cardinality, finding IDs, severity, and `path:line`
-evidence. On the first malformed/missing block, re-request once from the same agent with the schema
+Validate enum values, required keys, list cardinality, finding IDs, severity, and evidence
+locators. An evidence locator is `path:line`, and one finding may legitimately span several
+locations — accept `path:line,line`, `path:line-line`, and a list of locators, since a real defect
+often lives in a definition and its use site. Rejecting a well-formed multi-location finding as
+malformed would burn a retry on a correct review; require a path and at least one line, not exactly
+one line. On the first malformed/missing block, re-request once from the same agent with the schema
 and the validation error; this counts as a delegation but not a review iteration. If the second
 response is still invalid, synthesize a fail-closed reviewer result (never APPROVE):
 

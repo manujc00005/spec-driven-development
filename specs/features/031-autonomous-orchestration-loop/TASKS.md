@@ -70,11 +70,13 @@
   cap with a non-convergence report naming the reviewer. Verify re-entry refuses unchanged/lower
   caps and resumes only with a higher cap, preserving all counters and logging the cap change.
   Covers: AC-006.
-- [ ] T017 - Calibrate the cap semantics on a fixture with strictly more unchecked tasks than
-  `max-iterations`: prove the long feature reaches DONE with zero cap-related aborts, that a
-  fix-forced re-approval decrements only the delegation budget, that an alternating finding aborts
-  on the per-finding counter, and that a reviewer rejecting past the cap while resolving a prior
-  finding each round keeps going. Covers: AC-011.
+- [x] T017 - Calibrate the cap semantics on a fixture with strictly more unchecked tasks than
+  `max-iterations`: prove the long feature reaches DONE with zero cap-related aborts and that a
+  fix-forced re-approval decrements only the delegation budget. Covers: AC-011(a), AC-011(b).
+- [ ] T021 - Calibrate the two remaining cap behaviors AC-011 needs: a finding alternating
+  REJECT/APPROVE past `max-iterations` must abort on the per-finding counter, and a reviewer
+  rejecting past the cap while resolving a prior finding each round must keep going. Both need
+  seeded reviewer behavior. Covers: AC-011(c), AC-011(d).
 - [ ] T014 - Exercise a non-autonomous invocation, the default-branch refusal, and both provider
   paths; inspect command logs to confirm no commit/push or direct status transition occurred. Seed
   allowed lifecycle-only closure changes and one unexpected post-approval implementation change;
