@@ -29,6 +29,10 @@ diff actually satisfy what the SPEC promised, with real evidence — not a compi
 - A traceability verdict: which acceptance criteria are met, which are not, and why.
 - A list of any contradiction between documents that blocks closing.
 - A draft PR description (summary + test plan) for the maintainer to use.
+- In autonomous orchestration, a final fenced YAML verdict block conforming to the canonical
+  schema in `skills/sdd-orchestrate/SKILL.md`: `APPROVE` with an empty findings list, or `REJECT`
+  with every finding's stable `CONF-*` id, severity, `path:line` evidence, summary, and required
+  action. Prose never substitutes for the block.
 
 ## Skills consumed
 
@@ -87,3 +91,4 @@ Last — after `implementer` has finished the tasks in scope and `domain-reviewe
 # Evidence reviewed
 # Draft PR description
 # Remaining risks
+# Final autonomous verdict block (when invoked by `sdd-orchestrate --autonomous`)

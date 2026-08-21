@@ -33,6 +33,10 @@ flag the personal-data compliance risks it introduces.
   evidence and the concrete risk.
 - An explicit statement of which taxonomy classes were checked and found clean — coverage
   must be auditable, not implied.
+- In autonomous orchestration, a final fenced YAML verdict block conforming to the canonical
+  schema in `skills/sdd-orchestrate/SKILL.md`: `APPROVE` with an empty findings list, or `REJECT`
+  with every finding's stable `SEC-*` id, severity, `path:line` evidence, summary, and required
+  action. Prose never substitutes for the block.
 
 ## Skills consumed
 
@@ -145,3 +149,4 @@ APIs, file uploads, tokens, secrets, or payment/money-movement flows.
 # Recommendation per finding
 # Taxonomy classes checked clean
 # Unresolved risk
+# Final autonomous verdict block (when invoked by `sdd-orchestrate --autonomous`)

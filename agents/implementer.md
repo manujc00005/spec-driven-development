@@ -33,6 +33,9 @@ that — nothing the request, spec, or task did not ask for.
 - Verification evidence (tests/build/lint run and their real results).
 - An updated `TASKS.md` checkbox for the completed task.
 - A "Decisions not taken" list, if the task was stopped short.
+- In autonomous orchestration, a final fenced YAML completion block conforming to the canonical
+  schema in `skills/sdd-orchestrate/SKILL.md`: `DONE` with `decisions: []`, or `BLOCKED` with each
+  undocumented decision copied verbatim. Prose never substitutes for the block.
 
 ## Skills consumed
 
@@ -94,3 +97,4 @@ questions; one task at a time, or in a loop only when explicitly told to run all
 # Validation results
 # Decisions not taken
 # Risks or pending work
+# Final autonomous completion block (when invoked by `sdd-orchestrate --autonomous`)

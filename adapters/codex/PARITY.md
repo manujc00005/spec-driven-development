@@ -5,10 +5,10 @@ primary Claude Code adapter. **No parity is claimed.** Read this before relying 
 
 ## Verification status
 
-- **Prompt-based, unverified against a live Codex CLI in this environment.** The `codex` CLI is not
-  installed here (`which codex` → not found), so nothing below was executed against a real Codex
-  session. The adapter is built on **documented Codex conventions** (project-root `AGENTS.md`,
-  custom prompts under `~/.codex/prompts/`, config at `~/.codex/config.toml`).
+- **Prompt-based; autonomous-mode smoke verification pending.** `codex-cli
+  0.147.0-alpha.6.6` is available in this environment. The adapter remains based on **documented
+  Codex conventions** (project-root `AGENTS.md`, custom prompts under `~/.codex/prompts/`, config at
+  `~/.codex/config.toml`); presence of the binary does not make its instructions deterministic.
 - Promotion to "verified" is a tracked follow-up (SPEC OQ-1 in
   `specs/features/019-provider-aware-codex-adapter/`): install Codex, run the lifecycle prompts,
   then update this file and `../README.md`.
@@ -26,6 +26,7 @@ primary Claude Code adapter. **No parity is claimed.** Read this before relying 
 | Bounded context (Graphify optional) | optional, graceful | same doctrine | ✅ shared (external tool) |
 | Token economy (`## Context budget`) | PLAN template + `/spec-analyze` check | shared PLAN template + mirrored check in `prompts/sdd-spec-analyze.md` | ⚠️ template shared, check prompt-based |
 | PR-ready delivery / traceability | `/pr-description` + evidence chain | described in `AGENTS.md` | ⚠️ discipline, no PR tooling |
+| Autonomous orchestration protocol | native delegated roles + file blackboard | one session, sequential roles + the same file blackboard | ⚠️ protocol-equivalent, no fan-out |
 
 ## What does NOT carry over (honest gaps)
 
@@ -49,6 +50,31 @@ stack-specific reviewers are not, plus one more: the `codex` CLI is not installe
 environment, so any prompt written for it would ship unverified against a real provider CLI. An
 honest gap row is worth more than an unverifiable prompt. Porting remains a tracked follow-up
 alongside the rest of the reviewer catalogue.
+
+## Autonomous orchestration — sequential degradation
+
+`sdd-orchestrate --autonomous <feature-path>` is a shared protocol, not a claim that Codex has the
+Claude adapter's Agent tool. On Codex, one session adopts each role sequentially and must obey the
+same contract in `skills/sdd-orchestrate/SKILL.md`:
+
+- the same six-condition entry gate, including default-branch, unattributed-dirty-tree, and
+  green-but-mutating-baseline refusals;
+- the same final YAML reviewer verdict and worker completion blocks;
+- the same per-feature `ORCHESTRATION.md` blackboard, durable attempt lifecycle, findings registry,
+  counters, append-only logs, and diff-fingerprinted approvals;
+- the same conservative technical-versus-human escalation classifier;
+- the same all-stale-reviewer invalidation after a changed fingerprint;
+- the same monotonic iteration/delegation caps, recoverable/non-resumable abort distinction,
+  fail-closed malformed-output behavior, and DONE/PAUSED/ABORTED conditions;
+- the same frozen implementation fingerprint and separately audited lifecycle/PR closure delta;
+- the same prohibition on commit, push, merge, secrets, real migrations, and direct SPEC status
+  edits.
+
+There is no parallel fan-out, isolated context, or enforced tool grant. Role switches happen inside
+one context, so persisted file state—not conversation memory—is authoritative after compaction or
+resume. A Codex run may preserve protocol behavior, but it cannot claim permission-isolation parity.
+The live smoke result belongs in the active feature's `CALIBRATION.md`; until it passes, autonomous
+Codex support is documented but not closure evidence.
 
 ## The biggest gap, stated plainly
 
