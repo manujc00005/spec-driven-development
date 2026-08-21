@@ -8,7 +8,7 @@ Runs are ordered riskiest-assumption-first (PLAN, "Proposed approach"), not by c
 
 ## Phase 1: Preparation
 
-- [ ] T001 - Create `CALIBRATION.md` with the Environment, Baseline verification and
+- [x] T001 - Create `CALIBRATION.md` with the Environment, Baseline verification and
   Acceptance-criteria evidence matrix sections, mirroring 031's layout, and record the shared
   fixture conventions: disposable worktree path pattern, non-default branch, hermetic suite, and
   the two sizing rules (fixture exceeds the threshold under test; fixture cannot read this feature
