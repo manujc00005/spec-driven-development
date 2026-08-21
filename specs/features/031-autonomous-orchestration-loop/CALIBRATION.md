@@ -35,12 +35,12 @@ some of its clauses and none for the rest. `OPEN` means no observed run.
 | AC-003 | PASS | T009 plus the consistency suite in T001/T015 | Codex |
 | AC-004 | PASS | escalation classifier T011: auto-resolved and human-gated forks | Codex |
 | AC-005 | PASS | T012 both branches: in-scope partial write recovered without reimplementation, unattributed path failed closed | Claude Code |
-| AC-006 | PARTIAL | T013 non-convergence abort at 3/3 and malformed-block recovery. Budget abort and cap re-entry not run | Claude Code |
-| AC-007 | PARTIAL | default-branch refusal T010; no-commit/no-push asserted in every run's safety log. Dedicated provider-path and log sweep not run | Codex + Claude Code |
+| AC-006 | PASS | T013 non-convergence abort at 3/3 and malformed-block recovery. Budget abort and cap re-entry closed by spec 032 T007/T008 | Claude Code |
+| AC-007 | PASS | default-branch refusal T010; no-commit/no-push asserted in every run's safety log. Provider path closed by spec 032 T005, which executed both the refusal and a non-autonomous control on the same branch | Codex + Claude Code |
 | AC-008 | PASS | all-stale invalidation T009 and T017; interrupted-attempt recovery T012 | Codex + Claude Code |
 | AC-009 | PASS | T009: two SEC-001 rejects collapsed to one registry row and one task | Codex |
-| AC-010 | PARTIAL | closure boundary T009; red and mutating baselines T010/T017. Seeded post-approval invalidation not run | Codex + Claude Code |
-| AC-011 | PARTIAL | T017 clauses (a) and (b). Clauses (c) flip-flop and (d) reject-with-progress not run | Claude Code |
+| AC-010 | PASS | closure boundary T009; red and mutating baselines T010/T017. Seeded post-approval invalidation closed by spec 032 T006, both arms | Codex + Claude Code |
+| AC-011 | PARTIAL | T017 clauses (a) and (b). Clause (c) flip-flop is NOT closeable as written - spec 032 T002 failed to produce it across two fixture designs because competent reviewers escalate rather than re-litigate; see 032 CALIBRATION.md. Clause (d) reject-with-progress observed once in 032 T002 round 2 but not for more than max-iterations rounds | Claude Code |
 | AC-012 | PASS | `docs/SDD-ORCHESTRATION.md` autonomous section and the CHANGELOG entry both present | — |
 | AC-013 | PASS | both providers carry behavioral evidence: T009 Codex, T013/T017 Claude Code | Codex + Claude Code |
 

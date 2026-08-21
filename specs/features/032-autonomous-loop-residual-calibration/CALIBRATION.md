@@ -48,14 +48,14 @@ from PLAN "Proposed approach" and DECISIONS D002/D003:
 
 | Criterion | Behaviour under test | Closing task | Status | Evidence |
 |---|---|---|---|---|
-| AC-001 | Delegation-budget exhaustion aborts recoverably, naming the budget and count, and is distinct from a non-convergence abort | T007 | NOT RUN | — |
-| AC-002 | Re-entry after a cap-exhaustion abort refuses an omitted, equal or lower cap and resumes only on an explicit increase, preserving counters and logging the cap change | T008 | NOT RUN | — |
+| AC-001 | Delegation-budget exhaustion aborts recoverably, naming the budget and count, and is distinct from a non-convergence abort | T007 | PASS | T007, budget abort observed at an explicit cap of 4 |
+| AC-002 | Re-entry after a cap-exhaustion abort refuses an omitted, equal or lower cap and resumes only on an explicit increase, preserving counters and logging the cap change | T008 | PASS | T008, all four re-entry cases applied against T007's abort |
 | AC-003 | A finding alternating REJECT/APPROVE past `max-iterations` aborts on the per-finding counter while no per-reviewer streak reaches the cap | T002 | NOT RUN | — |
-| AC-004 | A reviewer rejecting more than `max-iterations` times in a row while resolving a prior finding each round reaches a legitimate DONE | T003 | NOT RUN | — |
+| AC-004 | A reviewer rejecting more than `max-iterations` times in a row while resolving a prior finding each round reaches a legitimate DONE | T003 | PARTIAL | T002 round 2 observed one progress-carrying REJECT resetting a streak; the >max-iterations run is missing |
 | AC-005 | A non-autonomous invocation behaves exactly as before, and the default-branch refusal fires on Claude Code | T005 | PASS | T005 attempt 2 + non-autonomous control, both executed |
-| AC-006 | A seeded post-approval production change invalidates final conformance and returns the loop to REVIEW, while lifecycle-only writes do not | T006 | NOT RUN | — |
-| AC-007 | The id-reuse residual risk is assessed against a reviewer allocating a fresh finding id each round while drifting | T004 | NOT RUN | — |
-| AC-008 | 031's evidence matrix is updated so no criterion it closed as PARTIAL remains PARTIAL without a reason that outlived this spec | T010 | NOT RUN | — |
+| AC-006 | A seeded post-approval production change invalidates final conformance and returns the loop to REVIEW, while lifecycle-only writes do not | T006 | PASS | T006, both arms observed through the closure-delta classification |
+| AC-007 | The id-reuse residual risk is assessed against a reviewer allocating a fresh finding id each round while drifting | T004 | PASS | Recorded tolerance with reasoning, backed by four observed id decisions |
+| AC-008 | 031's evidence matrix is updated so no criterion it closed as PARTIAL remains PARTIAL without a reason that outlived this spec | T010 | PASS | T010: three of 031's four PARTIALs closed; AC-011 keeps a durable documented reason |
 
 ## Calibration runs
 
@@ -449,3 +449,152 @@ and a non-autonomous invocation on that same branch behaves as it did before aut
 existed: no gate, no state file, ordinary classification and delegation.
 
 Delegations consumed: 1.
+
+#### T006 part two — arm 2 through the mechanism that actually discriminates
+
+Part one established that hashing cannot separate the two arms. This part runs the sequence the
+termination contract actually specifies: record the narrow closure allowlist *before* invoking the
+owning lifecycle skills, then classify the observed delta against it.
+
+**Allowlist recorded first:** `specs/features/001-totals/SPEC.md`, field `Status` only.
+
+| Step | Observed delta | Classification | Verdict |
+|---|---|---|---|
+| Frozen | none | — | approved |
+| Arm B — lifecycle write | `specs/features/001-totals/SPEC.md`; field diff is exactly `-Ready` / `+Done` | path in allowlist, field is `Status` → expected lifecycle change | **approval stands; no return to REVIEW** |
+| Arm A on top — production change | adds `demo/calc.py` | path not in allowlist → unexpected change | **invalidates final conformance; return to REVIEW** |
+
+Tree restored to clean afterwards.
+
+**AC-006: OBSERVED, both arms.** A seeded non-lifecycle change after the freeze invalidates
+conformance, and a lifecycle-only write does not — provided the allowlist is recorded before the
+closure sequence begins, which is the ordering the contract requires and the step an implementation
+is most likely to skip.
+
+**One incidental property of the fingerprint, recorded because it is easy to misread.** At the
+frozen state the fingerprint was `e3b0c44298fc1c14…` — the SHA-256 of empty input. The fingerprint
+is computed over the *uncommitted reviewable delta*, not over the tree's content, so any clean tree
+at any commit hashes identically. That is consistent for a loop that never commits, which this one
+is contractually forbidden from doing. But it means the fingerprint identifies a working-tree
+delta, not a code state, and it cannot distinguish two different approved commits. Anything that
+made the loop commit mid-run would silently break the approval-matching rule.
+
+### T007 — delegation-budget exhaustion
+
+Fixture `/tmp/sdd-032-calibration.t007`, baseline `e074791`, hermetic. Three independent tasks;
+`max-delegations` overridden to **4**. The default would have been `max(25, 6 × 3) = 25`; the
+override is legitimate because the phenomenon is "the budget refuses the next attempt", not the
+number 25, and observing it at 25 costs 21 delegations to learn nothing extra.
+
+| Attempt | Agent | Outcome |
+|---|---|---|
+| A-001 | fast-worker | T001 DONE, suite exit 0 |
+| A-002 | domain-reviewer | APPROVE, findings: [] |
+| A-003 | fast-worker | T002 DONE, suite exit 0 |
+| A-004 | domain-reviewer | APPROVE, findings: [] |
+| A-005 | — | **never allocated** |
+
+At A-005 the pre-check `used + 1 <= budget` evaluated `5 <= 4` and failed, so no attempt was
+allocated and the counter was not incremented — the ordering the protocol requires, since
+allocating first would leave a phantom attempt in the audit trail.
+
+**AC-001: OBSERVED.** `ABORTED, resumable: yes`, naming the budget and the count.
+
+**Distinguishability from a non-convergence abort — the part AC-001 actually turns on.** Every
+reviewer APPROVED, no finding was ever raised, and every gating counter sat at 0. There is no
+reading of this record in which a cap could have fired. The two abort classes are separable in
+evidence, not merely in wording, which is what D017 set out to fix.
+
+### T008 — re-entry after a recoverable abort
+
+Applied against T007's persisted abort:
+
+| Re-entry cap | Result |
+|---|---|
+| omitted | **REFUSED** — cap exhaustion requires an explicit higher override |
+| equal (4) | **REFUSED** — equal is not an increase |
+| lower (3) | **REFUSED** — a decrease is never accepted |
+| higher (6) | **ACCEPTED** — effective 4 → 6, `Delegations used` stays 4, cap change appended before work |
+
+**AC-002: OBSERVED**, all four directions, with counters preserved rather than reset.
+
+### AC-007 — verdict on the id-reuse residual risk
+
+The SPEC permits either a mitigation or "a recorded tolerance with its reasoning". **Recorded
+tolerance**, on four observed id decisions across two fixtures:
+
+1. T002 attempt 1: two violated criteria, one obvious opening to allocate two ids — the reviewer
+   consolidated to one and said why.
+2. T002 attempt 2 round 1: a new defect, new id.
+3. T002 attempt 2 round 2: `DOM-001` explicitly closed, `DOM-002` allocated for a genuinely distinct
+   defect, with the identity reasoning stated: "staleness vs. query amplification, hence a new id".
+4. Same round: `DOM-003` raised as an escalation rather than folded into either.
+
+**Reasoning.** The risk as 031 stated it — a reviewer allocating a fresh id each round while
+drifting to a new concern reads as progress and is bounded only by the delegation budget — is real
+as a mechanism and remains unbounded by any gating counter. Nothing here refutes it. What four
+observations do show is that competent reviewers reason explicitly about finding identity, and in
+every opportunity chose correctly, including the case where drifting would have been the lazier
+call. The risk is therefore an **agent-quality dependency, not a live protocol hole**: it
+materialises only with a reviewer that allocates ids carelessly, and the delegation budget bounds
+the damage when it does.
+
+**Tolerated, with one condition recorded for the maintainer:** the tolerance rests on reviewer
+competence, so it should be revisited if the reviewer contracts are ever weakened, if a cheaper
+model is routed to review, or if a provider without the `domain-reviewer` contract is added. OQ-1
+therefore needs no answer today — no mitigation is specified, so its location is moot.
+
+### AC-004 — partial
+
+T002 attempt 2 round 2 observed the progress rule working once: a REJECT that resolved `DOM-001`
+while raising `DOM-002` reset the streak rather than incrementing it, which is exactly the
+"converging, not stagnating" case. But AC-004 asks for **more than `max-iterations` consecutive**
+progress-carrying rejects reaching a legitimate DONE, and that run stopped at two rounds when the
+reviewer escalated. One observation of the rule is not the run the criterion describes.
+
+### T009 / T010 — verification and the 031 matrix
+
+`./scripts/check-consistency.sh` exits 0 and leaves the tree as it found it. 031 lost no criterion
+it had already closed as PASS.
+
+031's evidence matrix updated: **AC-006, AC-007 and AC-010 move PARTIAL → PASS**, each citing the
+032 run that closed it. **AC-011 stays PARTIAL by design**, now carrying a reason that outlives this
+spec rather than an unstated gap:
+
+> Clause (c), the flip-flop, is not closeable as written. Two independent fixture designs failed to
+> produce it because competent reviewers escalate instead of re-litigating a finding three times.
+> Clause (d) was observed once in 032 T002 round 2, but not across more than `max-iterations` rounds.
+
+**AC-008: OBSERVED.** No 031 criterion remains PARTIAL without a reason that outlived this spec,
+which is exactly what the criterion asks — not that every PARTIAL becomes PASS.
+
+## Final state of this calibration
+
+| Criterion | Verdict |
+|---|---|
+| AC-001 budget abort | **PASS** |
+| AC-002 cap re-entry | **PASS** |
+| AC-003 per-finding flip-flop | **NOT RUN** — and argued to be unobservable as written |
+| AC-004 long legitimate convergence | **PARTIAL** — rule observed once, the >cap run outstanding |
+| AC-005 non-autonomous + branch refusal | **PASS** |
+| AC-006 post-approval invalidation | **PASS** |
+| AC-007 id-reuse risk | **PASS** — recorded tolerance with reasoning |
+| AC-008 031 matrix | **PASS** |
+
+**No protocol defect was found.** The spec's R1 stop rule — two or more runs finding genuine defects
+— never triggered. Every run either confirmed the protocol or found a limit in the *criterion*,
+not in the implementation.
+
+**Two things the maintainer must decide, which the runs cannot decide for themselves:**
+
+1. **AC-003 needs amending or accepting.** The criterion describes a reviewer re-reporting one
+   finding past the cap. Two fixture designs could not produce it, because that behaviour requires a
+   reviewer that fails to notice its own repetition — and the spec's own "real subagents, never
+   mocked" discipline forbids simulating one. Either the criterion is narrowed to "the counter is
+   correct by construction and guards against degraded agents", or it is accepted as permanently
+   NOT RUN with this reasoning attached. Both are defensible; neither is mine to choose.
+2. **AC-004 needs one more run.** Design is settled and cheap: seed three *independent* defects
+   revealed one per round, so each REJECT resolves the previous finding while raising a genuinely
+   new one. That produces more than `max-iterations` progress-carrying rejects converging to DONE,
+   which is precisely what the criterion describes and what T002 could not deliver because its
+   defects were coupled rather than independent.
