@@ -404,3 +404,44 @@ that rule.
 Three new tasks and two new acceptance criteria. `Done` now depends on a Claude Code run that is
 currently quota-blocked, so closure may legitimately stall on an external limit — which is the
 intended honest outcome rather than a silent pass.
+
+### D019 - Spec updated: tiered closure standard, and what defers to a follow-up
+
+**Date:** 2026-08-21
+
+**Status:** Accepted
+
+**Context:**
+
+A conformance pass over the evidence found six criteria fully evidenced, five partial and one
+(AC-005) with none at all, plus a stale evidence matrix that contradicted its own per-run verdicts.
+The open work — T012, T014, T016, T021, T022 — is evidence, not known defects, so "finish
+everything" and "close now" were both defensible and the standard had to be stated rather than
+assumed.
+
+**Decision:**
+
+`Done` uses a tiered standard: a criterion protecting against **silent loss of work or a false
+claim of success** must be fully evidenced; a criterion whose failure mode is only an abort firing
+too early or too late may close with the gap documented in `CALIBRATION.md`. On that basis T012
+(AC-005 interrupted-write recovery) is blocking and stays in 031, T016 stays because it is the pass
+that caught the stale matrix, and T014, T021 and T022 defer to a follow-up. The maintainer's real
+non-seeded run stays a closure requirement and becomes T023 with an explicit owner. Provider
+asymmetry is documented in `PARITY.md` rather than closed by re-running five criteria.
+
+**Reasoning:**
+
+A framework whose selling point is that completion requires reviewable evidence cannot sign `Done`
+over unevidenced criteria without hollowing out the claim. But requiring every clause of every
+criterion would block indefinitely on low-consequence edge cases. The dividing line that survives
+both objections is consequence: T012 is the only gap that can corrupt a maintainer's working tree,
+because an unproven recovery path either reimplements blindly over partial writes or fails to
+fail-closed on unattributed paths. The rest can only mis-time an abort, which is visible and
+recoverable.
+
+**Consequences:**
+
+031 closes after T012, T016 and T023. T014, T021 and T022 move to a follow-up spec, and AC-006,
+AC-007, AC-008, AC-010 and AC-011 will close as PARTIAL with the gap named in the matrix — an
+explicit, auditable debt rather than an unstated one. Risk accepted: those five clauses ship
+unexercised.

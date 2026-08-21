@@ -21,18 +21,33 @@ Baseline verdict: **GREEN**.
 
 ## Acceptance-criteria evidence matrix
 
-| Criterion | Planned evidence | Status |
-|---|---|---|
-| AC-001 | Disposable happy-path run: REJECT → task → fix → APPROVE → close → PR description | Fixture ready; run pending T009 |
-| AC-002 | Six isolated entry-gate refusal cases with remediation | PASS T010: all six isolated; baseline also tested red and green-mutating |
-| AC-003 | Five agent contracts match the canonical schema; consistency suite green | Baseline green; contract evidence pending T003/T005/T006/T015 |
-| AC-004 | Seeded technical and human-gated blockers, with independent work continuing | PASS T011: D001 recorded before T001; T002 waiting; independent T003 completed; run PAUSED |
-| AC-005 | Interrupted run resumes idempotently; fingerprint invalidation is selective | Pending T012 |
-| AC-006 | Forced REJECT/malformed verdict aborts exactly at the cap | Pending T013 |
-| AC-007 | Default-branch refusal, provider paths, and command-log safety inspection | Dedicated main and disposable calibration branches established; remaining evidence pending T014/T015 |
-| AC-008 | Interrupted attempt recovery plus all-stale approval invalidation | All-stale invalidation passed in hardened T009; dirty-write recovery pending T012 |
-| AC-009 | Finding registry deduplicates repeated finding IDs | PASS in hardened T009: two SEC-001 rejects → one row and one T002 |
-| AC-010 | Clean baseline and frozen-fingerprint closure boundary | PASS: closure boundary T009; red and green-mutating baselines T010 |
+Regenerated from the per-run verdicts below, which are authoritative. The earlier version of this
+table stopped at AC-010 and still marked as pending several criteria later runs had closed — it
+misled in both directions, which is precisely what a conformance pass exists to catch.
+
+`PASS` means an observed run recorded below. `PARTIAL` means the criterion has real evidence for
+some of its clauses and none for the rest. `OPEN` means no observed run.
+
+| Criterion | Status | Evidence | Provider |
+|---|---|---|---|
+| AC-001 | PASS | hardened happy path T009 | Codex |
+| AC-002 | PASS | isolated entry-gate matrix T010, all six conditions | Codex |
+| AC-003 | PASS | T009 plus the consistency suite in T001/T015 | Codex |
+| AC-004 | PASS | escalation classifier T011: auto-resolved and human-gated forks | Codex |
+| AC-005 | PASS | T012 both branches: in-scope partial write recovered without reimplementation, unattributed path failed closed | Claude Code |
+| AC-006 | PARTIAL | T013 non-convergence abort at 3/3 and malformed-block recovery. Budget abort and cap re-entry not run | Claude Code |
+| AC-007 | PARTIAL | default-branch refusal T010; no-commit/no-push asserted in every run's safety log. Dedicated provider-path and log sweep not run | Codex + Claude Code |
+| AC-008 | PASS | all-stale invalidation T009 and T017; interrupted-attempt recovery T012 | Codex + Claude Code |
+| AC-009 | PASS | T009: two SEC-001 rejects collapsed to one registry row and one task | Codex |
+| AC-010 | PARTIAL | closure boundary T009; red and mutating baselines T010/T017. Seeded post-approval invalidation not run | Codex + Claude Code |
+| AC-011 | PARTIAL | T017 clauses (a) and (b). Clauses (c) flip-flop and (d) reject-with-progress not run | Claude Code |
+| AC-012 | PASS | `docs/SDD-ORCHESTRATION.md` autonomous section and the CHANGELOG entry both present | — |
+| AC-013 | PASS | both providers carry behavioral evidence: T009 Codex, T013/T017 Claude Code | Codex + Claude Code |
+
+**Provider asymmetry, stated plainly.** AC-001, 002, 003, 004 and 009 are evidenced on Codex only.
+This is accepted rather than closed: the protocol is file-based state and deliberately
+provider-neutral, and T013/T017 exercised the whole loop on Claude Code. Duplicating those five
+would cost real runs to prove something the design already makes provider-independent.
 
 ## Calibration runs
 
@@ -265,3 +280,70 @@ if it is ever observed outside a seeded fixture.
 T013 verdict: **PASS** for the non-convergence abort and the malformed-block recovery path.
 Still open in T013: the delegation-budget abort, and the re-entry rule that refuses an unchanged or
 lower cap and resumes only with a higher one.
+
+### Interrupted-attempt recovery, both branches (T012)
+
+The gap D019 classified as blocking: a session that dies after a worker writes files but before its
+completion block is persisted. Disposable worktree, branch `codex/calibration-031-recovery`,
+baseline `fe5bfe5`, entry suite green (1 test) and hermetic.
+
+Setup: attempt `A-001` recorded as `DISPATCHED` for T001 ("add `multiply` with a test"), allowed
+scope `demo/calc.py, demo/test_calc.py`, pre-fingerprint `e3b0c44298fc1c14` (clean tree). The
+worker's half-finished result was then left on disk — `multiply` implemented, its test missing, the
+checkbox unticked — and no response was ever persisted. That is exactly the crash shape the
+contract describes.
+
+**Branch 1 — in-scope partial write is recovered, not redone. PASS.**
+Re-entry recomputed the fingerprint as `11b2a5a9c660f0e8`, different from A-001's pre-fingerprint,
+so the tree had changed and the attempt could not be closed as `FAILED`. Every changed path
+resolved inside the recorded scope, so the protocol's "do not blindly reimplement" rule applied.
+The worker was re-dispatched with a recovery brief instead of the original one, and reported which
+part pre-existed and which it added: it kept `multiply` untouched and added only the missing test.
+`grep -c "def multiply" demo/calc.py` returned **1** — the decisive number, since a blind
+reimplementation would have produced a duplicate definition. Suite green, 2 tests. Attempt closed
+`RECOVERED` with evidence.
+
+**Branch 2 — an unattributed path fails closed. PASS.**
+An out-of-scope file `demo/unrelated_helper.py` was then introduced. Reconciliation classified each
+dirty path against A-001's recorded scope and split them correctly:
+
+```
+IN-SCOPE      demo/calc.py
+IN-SCOPE      demo/test_calc.py
+UNATTRIBUTED  demo/unrelated_helper.py
+```
+
+The run persisted `ABORTED, resumable: no`, naming the path and stating that provenance is ambiguous
+and will not be guessed. All three remediation obligations held: the prior audit file was preserved
+as `ORCHESTRATION.aborted-<timestamp>.md`, recovery was directed to a fresh worktree from the
+recorded trusted baseline, and **nothing was deleted or reverted** — the stray file was still on
+disk and the branch still carried only its harness baseline commit. A fail-closed abort that
+destroyed the evidence would be worse than the failure it guards against; it does not.
+
+T012 verdict: **PASS** for AC-005 and for the interrupted-attempt clause of AC-008.
+
+### Final conformance review (T016)
+
+Delegated to an independent `final-conformance-reviewer` rather than self-assessed, with the brief
+explicitly instructing it to be adversarial about self-congratulation: this feature was implemented
+and calibrated largely by the same agent asking for the verdict.
+
+**Round 1: REJECT**, two findings, both correct and both mine.
+
+- `CONF-001` (Medium) — the evidence matrix still showed AC-005 as `OPEN` and AC-008 as missing its
+  interrupted-attempt clause, contradicting T012's own verdict prose in the same file. Cause: the
+  matrix was regenerated *before* T012 ran, so the fix for staleness went stale again within the
+  same session. Exactly the failure the regeneration note claimed to have eliminated.
+- `CONF-002` (Low) — the CHANGELOG still said "calibration and both provider smoke runs are still
+  open", which stopped being true several runs earlier and understated what had actually landed.
+
+Both were fixed and re-reviewed by the same agent, which verified each `required_action` at the
+cited lines and confirmed no new inconsistency: **round 2 APPROVE**.
+
+This is the strongest single piece of evidence in this file that the loop's review gate does real
+work. The reviewer was given a diff its own orchestrator believed was finished, and it found two
+genuine documentation defects that would have shipped a `Done` claim contradicted by the evidence
+file underneath it. It also correctly declined to re-raise the debt D018/D019 had already accepted.
+
+T016 verdict: **PASS**. Traceability SPEC → PLAN → TASKS → diff → evidence is internally consistent
+with no unresolved contradiction. The only remaining closure requirement is T023.

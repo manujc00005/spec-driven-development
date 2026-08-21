@@ -60,7 +60,7 @@
 - [x] T011 - Seed one technical reversible blocker and one product blocker with an independent
   task; verify autonomous decision recording, human pause, and continued independent work.
   Covers: AC-004.
-- [ ] T012 - Interrupt after a worker file write but before its completion block, re-enter from the
+- [x] T012 - Interrupt after a worker file write but before its completion block, re-enter from the
   persisted attempt, and verify attributable work is recovered/validated without blind
   reimplementation; separately seed an out-of-scope dirty path and verify fail-closed handling.
   Confirm completed tasks are not repeated and every non-matching required APPROVE is invalidated.
@@ -69,17 +69,20 @@
   abort at the per-reviewer consecutive cap with a non-convergence report naming the reviewer and
   the finding. Done: abort fired before round 4 with both gating counters at 3/3, and the
   malformed-block re-request path was exercised for real. Covers: AC-006 (abort + malformed).
-- [ ] T022 - Complete the remaining AC-006 evidence T013 did not cover: the delegation-budget abort,
+- [~] T022 - **DEFERRED to spec 032 (delegation-budget abort and cap re-entry) by D019.** Original text follows.
+  Complete the remaining AC-006 evidence T013 did not cover: the delegation-budget abort,
   and re-entry refusing an unchanged or lower cap while resuming only with a higher one, preserving
   counters and logging the cap change. Covers: AC-006 (budget + cap re-entry).
 - [x] T017 - Calibrate the cap semantics on a fixture with strictly more unchecked tasks than
   `max-iterations`: prove the long feature reaches DONE with zero cap-related aborts and that a
   fix-forced re-approval decrements only the delegation budget. Covers: AC-011(a), AC-011(b).
-- [ ] T021 - Calibrate the two remaining cap behaviors AC-011 needs: a finding alternating
+- [~] T021 - **DEFERRED to spec 032 (flip-flop and reject-with-progress cap clauses) by D019.** Original text follows.
+  Calibrate the two remaining cap behaviors AC-011 needs: a finding alternating
   REJECT/APPROVE past `max-iterations` must abort on the per-finding counter, and a reviewer
   rejecting past the cap while resolving a prior finding each round must keep going. Both need
   seeded reviewer behavior. Covers: AC-011(c), AC-011(d).
-- [ ] T014 - Exercise a non-autonomous invocation, the default-branch refusal, and both provider
+- [~] T014 - **DEFERRED to spec 032 (non-autonomous, default-branch and closure-delta sweep) by D019.** Original text follows.
+  Exercise a non-autonomous invocation, the default-branch refusal, and both provider
   paths; inspect command logs to confirm no commit/push or direct status transition occurred. Seed
   allowed lifecycle-only closure changes and one unexpected post-approval implementation change;
   verify only the latter invalidates final approval. Covers: AC-007, AC-010.
@@ -98,7 +101,13 @@
 - [x] T015 - Run `bash scripts/check-consistency.sh` and
   `bash scripts/check-consistency.test.sh` after all contract edits; record actual exit codes and
   resolve only in-scope regressions. Covers: AC-003, AC-007.
-- [ ] T016 - Perform final SPEC → PLAN → TASKS → diff → calibration-evidence conformance review,
+- [ ] T023 - **Maintainer-owned, cannot be delegated.** Run `--autonomous` once against a real,
+  non-seeded small feature in a repository you actually work on, and record the outcome in
+  `CALIBRATION.md` as a pass or as an explicit `/spec-close` blocker. Every other run in this
+  feature used a fixture designed by the same agent that then reviewed it, and one of those
+  fixtures was contaminated by reading the spec documenting its own seeds; this is the only
+  evidence that does not share that flaw. Covers: AC-001, AC-013.
+- [x] T016 - Perform final SPEC → PLAN → TASKS → diff → calibration-evidence conformance review,
   confirm AC-001..AC-013 all have evidence, and leave any unavailable real-feature manual run as
   an explicit blocker to `/spec-close` rather than claiming it passed. Covers: AC-001, AC-002,
   AC-003, AC-004, AC-005, AC-006, AC-007, AC-008, AC-009, AC-010, AC-011, AC-012, AC-013.

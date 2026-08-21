@@ -70,6 +70,16 @@ same contract in `skills/sdd-orchestrate/SKILL.md`:
 - the same prohibition on commit, push, merge, secrets, real migrations, and direct SPEC status
   edits.
 
+**Where the autonomous evidence actually comes from.** Unusually for this adapter, most of the
+autonomous-mode behavioral evidence is **Codex-only**: the happy path, the entry-gate matrix, the
+agent-contract conformance, the escalation classifier and the finding dedup were all observed on
+Codex and never re-run on Claude Code. Claude Code carries the non-convergence abort, the
+malformed-block recovery and the cap-semantics runs. Both providers therefore have real evidence,
+but neither has all of it. This asymmetry is accepted, not pending: the protocol's state lives in
+files and is deliberately provider-neutral, so re-running those five on the other provider would
+spend real runs proving something the design already makes provider-independent. It is recorded
+here so nobody later mistakes "verified" for "verified on both".
+
 There is no parallel fan-out, isolated context, or enforced tool grant. Role switches happen inside
 one context, so persisted file state—not conversation memory—is authoritative after compaction or
 resume. A Codex run may preserve protocol behavior, but it cannot claim permission-isolation parity.
