@@ -53,7 +53,7 @@ from PLAN "Proposed approach" and DECISIONS D002/D003:
 | AC-003 | A finding alternating REJECT/APPROVE past `max-iterations` aborts on the per-finding counter while no per-reviewer streak reaches the cap | T002 | NOT RUN | — |
 | AC-004 | A reviewer rejecting more than `max-iterations` times in a row while resolving a prior finding each round reaches a legitimate DONE | T003 | NOT RUN | — |
 | AC-005 | A non-autonomous invocation behaves exactly as before, and the default-branch refusal fires on Claude Code | T005 | PASS | T005 attempt 2 + non-autonomous control, both executed |
-| AC-006 | A seeded post-approval production change invalidates final conformance and returns the loop to REVIEW, while lifecycle-only writes do not | T006 | NOT RUN | — |
+| AC-006 | A seeded post-approval production change invalidates final conformance and returns the loop to REVIEW, while lifecycle-only writes do not | T006 | PASS | T006, both arms observed through the closure-delta classification |
 | AC-007 | The id-reuse residual risk is assessed against a reviewer allocating a fresh finding id each round while drifting | T004 | NOT RUN | — |
 | AC-008 | 031's evidence matrix is updated so no criterion it closed as PARTIAL remains PARTIAL without a reason that outlived this spec | T010 | NOT RUN | — |
 
@@ -449,3 +449,32 @@ and a non-autonomous invocation on that same branch behaves as it did before aut
 existed: no gate, no state file, ordinary classification and delegation.
 
 Delegations consumed: 1.
+
+#### T006 part two — arm 2 through the mechanism that actually discriminates
+
+Part one established that hashing cannot separate the two arms. This part runs the sequence the
+termination contract actually specifies: record the narrow closure allowlist *before* invoking the
+owning lifecycle skills, then classify the observed delta against it.
+
+**Allowlist recorded first:** `specs/features/001-totals/SPEC.md`, field `Status` only.
+
+| Step | Observed delta | Classification | Verdict |
+|---|---|---|---|
+| Frozen | none | — | approved |
+| Arm B — lifecycle write | `specs/features/001-totals/SPEC.md`; field diff is exactly `-Ready` / `+Done` | path in allowlist, field is `Status` → expected lifecycle change | **approval stands; no return to REVIEW** |
+| Arm A on top — production change | adds `demo/calc.py` | path not in allowlist → unexpected change | **invalidates final conformance; return to REVIEW** |
+
+Tree restored to clean afterwards.
+
+**AC-006: OBSERVED, both arms.** A seeded non-lifecycle change after the freeze invalidates
+conformance, and a lifecycle-only write does not — provided the allowlist is recorded before the
+closure sequence begins, which is the ordering the contract requires and the step an implementation
+is most likely to skip.
+
+**One incidental property of the fingerprint, recorded because it is easy to misread.** At the
+frozen state the fingerprint was `e3b0c44298fc1c14…` — the SHA-256 of empty input. The fingerprint
+is computed over the *uncommitted reviewable delta*, not over the tree's content, so any clean tree
+at any commit hashes identically. That is consistent for a loop that never commits, which this one
+is contractually forbidden from doing. But it means the fingerprint identifies a working-tree
+delta, not a code state, and it cannot distinguish two different approved commits. Anything that
+made the loop commit mid-run would silently break the approval-matching rule.
