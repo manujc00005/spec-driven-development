@@ -570,34 +570,33 @@ which is exactly what the criterion asks — not that every PARTIAL becomes PASS
 
 ## Final state of this calibration
 
+> Superseded twice while this spec ran, and rewritten here to match the evidence below rather than
+> left contradicting it. Written last, after T012.
+
 | Criterion | Verdict |
 |---|---|
 | AC-001 budget abort | **PASS** |
 | AC-002 cap re-entry | **PASS** |
-| AC-003 per-finding flip-flop | **NOT RUN** — and argued to be unobservable as written |
-| AC-004 long legitimate convergence | **PARTIAL** — rule observed once, the >cap run outstanding |
+| AC-003 counter divergence (amended by D006) | **PASS** |
+| AC-004 long legitimate convergence | **PARTIAL** — blocked by DEFECT-001 |
 | AC-005 non-autonomous + branch refusal | **PASS** |
 | AC-006 post-approval invalidation | **PASS** |
-| AC-007 id-reuse risk | **PASS** — recorded tolerance with reasoning |
+| AC-007 id-reuse risk | **PASS** — recorded tolerance |
 | AC-008 031 matrix | **PASS** |
 
-**No protocol defect was found.** The spec's R1 stop rule — two or more runs finding genuine defects
-— never triggered. Every run either confirmed the protocol or found a limit in the *criterion*,
-not in the implementation.
+**One genuine protocol defect: DEFECT-001**, recorded below with a scoped fix (T013) and D007. The
+SPEC's R1 rule stops this spec at **two or more**, so calibration continued and completed.
 
-**Two things the maintainer must decide, which the runs cannot decide for themselves:**
+**AC-004 is the only criterion left open**, and deliberately so: it reached two consecutive
+progress-carrying REJECTs and the third was unreachable because DEFECT-001 would have tripped on the
+only surviving finding. It is re-run by T014 after T013 lands. Evidence gathered against a
+known-broken counter would assert nothing.
 
-1. **AC-003 needs amending or accepting.** The criterion describes a reviewer re-reporting one
-   finding past the cap. Two fixture designs could not produce it, because that behaviour requires a
-   reviewer that fails to notice its own repetition — and the spec's own "real subagents, never
-   mocked" discipline forbids simulating one. Either the criterion is narrowed to "the counter is
-   correct by construction and guards against degraded agents", or it is accepted as permanently
-   NOT RUN with this reasoning attached. Both are defensible; neither is mine to choose.
-2. **AC-004 needs one more run.** Design is settled and cheap: seed three *independent* defects
-   revealed one per round, so each REJECT resolves the previous finding while raising a genuinely
-   new one. That produces more than `max-iterations` progress-carrying rejects converging to DONE,
-   which is precisely what the criterion describes and what T002 could not deliver because its
-   defects were coupled rather than independent.
+**Three fixture assumptions failed against competent reviewers during this spec**, which is worth
+carrying forward: an advertised contradiction gets escalated rather than iterated (T002 attempt 1); a
+hidden contradiction gets *derived* and escalated after two rounds (attempt 2); and a regression trap
+never fires because competent review directs fixes to the source of truth (T012). Fixtures that
+assume degraded behaviour will not produce it.
 
 ### T012 — counter divergence and long legitimate convergence (pre-registration)
 
