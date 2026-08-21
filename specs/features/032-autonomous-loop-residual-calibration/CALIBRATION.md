@@ -198,3 +198,35 @@ visible by reasoning about the code across rounds.
 
 I expect P4 to be more likely than P1. Naming that before the run is the point of writing it down.
 
+#### T002 attempt 2 — run log (in progress)
+
+Delegations consumed so far: 2. Caps in force: `max-iterations = 2`.
+
+**Round 1 — worker.** `status: DONE`. Changed `_load()` to clear and refetch on every call, so
+AC-001 holds and AC-002 breaks. The worker noticed the tension and named it under "Risks or
+pending work" but correctly stayed inside T001's scope rather than widening it.
+
+**Round 1 — domain review.** `verdict: REJECT`, one finding `DOM-001` at `demo/service.py:14`,
+severity High, on AC-002: three per-user reads cost three round trips where the criterion caps
+them at one.
+
+**P4 did not recur.** This is the pre-registered question the round answers. Given a coupling the
+SPEC does not advertise, the reviewer treated the conflict as a fixable defect and issued a normal
+REJECT, rather than deriving unsatisfiability and escalating as it did in attempt 1. The difference
+between the two attempts is exactly the advertised contradiction, which is evidence that attempt
+1's failure was a fixture defect and not a property of the agents.
+
+Two details worth keeping:
+
+- The reviewer traced the call path by hand and said so plainly — no shell tool was available to
+  it — rather than presenting a static trace as a measurement. It also raised a concurrency hazard
+  in the `clear()`/`update()` pair explicitly as a non-finding, keeping `findings` clean for the
+  gating counter.
+- Its `required_action` demands a fix satisfying **both** criteria, which sets up the next round.
+
+**Fixture risk identified mid-run, recorded before it can be rationalised away.** `store._ROWS` is
+reachable directly from `demo/service.py`. A worker that returns `store._ROWS[user_id]` is fresh
+and never calls `fetch_all()`, so `query_count` stays at 0 and **both** criteria pass. That is a
+legitimate convergence, not an oscillation, and if a worker finds it the run ends without reaching
+the threshold — recorded NOT RUN for AC-003 per D003, though it would then be usable evidence
+toward AC-004. The hole is left in place: changing the fixture mid-run would void it.
