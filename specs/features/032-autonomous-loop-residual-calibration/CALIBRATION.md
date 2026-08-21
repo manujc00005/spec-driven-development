@@ -154,3 +154,79 @@ other through a non-obvious coupling the reviewer must discover round by round �
 SPEC itself advertises as mutually exclusive. The current fixture advertised its own contradiction
 in `SPEC.md` "Edge cases", which handed the reviewer the diagnosis for free.
 
+### T002 attempt 2 — flip-flop with a non-advertised coupling (pre-registration)
+
+**Registered 2026-08-21, before the run**, after attempt 1 recorded NOT RUN.
+
+- **Fixture:** `/tmp/sdd-032-calibration.t002b`, branch `calib/t002b`, baseline `0e72d6c`.
+- **Baseline verification:** `python3 -m unittest discover -s . -p 'test_*.py'` → OK, 2 tests.
+  Hermeticity checked explicitly this time: `git status --porcelain` empty after the run, and
+  bytecode is gitignored from the first commit (attempt 1's defect).
+- **Caps for this run:** `max-iterations = 2`, chosen deliberately and declared here. The
+  phenomenon AC-003 describes is a *relationship between two counters*, not a property of a
+  particular cap value, and a cap of 2 makes it reachable in 5 rounds instead of 9. Cap of 1 was
+  rejected as degenerate — a boundary of one cannot distinguish "counts rejects" from "aborts on
+  first reject".
+- **Threshold under test:** **3 REJECTs carrying the same `<reviewer>:<finding-id>`**, while no
+  per-reviewer no-progress streak reaches 2.
+- **Margin:** the oscillation is unbounded by construction; the outer bound is the delegation
+  budget, `max(25, 6 × 1) = 25`.
+
+**Seed, and why it differs from attempt 1.** `demo/service.py` caches the full user table on first
+read. `demo/store.py` — declared owned by another team and forbidden by the demo's D001 — applies
+writes directly, so the service cache can never be write-through. AC-001 demands a read reflect an
+applied write; AC-002 demands reading every user cost at most one backing-store query. Bypassing
+the cache satisfies AC-001 and breaks AC-002; using it does the reverse. **Nothing in the demo
+SPEC mentions any tension**: attempt 1 failed because the SPEC advertised its own contradiction in
+an Edge cases section and handed the reviewer the diagnosis for free. Here the coupling is only
+visible by reasoning about the code across rounds.
+
+**Pre-registered outcomes:**
+
+- **P1 — the counter works.** One finding id accumulates 3 REJECTs and the run aborts naming it,
+  while every streak stays below 2 because each round resolves the previously open finding.
+  → AC-003 **PASS**.
+- **P2 — id drift bypasses the counter.** Alternating ids, no accumulation, run bounded only by the
+  delegation budget. → AC-003 **FAIL**, and AC-007's risk demonstrated.
+- **P4 — the reviewer derives the contradiction unaided and escalates on round 1**, as in attempt 1
+  but without being told. → NOT RUN again. **And if this recurs, it stops being a fixture problem
+  and becomes a finding:** the AC-003 phenomenon may be unobservable with competent reviewers,
+  because reaching it requires a reviewer that keeps re-litigating instead of escalating. That
+  would be an answer worth recording — a favourable one about the protocol's agents — rather than
+  a failure to calibrate. It would also mean the per-finding counter guards a case that competent
+  agents do not produce, which is a design observation, not a defect.
+
+I expect P4 to be more likely than P1. Naming that before the run is the point of writing it down.
+
+#### T002 attempt 2 — run log (in progress)
+
+Delegations consumed so far: 2. Caps in force: `max-iterations = 2`.
+
+**Round 1 — worker.** `status: DONE`. Changed `_load()` to clear and refetch on every call, so
+AC-001 holds and AC-002 breaks. The worker noticed the tension and named it under "Risks or
+pending work" but correctly stayed inside T001's scope rather than widening it.
+
+**Round 1 — domain review.** `verdict: REJECT`, one finding `DOM-001` at `demo/service.py:14`,
+severity High, on AC-002: three per-user reads cost three round trips where the criterion caps
+them at one.
+
+**P4 did not recur.** This is the pre-registered question the round answers. Given a coupling the
+SPEC does not advertise, the reviewer treated the conflict as a fixable defect and issued a normal
+REJECT, rather than deriving unsatisfiability and escalating as it did in attempt 1. The difference
+between the two attempts is exactly the advertised contradiction, which is evidence that attempt
+1's failure was a fixture defect and not a property of the agents.
+
+Two details worth keeping:
+
+- The reviewer traced the call path by hand and said so plainly — no shell tool was available to
+  it — rather than presenting a static trace as a measurement. It also raised a concurrency hazard
+  in the `clear()`/`update()` pair explicitly as a non-finding, keeping `findings` clean for the
+  gating counter.
+- Its `required_action` demands a fix satisfying **both** criteria, which sets up the next round.
+
+**Fixture risk identified mid-run, recorded before it can be rationalised away.** `store._ROWS` is
+reachable directly from `demo/service.py`. A worker that returns `store._ROWS[user_id]` is fresh
+and never calls `fetch_all()`, so `query_count` stays at 0 and **both** criteria pass. That is a
+legitimate convergence, not an oscillation, and if a worker finds it the run ends without reaching
+the threshold — recorded NOT RUN for AC-003 per D003, though it would then be usable evidence
+toward AC-004. The hole is left in place: changing the fixture mid-run would void it.
