@@ -196,3 +196,41 @@ AC-004 cannot close until the fix lands - not because the criterion is wrong, bu
 counter it would have exercised is known-broken, and evidence gathered against a broken counter
 would assert nothing. AC-004 is re-run after the fix. If a second genuine defect appears before
 then, R1 fires and this spec stops and re-plans rather than continuing to calibrate.
+
+### D008 - The per-finding counter counts failed repairs, not re-reports
+
+**Date:** 2026-08-21
+
+**Status:** Accepted
+
+**Context:**
+
+DEFECT-001, found by T012 round 3. The per-finding REJECT total counted every `REJECT` carrying a
+finding id, including re-reports of a finding the loop had never dispatched a repair for. Finding
+`DOM-003` reached three rejects across three rounds while waiting its turn in the queue, exceeding
+`max-iterations = 2`, in a run that was converging optimally.
+
+**Decision:**
+
+Count a per-finding `REJECT` only when the loop has already dispatched a repair attempt for that
+finding. A finding re-reported while still unworked increments nothing. The pre-check in the durable
+state contract is worded to match.
+
+**Reasoning:**
+
+The counter exists to catch a flip-flop, and **every flip-flop follows a repair** - a finding cannot
+oscillate before anyone has touched it. So gating on failed repairs loses no detection while removing
+the false positive entirely. Counting bare re-reports made the abort a function of how many problems
+the first review found, which is workload, not stagnation - the precise error D017 corrected for
+per-reviewer streaks. The defect was that the per-finding counter, added in the same change,
+reintroduced it one level down.
+
+The perverse consequence is worth naming: under the old rule a **better** reviewer aborted the run
+sooner, because finding more real problems in one pass raised more ids that then accumulated
+re-reports while queued.
+
+**Consequences:**
+
+`skills/sdd-orchestrate/SKILL.md` changes in two places - the counter definition and the pre-check
+wording. No counter is removed and no cap value changes. AC-004 can now be re-run against a counter
+that is not known-broken, which is T014.
