@@ -93,8 +93,64 @@ below it.
   unsatisfiable criteria and the loop escalates before any oscillation occurs. → recorded
   **NOT RUN** per D003, never PASS; the fixture is redesigned.
 
+**Pre-run refinement (2026-08-21, before any delegation).** The first draft of the fixture's
+demo task named both opposing criteria in one task description, which a competent worker would
+read as a contradiction and return `BLOCKED` — outcome P3 by construction rather than by
+discovery. The demo task now names only the liveness criterion (AC-001), so the conflict with
+AC-002 emerges from the review cycle, which is the mechanism under test. Fixture baseline moved
+from `d0e8095` to the commit recorded below. No delegation had been spent when this was changed,
+and no outcome had been observed.
+
 P2 is the outcome worth naming in advance, because it is the one that would make this spec stop
 under its own R1 rule rather than continue calibrating.
 
 
 *No run has been executed yet. Entries are appended below, in the order the runs occur.*
+
+#### T002 outcome — P4, an outcome not pre-registered
+
+**Result: AC-003 remains `NOT RUN`.** Per D003 a fixture that does not reach its declared
+threshold is never recorded as PASS. The threshold was 4 REJECTs on one finding id; the run
+produced 1.
+
+Delegations consumed: 2 (one fast-worker, one domain-reviewer). No cap was approached.
+
+**Round 1 — worker.** `status: DONE`. Set `TIMEOUT_SECONDS` from 30 to 2, satisfying AC-001 and
+breaking AC-002, exactly as the seed intended. The oscillation was primed.
+
+**Round 1 — domain review.** `verdict: REJECT`, one finding `DOM-001` at `demo/config.py:4`,
+severity High. The reviewer did three things the pre-registration did not anticipate:
+
+1. It judged the **whole** acceptance set rather than the implemented task's scope, so it saw the
+   contradiction on the first look instead of discovering it across rounds.
+2. It **deliberately consolidated** the two sides into one finding, stating that "AC-002 unmet" and
+   "the constraints are mutually exclusive" are the same defect viewed from two sides.
+3. Its `required_action` refused iteration outright: *"Escalation, not iteration, is the required
+   next step... re-running implement/review on the same scope will not converge."*
+
+**What this means.** A competent reviewer collapses a contradictory-requirements fixture into a
+single human-gated escalation on round one. The flip-flop never starts, so **this class of fixture
+cannot produce the phenomenon AC-003 describes**. That is a property of the fixture, not a verdict
+on the protocol: the per-finding REJECT counter was never exercised, and nothing here says whether
+it works.
+
+**Two secondary observations, recorded because they are evidence and cheap to lose:**
+
+- **Against P2, weakly.** The reviewer had an obvious opportunity to allocate two ids — one per
+  violated criterion — and explicitly chose not to, reasoning about identity rather than convenience.
+  One observation is not a verdict on the AC-007 id-reuse risk, but it points the opposite way from
+  the pessimistic reading, and T004 should test the drifting case directly rather than assume it.
+- **Fixture hermeticity defect, mine.** The first fixture commit tracked `__pycache__/*.pyc`, so
+  running the mandated suite dirtied the tree — a mutating baseline, which the loop's entry gate
+  treats as a refusal rather than as attributable work. The worker caught it and reverted the
+  artifact unprompted. Fixed before the review round by untracking bytecode; re-verified that the
+  suite now leaves `git status --porcelain` empty. Every later fixture must be checked for this
+  before its baseline is recorded.
+
+**Redesign required for a second T002 attempt.** To reach the threshold, the oscillation must not be
+diagnosable as a contradiction from a single reading. That means two requirements that are each
+individually satisfiable and jointly satisfiable in principle, where the fix for one regresses the
+other through a non-obvious coupling the reviewer must discover round by round — not a pair the
+SPEC itself advertises as mutually exclusive. The current fixture advertised its own contradiction
+in `SPEC.md` "Edge cases", which handed the reviewer the diagnosis for free.
+
