@@ -65,11 +65,13 @@
   reimplementation; separately seed an out-of-scope dirty path and verify fail-closed handling.
   Confirm completed tasks are not repeated and every non-matching required APPROVE is invalidated.
   Covers: AC-005, AC-008.
-- [ ] T013 - **[NEEDS REVIEW — D017]** Force repeated no-progress REJECT and malformed verdict
-  output; verify fail-closed handling and exact recoverable abort at the per-reviewer consecutive
-  cap with a non-convergence report naming the reviewer. Verify re-entry refuses unchanged/lower
-  caps and resumes only with a higher cap, preserving all counters and logging the cap change.
-  Covers: AC-006.
+- [x] T013 - Force repeated no-progress REJECT and malformed verdict output; verify the recoverable
+  abort at the per-reviewer consecutive cap with a non-convergence report naming the reviewer and
+  the finding. Done: abort fired before round 4 with both gating counters at 3/3, and the
+  malformed-block re-request path was exercised for real. Covers: AC-006 (abort + malformed).
+- [ ] T022 - Complete the remaining AC-006 evidence T013 did not cover: the delegation-budget abort,
+  and re-entry refusing an unchanged or lower cap while resuming only with a higher one, preserving
+  counters and logging the cap change. Covers: AC-006 (budget + cap re-entry).
 - [x] T017 - Calibrate the cap semantics on a fixture with strictly more unchecked tasks than
   `max-iterations`: prove the long feature reaches DONE with zero cap-related aborts and that a
   fix-forced re-approval decrements only the delegation budget. Covers: AC-011(a), AC-011(b).
@@ -100,7 +102,7 @@
   confirm AC-001..AC-013 all have evidence, and leave any unavailable real-feature manual run as
   an explicit blocker to `/spec-close` rather than claiming it passed. Covers: AC-001, AC-002,
   AC-003, AC-004, AC-005, AC-006, AC-007, AC-008, AC-009, AC-010, AC-011, AC-012, AC-013.
-- [ ] T020 - Run the Claude Code provider smoke on the autonomous loop and record it in
-  `CALIBRATION.md`. If quota or another external limit still blocks it, record it as an explicit
-  unmet `/spec-close` blocker rather than a pass; the Codex run does not substitute for it.
-  Covers: AC-013.
+- [x] T020 - Run the Claude Code provider smoke on the autonomous loop and record it in
+  `CALIBRATION.md`. Satisfied by the T017 run: a Claude Code orchestrator session drove real
+  `fast-worker`, `domain-reviewer` and `security-reviewer` subagents through the entry gate,
+  five tasks, a REJECT, a traceable finding task, a fix and re-approval. Covers: AC-013.

@@ -217,3 +217,51 @@ Two defects in this feature's own contract surfaced from the run:
    constraint on T008-style setup rather than silently accepted.
 
 T017 verdict: **PASS for AC-011(a) and (b) on Claude Code; (c) and (d) open as T021.**
+
+### Non-convergence abort after D017, on Claude Code (T013, partial)
+
+Counterpart to T017: that run proved the caps do not fire on healthy workload, this one proves they
+still fire on genuine stagnation. Same orchestrator/subagent setup, disposable worktree on branch
+`codex/calibration-031-abort`, baseline green (1 test) and hermetic.
+
+`domain-reviewer` was seeded as the always-rejecting reviewer that AC-006 calls for, reusing the
+stable id `DOM-001` each round. Between rounds a real `fast-worker` genuinely implemented each
+stated `required_action`.
+
+| Round | Worker outcome | Verdict | Resolved a finding? | No-progress streak | DOM-001 REJECTs |
+|---|---|---|---|---|---|
+| 1 | – | REJECT `DOM-001` (missing `=` separator) | no | 1 | 1 |
+| 2 | DONE — raises on missing separator, test added | REJECT `DOM-001` (empty key) | no | 2 | 2 |
+| 3 | DONE — raises on empty/whitespace key, 2 tests added | REJECT `DOM-001` (empty value) | no | **3** | **3** |
+| 4 | not dispatched | — | — | would be 4 | would be 4 |
+
+**Result: ABORTED, resumable: yes**, decided before dispatching round 4, because both gating
+counters sat at 3 of 3 and the next call would exceed `max-iterations`. The abort names the
+reviewer (`domain-reviewer`, no-progress streak) and the finding (`DOM-001`), not merely a number.
+Resuming requires an explicit higher cap; counters are preserved. Delegations 6 of 25, so the run
+stopped on non-convergence rather than on budget — the two backstops stayed distinguishable, which
+is the whole point of D017.
+
+The suite was green (4 tests) at abort: the loop stopped on reviewer disagreement, not on red
+verification, and left the tree intact for the maintainer. No agent committed, staged, pushed or
+merged; the only commit on the branch is the harness baseline.
+
+**Unplanned but valuable — the malformed-block path fired for real.** Round 1's verdict came back
+with correct content but *unfenced*, so it was invalid under the canonical schema. The protocol was
+followed exactly as written: one format-correction re-request to the same agent, quoting the schema
+and the validation error, which returned a properly fenced block with identical content. It
+consumed one delegation and **no** review iteration, exactly as the contract specifies. That path
+had never been exercised before; it works, and it needed no second attempt or fail-closed synthetic
+REJECT.
+
+**Residual risk observed, not fixed.** Each round the reviewer kept the id `DOM-001` while actually
+moving to a different concern (separator → empty key → empty value). Because the harness forced id
+reuse, this correctly registered as stagnation. In a real run a reviewer doing the same thing while
+allocating a *fresh* id each round would instead look like progress under FR-009's reset rule, and
+would iterate until the delegation budget stopped it. The progress rule trusts reviewers to reuse
+ids honestly; the budget is the only backstop against a goalpost-moving reviewer. Worth revisiting
+if it is ever observed outside a seeded fixture.
+
+T013 verdict: **PASS** for the non-convergence abort and the malformed-block recovery path.
+Still open in T013: the delegation-budget abort, and the re-entry rule that refuses an unchanged or
+lower cap and resumes only with a higher one.
