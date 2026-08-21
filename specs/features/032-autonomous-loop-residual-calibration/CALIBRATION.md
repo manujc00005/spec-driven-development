@@ -52,7 +52,7 @@ from PLAN "Proposed approach" and DECISIONS D002/D003:
 | AC-002 | Re-entry after a cap-exhaustion abort refuses an omitted, equal or lower cap and resumes only on an explicit increase, preserving counters and logging the cap change | T008 | NOT RUN | — |
 | AC-003 | A finding alternating REJECT/APPROVE past `max-iterations` aborts on the per-finding counter while no per-reviewer streak reaches the cap | T002 | NOT RUN | — |
 | AC-004 | A reviewer rejecting more than `max-iterations` times in a row while resolving a prior finding each round reaches a legitimate DONE | T003 | NOT RUN | — |
-| AC-005 | A non-autonomous invocation behaves exactly as before, and the default-branch refusal fires on Claude Code | T005 | NOT RUN | — |
+| AC-005 | A non-autonomous invocation behaves exactly as before, and the default-branch refusal fires on Claude Code | T005 | PASS | T005 attempt 2 + non-autonomous control, both executed |
 | AC-006 | A seeded post-approval production change invalidates final conformance and returns the loop to REVIEW, while lifecycle-only writes do not | T006 | NOT RUN | — |
 | AC-007 | The id-reuse residual risk is assessed against a reviewer allocating a fresh finding id each round while drifting | T004 | NOT RUN | — |
 | AC-008 | 031's evidence matrix is updated so no criterion it closed as PARTIAL remains PARTIAL without a reason that outlived this spec | T010 | NOT RUN | — |
@@ -423,3 +423,29 @@ by fingerprint measurement alone; closing it requires observing a real closure s
 allowlist is recorded first and the delta is classified against it. That observation is not yet made,
 so **AC-006 remains partially observed**, with arm 2 named as the outstanding half rather than
 quietly folded into arm 1's green.
+
+#### T005 attempt 2, part two — the non-autonomous control
+
+The same fixture, on the same default branch, with the only variable being the mode. This is the
+control the first half needed: a refusal proves nothing about the non-autonomous path unless the
+non-autonomous path is shown to proceed under identical conditions.
+
+- **Autonomous entry, branch `main`:** refused on `isolated-git-location`, no state written.
+- **Non-autonomous run, branch `main`, same fixture:** proceeded. Intent detected as *Implement*,
+  classified Level 1 (create a file containing a word), delegated to `fast-worker`, validated.
+  T001 completed, `sh scripts/verify.sh` → `verify: OK`, exit 0.
+
+Post-run state, measured:
+
+| Check | Observed |
+|---|---|
+| `ORCHESTRATION.md` created | **0** |
+| Entry gate run | no — the branch that refused the autonomous entry did not block this one |
+| Tree | ` M specs/features/001-demo/TASKS.md`, `?? demo.txt` — exactly the task's own output |
+| T001 | checked |
+
+**AC-005: OBSERVED, by execution, on Claude Code.** Both halves. The default-branch refusal fires,
+and a non-autonomous invocation on that same branch behaves as it did before autonomous mode
+existed: no gate, no state file, ordinary classification and delegation.
+
+Delegations consumed: 1.
