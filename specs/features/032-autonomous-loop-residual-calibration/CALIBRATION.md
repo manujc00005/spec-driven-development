@@ -598,3 +598,38 @@ not in the implementation.
    new one. That produces more than `max-iterations` progress-carrying rejects converging to DONE,
    which is precisely what the criterion describes and what T002 could not deliver because its
    defects were coupled rather than independent.
+
+### T012 — counter divergence and long legitimate convergence (pre-registration)
+
+**Registered 2026-08-21, before the run.** Closes AC-003 as amended by D006, and AC-004.
+
+- **Fixture:** `/tmp/sdd-032-calibration.t012`, branch `calib/t012`, baseline `45aa9a0`, hermetic
+  (suite OK, tree clean before and after, bytecode gitignored from the first commit).
+- **Caps:** `max-iterations = 2`.
+- **Seed:** three independent wrong settings — `retries`, `timeout`, `verbose` — plus an
+  `apply_defaults()` helper documented as "use this before changing a setting". The helper is the
+  regression trap: a worker that calls it before setting `verbose` silently reverts the two settings
+  already fixed. This is an ordinary configuration bug class, not a contrived contradiction, which
+  matters because a **regression is re-reported under its original id as routine review work**,
+  whereas a contradiction makes a competent reviewer escalate — the exact behaviour that ended both
+  T002 attempts.
+
+**Thresholds:**
+
+- AC-004: strictly more than `max-iterations` = **at least 3 consecutive REJECTs each resolving a
+  previously open finding**, followed by a legitimate DONE.
+- AC-003 (amended): at the regression round, one finding id's **per-finding total reaches 2 while
+  that reviewer's no-progress streak is 0**.
+
+**Expected round shape**, written before observing it:
+
+| Round | Worker | Expected review |
+|---|---|---|
+| 1 | fixes `retries` | REJECT — `timeout` and `verbose` still wrong |
+| 2 | fixes `timeout` | REJECT — resolves the timeout finding, `verbose` still open → streak resets |
+| 3 | fixes `verbose` via `apply_defaults()` | REJECT — resolves verbose, but `timeout` regressed → **same id re-reported, total 2, streak 0** |
+| 4 | fixes `timeout` without the helper | APPROVE → DONE |
+
+If the round-3 worker avoids the helper, no regression occurs, AC-003 stays unobserved, and the run
+still closes AC-004 on rounds 1–3. That asymmetry is deliberate: the cheaper criterion is not held
+hostage to the trap firing.
