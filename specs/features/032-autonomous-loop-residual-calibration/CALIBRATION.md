@@ -328,3 +328,51 @@ recorded run*, so specification-level reasoning does not close it. Recorded as p
 but also stopping before any state write, and does not say whether a conformant preflight still
 executes condition 6's baseline suite once condition 4 has already guaranteed refusal. The fixture
 has a single failing condition and cannot discriminate.
+
+#### T005 attempt 2 — the gate executed, not reasoned about
+
+**Executed by the maintainer's orchestrator session** against the fixture T005 attempt 1 left
+behind, per D001. This is the difference from attempt 1: the six conditions were measured against
+the live fixture and the preflight actually refused, rather than being derived from the skill text.
+
+- **Fixture:** `/tmp/sdd-032-calibration.t005`, HEAD `eaa30fc`, branch `main`, tree clean.
+
+Measured values, condition by condition:
+
+| # | Condition | Observed | Result |
+|---|---|---|---|
+| 1 | lifecycle-status | 0 `ORCHESTRATION.md` in the tree → first entry; `SPEC.md:3` reads `- Status: Ready` | PASS |
+| 2 | no-open-decisions | 0 occurrences of `Proposed` in `DECISIONS.md` | PASS |
+| 3 | runnable-task-queue | 1 unchecked task in `TASKS.md` | PASS |
+| 4 | isolated-git-location | branch `main`; `init.defaultBranch=main`; no remote HEAD; `git-dir` == `git-common-dir` == `.git`, so the main worktree, not a linked one | **FAIL** |
+| 5 | clean-working-tree | `git status --porcelain` empty | PASS |
+| 6 | green-baseline-suite | not executed — see below | not reached |
+
+The refusal produced:
+
+```text
+AUTONOMOUS REFUSED
+- condition: isolated-git-location
+  observed: current branch `main` is this repository's default branch (init.defaultBranch=main,
+            no remote and therefore no refs/remotes/origin/HEAD), and the checkout is the main
+            worktree rather than a dedicated linked one (git-dir == git-common-dir == .git)
+  remediation: create or switch to a feature branch or dedicated worktree, e.g.
+               `git switch -c feature/001-demo`, then re-invoke
+```
+
+**Post-refusal state, verified:** no `ORCHESTRATION.md` was created, and `git status --porcelain`
+remained empty. The gate wrote nothing, which is what "stop before any delegation or state write"
+requires.
+
+**The ordering ambiguity, resolved empirically for one implementation.** Attempt 1 flagged that the
+skill both demands every failed condition be reported and demands stopping before any state write,
+without saying whether the baseline suite still runs once an earlier condition has guaranteed
+refusal. This invocation did **not** run condition 6: the refusal was already certain and executing
+a suite is an action, not an observation. That is one conformant implementation's choice, recorded
+as behaviour — it does not pin the skill, which remains silent.
+
+**AC-005 status: half closed.** The default-branch refusal is now **OBSERVED by execution** on
+Claude Code. The other half — that a *non-autonomous* invocation behaves exactly as before
+autonomous mode existed — is still **NOT OBSERVED**: no non-autonomous run was performed. The
+negative evidence here (a refused autonomous entry writes no state file) does not substitute for
+running the ordinary path and watching it produce classification, phases and no `ORCHESTRATION.md`.
