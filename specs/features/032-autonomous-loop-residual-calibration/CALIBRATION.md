@@ -295,3 +295,36 @@ any run so far. T004 must still test a reviewer that actually drifts, but the pr
 updated: this is not the default behaviour.
 
 Delegations consumed by attempt 2: 4. Cap `max-iterations = 2` never reached on any counter.
+
+### T005 — non-autonomous path and default-branch refusal
+
+**Result: AC-005 remains `NOT RUN`.** The run produced a real fixture and a real gate analysis, but
+**no live invocation of `sdd-orchestrate` was executed in either mode**. The agent said so plainly
+and labelled its own verdict "OBSERVED by specification, not by execution". AC-005 requires *a
+recorded run*, so specification-level reasoning does not close it. Recorded as partial evidence.
+
+- **Fixture:** `/tmp/sdd-032-calibration.t005`, default branch `main`, HEAD `eaa30fc`. Default
+  branch established from git metadata (`init.defaultBranch`, absent remote HEAD, sole branch),
+  not assumed.
+- **Gate walk:** conditions 1, 2, 3, 5, 6 measured green; condition 4 the sole failure. The fixture
+  was built deliberately so that only the default-branch condition fails, isolating it.
+- **Self-correction worth recording:** its first fixture draft mandated a baseline command that was
+  red at baseline, which would have failed condition 6 as well and confounded the measurement. It
+  replaced the command before taking any measurement and disclosed both commits.
+
+**Two framework findings, neither a calibration result:**
+
+- **F-001 — condition names are not pinned.** The skill writes the refusal slot as
+  `<stable condition name>` and never quotes literal identifiers. `isolated-git-location` is a slug
+  derived from a heading. Two conformant implementations could emit `isolated-git-location`,
+  `Isolated git location`, or `4`, and no test could assert the string. If any spec wants to assert
+  condition names, `skills/sdd-orchestrate/SKILL.md` must pin them.
+- **F-002 — the SDD Contract block overstates its outputs.** The front block lists
+  `ORCHESTRATION.md` unconditionally in `outputs`, while the prose binds its creation exclusively to
+  autonomous mode. A reader or tool consuming only the contract block would conclude every run
+  emits the file. Documentation inconsistency, not behavioural.
+
+**Open ambiguity the run could not resolve:** the skill requires reporting *every* failed condition
+but also stopping before any state write, and does not say whether a conformant preflight still
+executes condition 6's baseline suite once condition 4 has already guaranteed refusal. The fixture
+has a single failing condition and cannot discriminate.
