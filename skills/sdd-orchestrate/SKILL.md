@@ -1,14 +1,14 @@
 ---
 name: sdd-orchestrate
-description: Run the SDD workflow as a multi-model orchestrator across the deep-reasoner (Opus) and fast-worker (Sonnet) agents. Use when work is large or risky enough to be worth delegating and the main context must stay clean. Accepts a free-form goal; analysis and audit requests produce a report without implementing. Not needed for single-session work — /sdd covers that without delegation overhead.
+description: Orchestrate large or risky SDD work across deep-reasoner and fast-worker, or run an approved feature through the autonomous implement-review-fix loop. Use for delegated implementation, analysis, audits, and resumable autonomous closure. For small single-session work, use /sdd.
 ---
 
 ## SDD Contract
 
 ```yaml
 category: orchestration
-inputs: [free-form-goal]
-outputs: [task-classification, delegated-work, synced-SPEC-PLAN-TASKS-DECISIONS]
+inputs: [free-form-goal, autonomous-feature-path]
+outputs: [task-classification, delegated-work, synced-SPEC-PLAN-TASKS-DECISIONS, ORCHESTRATION.md]
 side_effects: writes-code
 writes_code: true
 writes_specs: true
@@ -24,9 +24,24 @@ coordination, decomposition, review, and synthesis — not extensive mechanical 
 keep the main context focused on requirements, decisions, and validation, and you push
 heavy reading and heavy editing into subagents.
 
-ARGUMENTS: a free-form description of the goal.
+ARGUMENTS: either a free-form description of the goal, or:
+
+```text
+--autonomous specs/features/<nnn>-<name> [--max-iterations N] [--max-delegations N]
+```
+
+Both overrides must be positive integers. Defaults: `max-iterations=3` per reviewer and
+`max-delegations=25` for the whole run. Reject unknown flags, missing paths, duplicate overrides,
+and non-positive/non-integer values before reading or writing feature state. On first entry the
+chosen values become the effective caps. On authenticated re-entry, omitted overrides preserve
+them; explicit overrides may only increase them. Refuse a decrease, never reset counters, and log
+every accepted cap increase with its old/new value and reason before resuming (D013).
 
 ## Intent detection (before anything else)
+
+`--autonomous` is an explicit mode, not a free-form intent. Parse it first and follow the autonomous
+protocol below. All invocations without that flag continue through the existing intent detection,
+classification, phases, and output unchanged.
 
 Classify what the user is asking FOR, not just what it touches:
 
@@ -34,6 +49,337 @@ Classify what the user is asking FOR, not just what it touches:
   or a report. Do NOT implement, even if fixes look obvious. Offer the follow-up spec instead.
 - **Specify** → stop after SPEC. **Plan** → stop after PLAN/TASKS.
 - **Implement / Fix** → run the full flow below.
+
+## Autonomous mode — entry gate
+
+Run these checks in order and stop before any delegation or state write if one fails. Report every
+failed condition found in the preflight, not merely the first. Each refusal uses:
+
+```text
+AUTONOMOUS REFUSED
+- condition: <stable condition name>
+  observed: <specific evidence>
+  remediation: <exact command or action>
+```
+
+The six conditions and remediations are:
+
+1. **Lifecycle status.** On first entry (no valid `ORCHESTRATION.md` for this feature), `SPEC.md`
+   must be exactly `Ready`; otherwise run `/spec-plan <feature-path>`. On authenticated re-entry,
+   `In Progress` or `In Review` is allowed only when the state file names the same feature and its
+   result is `ACTIVE`, `PAUSED`, or `ABORTED` with `resumable: yes`; a mismatched, non-resumable,
+   `Draft`, `Done`, or `Archived` run refuses and names the owning lifecycle action. This
+   distinction is D010/D013; it is not permission to edit status.
+2. **No open decisions.** `DECISIONS.md` must contain no unresolved/open question or Proposed
+   decision that blocks an unchecked task. Remediation: resolve it with `/spec-clarify
+   <feature-path>` (first entry) or record the maintainer's answer in `DECISIONS.md` (re-entry).
+3. **Runnable task queue.** `TASKS.md` must exist and contain at least one unchecked task or a
+   terminal-ready queue; no unchecked blocking prerequisite may precede runnable work.
+   Remediation: `/spec-plan <feature-path>` for a missing queue, otherwise resolve the named
+   prerequisite in `TASKS.md`/`DECISIONS.md`.
+4. **Isolated git location.** The current branch must not be the repository's default branch, or
+   the current worktree must be a dedicated linked worktree on a non-default branch. Determine the
+   default branch from git metadata; never assume its name. Remediation: create/switch to a feature
+   branch or worktree, e.g. `git switch -c feature/<name>`.
+5. **Clean working tree.** `git status --porcelain` must be empty at first entry. On re-entry, only
+   paths attributable to the recorded autonomous run may be dirty; any pre-existing/unattributed
+   path refuses. Remediation: inspect `git status --short`, then commit/stash/discard manually—the
+   orchestrator never does so.
+6. **Green baseline suite.** Run exactly the verification commands mandated by `PLAN.md` before
+   the first implementation delegation. Every command must exit 0 and the complete suite must leave
+   the same clean tree it received. Record commands, results, and before/after status in
+   `ORCHESTRATION.md` when state is initialized. A zero exit that creates or modifies a path is a
+   mutating-baseline refusal, not attributable work. Remediation: make the suite hermetic, clean the
+   named generated paths manually, or update the PLAN through `/spec-update`; never attribute
+   baseline red or baseline dirt to this run.
+
+If all six pass, initialize or validate `ORCHESTRATION.md` using the canonical state contract below,
+then enter the autonomous loop. Permission modes and worktree creation remain caller concerns; the
+skill never weakens permissions or mutates git history to make the gate pass.
+
+## Autonomous mode — canonical structured output
+
+These schemas are the single source of truth. Delegation briefs must require the relevant block as
+the final content in the agent response. Human-readable prose remains above it; control flow reads
+only the final fenced YAML block and never infers success from prose.
+
+### Reviewer verdict block
+
+`security-reviewer`, `domain-reviewer`, and `final-conformance-reviewer` must end every autonomous
+report with exactly this shape:
+
+```yaml
+verdict: APPROVE # APPROVE | REJECT
+findings: []
+```
+
+For `REJECT`, `findings` must be non-empty and every item must contain all fields:
+
+```yaml
+verdict: REJECT
+findings:
+  - id: SEC-001
+    severity: High # Critical | High | Medium | Low
+    evidence: path/to/file.ext:42
+    summary: One-line description of the confirmed problem
+    required_action: Concrete condition that must be satisfied on re-review
+```
+
+Finding IDs are stable within a run and use the reviewer namespace (`SEC-`, `DOM-`, `CONF-`). A
+reviewer re-reporting the same unresolved issue reuses its ID; a genuinely distinct issue gets the
+next ID. Identity is `<reviewer>:<finding-id>` and maps to exactly one row in the durable Findings
+registry and exactly one repair task. Re-reporting updates `last seen`, action, and status; it never
+allocates another task. `APPROVE` requires `findings: []`; an approval carrying findings is malformed.
+
+### Worker completion block
+
+`implementer` and `fast-worker` must end every autonomous report with exactly one of:
+
+```yaml
+status: DONE
+decisions: []
+```
+
+```yaml
+status: BLOCKED
+decisions:
+  - The exact undocumented question, copied verbatim
+```
+
+`DONE` with decisions or `BLOCKED` without a non-empty decisions list is malformed. Validation
+evidence stays in the worker's prose report and is copied into the delegation log.
+
+### Malformed or missing blocks
+
+Validate enum values, required keys, list cardinality, finding IDs, severity, and `path:line`
+evidence. On the first malformed/missing block, re-request once from the same agent with the schema
+and the validation error; this counts as a delegation but not a review iteration. If the second
+response is still invalid, synthesize a fail-closed reviewer result (never APPROVE):
+
+```yaml
+verdict: REJECT
+findings:
+  - id: ORCH-MALFORMED-<reviewer>-<iteration>
+    severity: High
+    evidence: agent-output:verdict-block
+    summary: Reviewer returned an invalid autonomous verdict twice
+    required_action: Return a block conforming to the canonical sdd-orchestrate schema
+```
+
+For a worker, two invalid completion blocks become `BLOCKED` with the exact validation errors and
+follow the escalation classifier. A synthetic reviewer REJECT consumes the current reviewer's
+iteration and therefore cannot bypass convergence caps.
+
+## Autonomous mode — implement/review/fix circuit
+
+Process one unchecked runnable task at a time. Batch only when the existing Parallelism rule proves
+the tasks share no files, contracts, state, migrations, or conflict-prone tests. Treat every agent
+call as a durable attempt (D014). Before every delegation, allocate `A-NNN`, persist its objective,
+task/batch, agent, allowed-path scope, pre-delegation fingerprint, and lifecycle `PLANNED` only
+after proving `Delegations used + 1 <= effective max delegations`; then increment the counter and
+persist `DISPATCHED` immediately before the call. The budget counts
+workers, reviewers, deep-reasoner calls, and structured-output retries. Local commands and
+same-context owning-skill calls are logged but do not consume it.
+
+1. Delegate the task using the normal full brief and require the completion block.
+2. On response, persist `RESPONDED`, the raw outcome reference, and post-delegation fingerprint
+   before acting. On `BLOCKED`, follow the escalation protocol below. On `DONE`, verify the claimed
+   task checkbox and command evidence rather than trusting the word DONE, then persist `VERIFIED`.
+3. Compute the reviewed-diff fingerprint, then run `domain-reviewer` for every implemented diff.
+   Run `security-reviewer` when the diff/spec matches the existing Level-3 triggers: auth,
+   authorization, personal data, payments, migrations, uploads, secrets, public APIs, schema, or
+   persistence. Do not invent a second trigger list.
+4. Parse and persist each verdict before acting. `APPROVE` is valid only for its recorded diff
+   fingerprint. On `REJECT`, upsert every finding in the Findings registry. For a new identity,
+   create exactly one unchecked task using the next available stable `TNNN` ID and title suffix
+   `(from <finding-id>)`; for an existing identity, update its registry row and reuse its task.
+   Include the originating reviewer's `required_action`, allowed files implied by its evidence,
+   required re-review, and the SPEC acceptance criterion the finding blocks. If no acceptance
+   criterion covers the required action, do not invent one: classify it as a SPEC contradiction and
+   route to `/spec-update`.
+5. Delegate finding tasks through the same worker path. After *any* implementation change,
+   recompute the fingerprint, invalidate every required reviewer APPROVE that does not match it,
+   and schedule all stale required reviewers—not only the reviewer that rejected. Preserve finding
+   IDs across iterations. An APPROVE resolves every currently open finding owned by that reviewer
+   for the approved fingerprint; persist that verdict/fingerprint in each row. No worker DONE or
+   absence from a later REJECT resolves a finding implicitly.
+6. When no implementation/review task remains, run `final-conformance-reviewer` exactly once on the
+   full evidence chain. Re-run it only if the diff changes after its APPROVE.
+
+The loop continues until the termination or abort contract below fires. Findings are never marked
+resolved merely because a worker says it changed code; only a subsequent structured APPROVE closes
+their gate.
+
+## Autonomous mode — escalation protocol
+
+Classify each exact question from a worker `BLOCKED` block independently. It is **auto-resolvable**
+only when every statement is true: purely technical; reversible; inside the approved SPEC; and not
+in a human-gated domain. Any one of these conditions makes it **human-gated**:
+
+- product or UX behavior the SPEC does not decide;
+- money movement, pricing, billing, refunds, or financial liability;
+- personal-data handling, retention, consent, erasure, or other RGPD/LOPDGDD scope;
+- a public API, published schema, or external contract change not already approved in the SPEC;
+- destructive/irreversible work, including deletion or applying a migration to real data;
+- evidence that contradicts the SPEC (route through `/spec-update`; never reinterpret it).
+
+For auto-resolvable questions, persist the classification, delegate the exact question plus SDD
+context to `deep-reasoner`, and require alternatives, risks, reversibility, and a recommendation.
+The orchestrator—not the read-only agent—then appends an Accepted entry to `DECISIONS.md` labeled
+"decided by the orchestrator in autonomous mode" and cites the analysis in the delegation log.
+Persist the resolution before re-delegating the blocked task.
+
+For human-gated questions, append an open escalation with the verbatim question, trigger, affected
+tasks, and `waiting` status. Continue only tasks proven independent under the existing parallelism
+rule. When no independent task remains, end the current invocation with `PAUSED`, a compact list of
+answers needed, and the resume command. A maintainer answer is written to `DECISIONS.md`, closes the
+escalation, and re-enters through the normal state-validation path.
+
+Contradictory reviewer actions follow the same classifier after one deep-reasoner analysis. If the
+contradiction touches a human-gated domain, pause; otherwise record the chosen resolution before
+creating/revising finding tasks.
+
+## Autonomous mode — durable state contract
+
+`ORCHESTRATION.md` in the active feature folder is authoritative over conversation memory. Create
+it only after the entry gate passes. Write it atomically at every phase transition, before each
+delegation, after each response/verdict, after each escalation change, and before returning to the
+user. Never let more than the currently recorded in-flight action be recoverable only from chat.
+
+Initialize it with this canonical scaffold (replace angle-bracket values; do not leave them):
+
+```markdown
+# Orchestration: <feature-name>
+
+- Feature: `<feature-path>`
+- Mode: `autonomous`
+- Started at: `<ISO-8601>`
+- Updated at: `<ISO-8601>`
+- Effective max iterations per reviewer: `<N>`
+- Effective max delegations: `<N>`
+
+## State
+
+- Phase: `ENTRY | IMPLEMENT | REVIEW | FIX | FINAL | PAUSED | TERMINAL`
+- Current task: `<TNNN | none>`
+- Current attempt: `<A-NNN | none>`
+- Current attempt state: `<PLANNED | DISPATCHED | RESPONDED | VERIFIED | RECOVERED | FAILED | none>`
+- Delegations used: `<N>`
+- Attributed dirty paths: `<sorted paths or none>`
+- Baseline verification: `<commands and PASS evidence>`
+- Reviewer iterations: `security=<N>, domain=<N>, final-conformance=<N>`
+- Approvals: `<reviewer=fingerprint or none>`
+- Frozen implementation fingerprint: `<fingerprint or none>`
+
+## Attempts
+
+| ID | Timestamp | Agent | Task/objective | State | Allowed paths | Pre fingerprint | Post fingerprint | Outcome |
+|---|---|---|---|---|---|---|---|---|
+
+## Findings
+
+| Reviewer:finding | Task | Severity | Required action | Status | First seen | Last seen | Resolving verdict/fingerprint |
+|---|---|---|---|---|---|---|---|
+
+## Delegation log
+
+| Timestamp | Agent | Objective | Outcome | Evidence |
+|---|---|---|---|---|
+
+## Escalations
+
+| ID | Classification | Status | Question | Affected tasks | Resolution |
+|---|---|---|---|---|---|
+
+## Cap changes
+
+| Timestamp | Invocation | Cap | Old | New | Reason |
+|---|---|---|---|---|---|
+
+## Closure delta
+
+- Frozen fingerprint: `<fingerprint or none>`
+- Allowed lifecycle/evidence changes: `<exact paths and lifecycle-only fields or none>`
+- Observed changes: `<exact paths/fields or none>`
+- Unexpected changes: `<exact paths/fields or none>`
+
+## Run result
+
+- Status: `ACTIVE | PAUSED | DONE | ABORTED`
+- Resumable: `yes | no`
+- Reason: `<reason or next action>`
+- Required remediation: `<command/action or none>`
+```
+
+Append attempt, finding, delegation, and cap-change history; never rewrite it to hide a failed
+attempt. State is only the current machine-readable summary. Before any agent call, first evaluate
+`Delegations used + 1`; if it exceeds the effective budget, abort without allocating an attempt or
+incrementing the counter. Otherwise allocate/persist the attempt and increment exactly once. Before
+a reviewer call, apply the same pre-check to `reviewer iterations + 1`; an over-cap call is never
+made or counted. The one format-correction re-request is a new attempt and consumes a delegation but
+not another reviewer iteration.
+
+On re-entry, reconcile any active `PLANNED`, `DISPATCHED`, or `RESPONDED` attempt before selecting
+work. If the current fingerprint equals its pre-fingerprint, close it as `FAILED` (interrupted with
+no writes) and a retry, if allowed, is a new counted attempt. If the tree changed only inside its
+recorded allowed paths, do not blindly reimplement: validate the partial result, route it through
+the applicable reviewers, and mark it `RECOVERED` or `FAILED` with evidence. If any changed path is
+outside scope or provenance is ambiguous, persist a non-resumable fail-closed abort naming every
+path; only the maintainer may recover outside autonomous mode. The remediation must preserve the
+aborted audit file under a timestamped name, create a clean dedicated worktree from the run's
+recorded trusted baseline, and start a new run there—never delete evidence or silently authenticate
+the ambiguous tree. A checked task never skips this recovery validation.
+
+Compute approval fingerprints over the deterministic reviewable tree: tracked diff plus sorted
+untracked paths and their bytes. Exclude the active feature's `ORCHESTRATION.md`, `CALIBRATION.md`,
+and generated `PR_DESCRIPTION.md`; do not exclude production files or tests. This inclusion rule,
+not a particular shell utility, is canonical. On re-entry, recompute it: preserve matching
+approvals and invalidate every non-matching required approval; schedule all stale required
+reviewers before final conformance. Reconcile the recorded current task with checkboxes, Findings,
+Attempts, and the real tree; never re-delegate a checked task or duplicate an existing finding task.
+A missing/malformed/mismatched state file cannot authenticate re-entry and must fail the entry gate
+rather than being guessed back into shape.
+
+## Autonomous mode — termination and abort
+
+The run is **DONE** only when all are simultaneously true:
+
+1. every `TASKS.md` item is checked;
+2. every PLAN-mandated verification command has just exited 0;
+3. `domain-reviewer` has APPROVE for the current fingerprint;
+4. `security-reviewer`, when triggered, has APPROVE for the current fingerprint;
+5. `final-conformance-reviewer` has APPROVE for the current fingerprint;
+6. no escalation or blocking decision remains open.
+
+Then freeze and persist the fully approved implementation fingerprint. Before invoking lifecycle
+skills, record the narrow closure allowlist: the exact lifecycle status/evidence writes declared by
+`/spec-review` and `/spec-close`, plus generated `ORCHESTRATION.md`, `CALIBRATION.md`, and
+`PR_DESCRIPTION.md`. Run `/spec-review <feature-path>` and require its Pass (the owning skill alone
+may set `In Review`), run `/spec-close <feature-path>` and require its gate (the owning skill alone
+may set `Done`), then generate `PR_DESCRIPTION.md` via `/pr-description`. Record the observed
+closure delta. Expected lifecycle-only/evidence changes do not invalidate the frozen implementation
+approval; any production file, test, requirement, PLAN content, TASKS content beyond expected
+lifecycle bookkeeping, DECISIONS content, or other unexpected change invalidates final conformance
+and returns to REVIEW (or `/spec-update` if requirements changed). Persist `Run result: DONE` only
+after the observed delta contains no unexpected change. If an owning skill refuses, remain PAUSED or
+recoverably ABORTED with its exact reason; never write the status on its behalf.
+
+Stop before the next action when a reviewer would exceed `max-iterations`, a delegation would
+exceed `max-delegations`, two structured-output attempts fail as defined above and cannot be
+classified safely, verification remains red outside the current task's scope, or human-gated work
+blocks every remaining task. `PAUSED` is reserved for a concrete maintainer answer. Cap exhaustion,
+provider-format failure, and remediable verification failure persist `ABORTED, resumable: yes` with
+the exact counter/failure and required remediation. Corrupt or mismatched state and unexplained
+out-of-scope writes persist/refuse as `ABORTED, resumable: no`; never guess provenance. Every stop
+records open findings/tasks/escalations and last green verification.
+
+Re-entry from a recoverable abort first proves its remediation. Cap exhaustion requires an explicit
+higher override; omitted, equal, or lower caps refuse. Accepted increases update the effective cap
+and append `Cap changes` before work. All counters and reviewer iterations remain monotonic.
+
+At every exit—DONE, PAUSED, or ABORTED—assert from the attempt/delegation/command log that the loop did not
+run `git commit`, `git push`, `git merge`, apply a real migration, edit secrets, or directly change
+SPEC status. The loop may invoke the owning lifecycle skills; that is not a direct transition.
 
 ## Task classification
 

@@ -49,7 +49,11 @@ restrictions, and what you must not touch. You implement exactly that.
 # Validation results
 # Decisions not taken
 # Risks or pending work
+# Final autonomous completion block (when invoked by `sdd-orchestrate --autonomous`)
 
 Keep it compact: paths and one-line summaries, not full diffs — the orchestrator reviews
 the real diff itself. If you stopped on the stop condition, say so in "Task implemented"
-and put the exact blocking question in "Decisions not taken".
+and put the exact blocking question in "Decisions not taken". In autonomous orchestration, end
+after the prose with a fenced YAML completion block conforming to the canonical schema in
+`skills/sdd-orchestrate/SKILL.md`: `DONE` with `decisions: []`, or `BLOCKED` with every undocumented
+decision copied verbatim. Prose never substitutes for the block.

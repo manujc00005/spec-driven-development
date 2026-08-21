@@ -31,6 +31,10 @@ ad-hoc or externally-coupled subagent routing.
 
 - Domain findings, grouped by the reviewer skill that produced them.
 - Domain-specific test expectations for `solution-architect` / `final-conformance-reviewer`.
+- In autonomous orchestration, a final fenced YAML verdict block conforming to the canonical
+  schema in `skills/sdd-orchestrate/SKILL.md`: `APPROVE` with an empty findings list, or `REJECT`
+  with every finding's stable `DOM-*` id, severity, `path:line` evidence, summary, and required
+  action. Prose never substitutes for the block.
 
 ## Skills consumed
 
@@ -88,3 +92,4 @@ stack-specific code (controllers, entities, brokers, migrations, public pages).
 # Findings by reviewer
 # Domain test expectations
 # Pending-reroute notes
+# Final autonomous verdict block (when invoked by `sdd-orchestrate --autonomous`)
