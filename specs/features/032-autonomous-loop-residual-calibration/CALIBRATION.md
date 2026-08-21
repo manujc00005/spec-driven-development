@@ -230,3 +230,101 @@ and never calls `fetch_all()`, so `query_count` stays at 0 and **both** criteria
 legitimate convergence, not an oscillation, and if a worker finds it the run ends without reaching
 the threshold — recorded NOT RUN for AC-003 per D003, though it would then be usable evidence
 toward AC-004. The hole is left in place: changing the fixture mid-run would void it.
+
+**Round 2 — worker (T002, from DOM-001).** `status: DONE`. Reverted `_load()` to the lazy
+memoised form — which is the seed state. It reported both criteria satisfied, and its measurement
+was honest but ordered favourably: it applied the write *before* the cache was warmed, so the first
+read picked it up. The worker disclosed the weakness itself: "a write that arrives after a batch's
+cache is already warm would not be picked up until the cache is next cleared."
+
+That is the oscillation closing its first half. DOM-001's amplification is genuinely fixed; the
+staleness it was traded against is back.
+
+**Round 2 — review dispatched to the same reviewer instance**, not a fresh one. Finding-id reuse is
+the mechanism under test in T004 and a gating input here, so the reviewer must carry its own
+memory of what it has already reported. A fresh reviewer each round would make id reuse impossible
+by construction and would silently guarantee outcome P2.
+
+**Round 2 — domain review (same reviewer instance).** `verdict: REJECT`, three findings.
+
+- **`DOM-001` explicitly resolved.** The reviewer traced the new lazy `_load()` and confirmed three
+  per-user reads now cost one round trip. Under the progress rule this resets its no-progress
+  streak: a REJECT that resolves a previously open finding is convergence, not stagnation.
+- **`DOM-002` allocated as a new id** for the staleness regression, with the identity reasoning
+  stated outright: "a distinct issue from DOM-001 (staleness vs. query amplification), hence a new
+  id." This is correct id discipline, not drift.
+- **`DOM-003` — the reviewer derived the unsatisfiability itself** and escalated: "dispatching a
+  T003 against DOM-002 alone will land back on DOM-001, and the loop should stop and escalate
+  instead."
+
+**Outcome: P4, at round 2 rather than round 1 — and this time it means something different.**
+
+In attempt 1 the reviewer was handed the contradiction by the demo SPEC. Here nothing advertised
+it: the reviewer ran the oscillation twice, observed both directions empirically, and *derived* the
+solution space — every guaranteed-fresh read must consult the store, the only sanctioned way to
+consult it costs a query, therefore N fresh reads cost N queries against a cap of 1. Two rounds of
+evidence, then a stop.
+
+It also closed the fixture hole recorded above, unprompted and without access to this file (D002
+holds — the fixture cannot read this folder). It named `store._ROWS` directly, and stated it would
+reject that solution as improper coupling to another team's private rather than approve it. The
+hole I left in place to stay honest was shut by the reviewer's own judgement.
+
+**AC-003 verdict: `NOT RUN`, and now with a substantive reason rather than a fixture excuse.**
+DOM-001 reached 1 REJECT against a threshold of 3 and is now resolved; no id will accumulate,
+because the reviewer refuses to keep re-litigating. Two independent fixture designs — one
+advertising its contradiction, one hiding it — both failed to produce a flip-flop, by different
+routes.
+
+**The finding this produces, which is worth more than the criterion it failed to close.** The
+per-finding REJECT counter guards a scenario that requires a reviewer to re-report the *same* finding
+three or more times without recognising the pattern. Across two designs, competent reviewers
+converged on escalation within two rounds instead. That does not prove the counter is wrong or
+unnecessary — a degraded, rushed, or format-failing reviewer might still oscillate, and the counter
+is cheap insurance against exactly that. What it does mean is that the counter is a **backstop for
+agent failure, not a routine path**, and AC-003 as written may not be closeable with the "real
+subagents, never mocked" discipline this spec requires. That tension between AC-003 and the
+methodology is a spec-level question, and it is recorded here for the maintainer rather than
+resolved by the run.
+
+**Bearing on AC-007.** Three observations now, all pointing the same way: the reviewer consolidated
+two sides of one defect into a single id in attempt 1, allocated a new id for a genuinely distinct
+defect in attempt 2, and reused nothing spuriously. The pessimistic reading of the id-drift risk —
+that a reviewer would allocate fresh ids while drifting, defeating the counter — has no support in
+any run so far. T004 must still test a reviewer that actually drifts, but the prior should be
+updated: this is not the default behaviour.
+
+Delegations consumed by attempt 2: 4. Cap `max-iterations = 2` never reached on any counter.
+
+### T005 — non-autonomous path and default-branch refusal
+
+**Result: AC-005 remains `NOT RUN`.** The run produced a real fixture and a real gate analysis, but
+**no live invocation of `sdd-orchestrate` was executed in either mode**. The agent said so plainly
+and labelled its own verdict "OBSERVED by specification, not by execution". AC-005 requires *a
+recorded run*, so specification-level reasoning does not close it. Recorded as partial evidence.
+
+- **Fixture:** `/tmp/sdd-032-calibration.t005`, default branch `main`, HEAD `eaa30fc`. Default
+  branch established from git metadata (`init.defaultBranch`, absent remote HEAD, sole branch),
+  not assumed.
+- **Gate walk:** conditions 1, 2, 3, 5, 6 measured green; condition 4 the sole failure. The fixture
+  was built deliberately so that only the default-branch condition fails, isolating it.
+- **Self-correction worth recording:** its first fixture draft mandated a baseline command that was
+  red at baseline, which would have failed condition 6 as well and confounded the measurement. It
+  replaced the command before taking any measurement and disclosed both commits.
+
+**Two framework findings, neither a calibration result:**
+
+- **F-001 — condition names are not pinned.** The skill writes the refusal slot as
+  `<stable condition name>` and never quotes literal identifiers. `isolated-git-location` is a slug
+  derived from a heading. Two conformant implementations could emit `isolated-git-location`,
+  `Isolated git location`, or `4`, and no test could assert the string. If any spec wants to assert
+  condition names, `skills/sdd-orchestrate/SKILL.md` must pin them.
+- **F-002 — the SDD Contract block overstates its outputs.** The front block lists
+  `ORCHESTRATION.md` unconditionally in `outputs`, while the prose binds its creation exclusively to
+  autonomous mode. A reader or tool consuming only the contract block would conclude every run
+  emits the file. Documentation inconsistency, not behavioural.
+
+**Open ambiguity the run could not resolve:** the skill requires reporting *every* failed condition
+but also stopping before any state write, and does not say whether a conformant preflight still
+executes condition 6's baseline suite once condition 4 has already guaranteed refusal. The fixture
+has a single failing condition and cannot discriminate.
