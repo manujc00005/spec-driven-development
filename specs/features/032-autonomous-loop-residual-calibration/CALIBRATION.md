@@ -376,3 +376,50 @@ Claude Code. The other half — that a *non-autonomous* invocation behaves exact
 autonomous mode existed — is still **NOT OBSERVED**: no non-autonomous run was performed. The
 negative evidence here (a refused autonomous entry writes no state file) does not substitute for
 running the ordinary path and watching it produce classification, phases and no `ORCHESTRATION.md`.
+
+### T006 — post-approval change versus lifecycle-only write
+
+**Executed by the maintainer's orchestrator session.** Fixture `/tmp/sdd-032-calibration.t006`,
+baseline `db1328a`, hermetic (`git status --porcelain` empty before and after the mandated suite;
+bytecode gitignored from the first commit, the lesson from T002 attempt 1 applied).
+
+The reviewable-tree fingerprint was computed exactly as the protocol defines it — tracked diff plus
+sorted untracked paths and their bytes, excluding the active feature's `ORCHESTRATION.md`,
+`CALIBRATION.md` and generated `PR_DESCRIPTION.md` — and measured across three states:
+
+| State | Fingerprint | Differs from frozen |
+|---|---|---|
+| Frozen, approved | `b5674db29e858da3…` | — |
+| Arm A: production change appended to `demo/calc.py` | `70cab95efa63d438…` | **yes** |
+| Arm B: lifecycle-only `Status` write in `SPEC.md` | `6fd134ba4d94f12c…` | **yes** |
+
+Both arms were reverted afterwards; the tree returned to fingerprint `b5674db29e858da3…`.
+
+**AC-006 arm 1: OBSERVED.** A seeded non-lifecycle production change made after the freeze moves the
+fingerprint, so it invalidates the frozen approval and the loop must return to REVIEW.
+
+**AC-006 arm 2: the fingerprint does not do this job, and was never claimed to.** A lifecycle-only
+`Status` write moves the fingerprint too, because the exclusion list covers `ORCHESTRATION.md`,
+`CALIBRATION.md` and `PR_DESCRIPTION.md` — not `SPEC.md`. Fingerprint inequality is therefore
+**necessary but not sufficient** for invalidation. The discrimination lives entirely in the closure
+delta: the protocol requires recording a narrow allowlist of the exact lifecycle status and evidence
+writes before invoking the owning skills, then classifying the observed delta against it.
+
+Read against the protocol text this is **conformance, not a defect**. The termination contract says
+expected lifecycle changes "do not invalidate the frozen implementation approval" while any
+production, test, requirement, PLAN, TASKS or DECISIONS change does — a statement about the
+classified delta, never about the hash.
+
+**But it is a live trap for any implementation, and 031 already fell into it.** 031's own
+calibration recorded that "status/PR writes changed the reviewable tree under the candidate
+fingerprint rule, forcing a final refresh… and consuming domain/security iteration 3/3". An
+implementation that treats fingerprint inequality as invalidation will return to REVIEW on every
+lifecycle write and burn its convergence caps on closure bookkeeping. The three-artifact exclusion
+narrows that trap; it does not remove it, because `SPEC.md` status is on the write path of
+`/spec-review` and `/spec-close` by design.
+
+**Recorded consequence for AC-006's verdict:** arm 1 is closed by execution. Arm 2 cannot be closed
+by fingerprint measurement alone; closing it requires observing a real closure sequence in which the
+allowlist is recorded first and the delta is classified against it. That observation is not yet made,
+so **AC-006 remains partially observed**, with arm 2 named as the outstanding half rather than
+quietly folded into arm 1's green.
