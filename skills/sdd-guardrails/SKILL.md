@@ -317,6 +317,7 @@ performer, and each performer must verify its precondition before promoting:
 | `Draft` → `Ready` | `/spec-plan` | `PLAN.md`, `TASKS.md`, `DECISIONS.md` created; every acceptance criterion covered by a task |
 | `Ready` → `In Progress` | `/spec-implement` | First task actually being implemented (no tasks checked yet) |
 | `In Progress` → `In Review` | `/spec-review` | Review verdict is **Pass**. On `Partial`/`Fail` the status does **not** change |
+| `Ready` → `In Review` | `/spec-review` | Review verdict is **Pass** **and** `DECISIONS.md` holds an Accepted decision explaining why `/spec-implement` was bypassed. The review must name it |
 | `In Review` → `Done` | `/spec-close` | Status is already `In Review`; open questions resolved; acceptance criteria covered |
 | any → `Archived` | **explicit user decision only** — no skill archives on its own initiative | The abandonment or supersession is recorded in `DECISIONS.md`, naming the superseding spec when one exists |
 | any → an earlier state (demotion) | **explicit user decision only** | The reason is recorded in `DECISIONS.md`; the work the demoted gate represented must be redone, not assumed |
@@ -334,6 +335,15 @@ Rules:
   user asks, but must never initiate it.
 - **Re-entering a gate re-runs it.** A spec demoted from `In Review` back to `In Progress` must
   pass `/spec-review` again to return; the earlier Pass does not carry over.
+- **Exception — work executed outside `/spec-implement`.** A feature can be legitimately implemented
+  without that skill ever running: spec 032's own decision routed every calibration run to the
+  maintainer's session, so it sat at `Ready` with all eight criteria closed by execution. `Ready` →
+  `In Review` is therefore permitted to `/spec-review`, and to nothing else, **only** when an
+  Accepted decision in the feature's `DECISIONS.md` states why `/spec-implement` was bypassed and
+  the review names that decision. This is not a shortcut around implementation — it exists because
+  the alternative was worse: invoking `/spec-implement` to move a status with nothing left to
+  implement manufactures a transition that never happened, which is precisely the false claim this
+  section forbids.
 - **Exception — explicit user instruction.** The rule binds skills and agents, not the human. If
   the user explicitly asks for a status change, make it and say which gate was skipped.
 

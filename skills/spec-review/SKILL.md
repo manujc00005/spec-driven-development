@@ -39,6 +39,7 @@ If no path is provided, use the most recently referenced feature path from the c
 - Be direct and specific.
 - If the verdict is **Pass**, update `Status` in `SPEC.md` to `In Review`.
 - **This skill is the only authorized performer of `In Progress` → `In Review`.** A spec marked `In Review` by any other means is an unverified claim, and it silently defeats `/spec-close`'s precondition check. See `sdd-guardrails` section 11.
+- **`Ready` is accepted only under a recorded exception.** Some features are legitimately executed outside `/spec-implement` — a calibration spec whose own decision routes the work to the maintainer's session, for example — so `/spec-implement` never runs and the spec stays at `Ready` with the work done. In that case, and only when the feature's `DECISIONS.md` contains an **Accepted** decision explaining why `/spec-implement` was bypassed, this skill may perform `Ready` → `In Review` on a **Pass**. It must name that decision in its output. Without such a decision, `Ready` is refused: tell the user to run `/spec-implement`. A `Proposed` decision does not qualify. The citation is the point — an exception nobody has to justify in writing is the silent status edit section 11 exists to prevent.
 - If the verdict is **Partial** or **Fail**, do not change the status.
 
 ## Review checklist
