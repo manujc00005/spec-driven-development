@@ -347,3 +347,46 @@ file underneath it. It also correctly declined to re-raise the debt D018/D019 ha
 
 T016 verdict: **PASS**. Traceability SPEC → PLAN → TASKS → diff → evidence is internally consistent
 with no unresolved contradiction. The only remaining closure requirement is T023.
+
+### T023 — the real-feature run
+
+**The only evidence in this feature not drawn from a fixture designed by the agent that then
+reviewed it.** Run on 2026-08-22 against spec 033 (`task-verification-criterion`) — a real feature
+in this repository, with no seeded defects, planned and executed through the autonomous loop.
+
+- **Worktree:** `/Users/manu/Proyectos/sdd-t023`, branch `feat/033-task-verification-criterion`,
+  baseline `4f3542d`. Entry gate: all six conditions PASS. Budget `max(25, 6 × 7) = 42`.
+- **Delegations used: 3** — one worker for T001, one domain review, one worker for the finding task.
+  No cap approached.
+
+**What the circuit did.** T001 implemented, reviewed, REJECTed with `DOM-001`; the finding became
+task T008 with the reviewer's required action; a worker fixed it; re-review resolved `DOM-001` and
+raised `DOM-002`. Finding identity was preserved across rounds, and the resolution was recorded by a
+structured APPROVE of the specific finding rather than inferred from a worker saying DONE.
+
+**Why this run justifies its own existence — it found two defects a fixture could not have
+contained.** Both were in *my own decision record*, not in the implementation:
+
+1. `DOM-001`'s round flagged that D002 defined a legacy file as one "containing no `Verify:` clause
+   at all". This feature's own `TASKS.md` mentions the token in T003's prose while no task carries a
+   clause, so a content match would have flipped the file to adopted and blocked all seven of its
+   tasks. The rule was wrong as written.
+2. `DOM-002` then found the fix had *moved* the hole, not closed it: it named the detection unit as
+   "a line beginning `- [ ]`", but this repository's task lines wrap, and 8 of 9 tasks in that same
+   file carry `Covers:` on a continuation line. A physical-line test reads a correct wrapped clause as
+   missing — the opposite error, equally fatal.
+
+A seeded fixture cannot produce this class of finding, because an agent does not plant defects in its
+own reasoning; it commits them. That is precisely the flaw T023 was written to cover, and the run
+exhibited it twice in three delegations.
+
+**Final rule, validated against the corpus rather than by argument:** the detection unit is the task
+item — bullet plus continuation lines — and the clause is the one following `Covers:`. Implemented as
+a probe and run over all 35 existing `TASKS.md` files: 35 classified legacy, 0 false adoptions, which
+is AC-003's backward-compatibility requirement met empirically.
+
+**Status of this run: incomplete and honestly so.** T002–T007 of spec 033 remain unimplemented. This
+record is evidence that the loop works on real, non-seeded material and that its review circuit finds
+real defects — it is **not** a claim that spec 033 reached DONE. Per T016's instruction, an
+unfinished real-feature run is recorded as an explicit `/spec-close` blocker for spec 031 rather than
+reported as a pass.
