@@ -234,3 +234,45 @@ re-reports while queued.
 `skills/sdd-orchestrate/SKILL.md` changes in two places - the counter definition and the pre-check
 wording. No counter is removed and no cap value changes. AC-004 can now be re-run against a counter
 that is not known-broken, which is T014.
+
+### D009 - A spec whose work is driven outside /spec-implement has no owner for Ready → In Progress
+
+**Date:** 2026-08-22
+
+**Status:** Accepted
+
+**Context:**
+
+The lifecycle is `Draft → Ready → In Progress → In Review → Done`, and guardrails section 11 assigns
+each transition to exactly one owning skill: `/spec-plan` sets `Ready`, `/spec-implement` sets
+`In Progress`, `/spec-review` sets `In Review`, `/spec-close` sets `Done`.
+
+This spec's work could not go through `/spec-implement`. D001 routes every calibration run to the
+maintainer's orchestrator session precisely because the autonomous loop cannot credibly observe
+itself. So `/spec-implement` never ran, the spec sat at `Ready` while eight criteria were closed by
+execution, and the `Ready → In Progress` transition has no owner in this execution model.
+
+**Decision:**
+
+Record the gap as a framework finding and let `/spec-review` perform `Ready → In Review` for this
+spec, with this decision as the written justification.
+
+**Reasoning:**
+
+The two alternatives are worse. Invoking `/spec-implement` to move a status when there is nothing
+left to implement manufactures a transition that never happened - the exact unverified claim the
+guardrail exists to prevent. Leaving the spec at `Ready` forever would make its lifecycle contradict
+its own evidence, which is the failure mode this spec was written to eliminate from 031.
+
+What the guardrail actually protects is that `In Review` is never claimed without verification. That
+verification happened: `/spec-review` inspected the diff, confirmed the change is confined to the
+two D008 edits the SPEC declared, and found the stale `ORCHESTRATION.md` that this review then
+reconciled. The protection held; only the preceding transition's ownership is undefined.
+
+**Consequences:**
+
+A framework follow-up is warranted, outside this spec: either `/spec-review` is authorised to accept
+`Ready` as an input state when a recorded decision explains why `/spec-implement` was bypassed, or
+the lifecycle gains an owner for maintainer-driven execution. Until then, any spec that legitimately
+executes outside `/spec-implement` will hit this same wall, and the workaround must be a recorded
+decision rather than a silent status edit.
