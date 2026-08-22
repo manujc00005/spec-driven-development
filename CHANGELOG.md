@@ -11,7 +11,7 @@ under `specs/features/` — the framework is developed with its own workflow.
 
 ## [Unreleased]
 
-Spec 035 · Mindset reminder hook — "always in effect" stops depending on the model remembering.
+Spec 036 · Mindset reminder hook — "always in effect" stops depending on the model remembering.
 Spec 034 · Install manifest coherence — the manifest stops claiming a freshness it never verified.
 Spec 031 · Autonomous orchestration — the loop closes without a human in the middle.
 Spec 029 · Python/SQL/data profile — review coverage for script-and-query work.
@@ -64,7 +64,7 @@ Spec 024 · Delivery-operations profile — the first coverage of what happens a
 
 ### Added
 
-- **`scope-keeper-reminder` hook (spec 035).** The mindset skills are declared *"always in effect"*,
+- **`scope-keeper-reminder` hook (spec 036).** The mindset skills are declared *"always in effect"*,
   but a skill is **model-invoked**: its rules only enter context if the assistant chooses to load
   it. Claim and mechanism disagreed — the same shape as the manifest defect below. Measured across
   the whole spec 034 implementation session (25 tasks, ~1.300 lines): `/scope-keeper` was invoked

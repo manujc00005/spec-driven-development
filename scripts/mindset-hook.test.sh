@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Self-test for hooks/scope-keeper-reminder.sh (spec 035).
+# Self-test for hooks/scope-keeper-reminder.sh (spec 036).
 #
 # The hook runs before EVERY Edit/Write in every session, so its hard contract
 # is "never fail an edit" (D002): every case below asserts exit 0, including

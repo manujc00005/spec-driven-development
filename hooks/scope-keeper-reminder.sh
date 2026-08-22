@@ -3,14 +3,14 @@
 #
 # The mindset skills are declared "always in effect", but a skill is
 # model-invoked: its rules only reach context if the assistant chooses to load
-# it. That gap is the point of this hook (spec 035) — scope-keeper's own
+# it. That gap is the point of this hook (spec 036) — scope-keeper's own
 # description names a deterministic trigger, "before your first edit", and this
 # is the harness observing it.
 #
 # Fires ONCE per session (keyed on session_id, falling back to a time throttle
 # when that field is absent). Set SDD_SCOPE_REMINDER=0 to disable.
 #
-# Exit 0 ALWAYS — reinforcement, not enforcement (spec 035 D002). Scope is a
+# Exit 0 ALWAYS — reinforcement, not enforcement (spec 036 D002). Scope is a
 # judgement, not a predicate; a hook that blocked edits on a judgement call
 # would fire on correct work and be switched off within a day, taking the
 # reminder with it. Nothing below may fail an edit.
@@ -38,7 +38,7 @@ fi
 # The session id becomes a filename, so it is sanitised to a closed character
 # set rather than escaped: a value like "../../etc/passwd" must not be able to
 # name a path at all. Anything that sanitises away falls through to the time
-# throttle (spec 035 AC-006).
+# throttle (spec 036 AC-006).
 SAFE_ID="$(printf '%s' "$SESSION_ID" | tr -cd 'A-Za-z0-9_-' | cut -c1-64)"
 
 TMPDIR_SAFE="${TMPDIR:-/tmp}"
@@ -69,6 +69,6 @@ touch "$MARKER" 2>/dev/null || true
 
 # Excerpt only. skills/scope-keeper/SKILL.md is the source of truth; scripts/
 # mindset-hook.test.sh asserts these claims still exist there, so the two
-# cannot drift silently (spec 035 D004).
+# cannot drift silently (spec 036 D004).
 printf '%s\n' '{"systemMessage": "[scope-keeper] Before this edit — do exactly what was asked: the requested scope IS the deliverable. No drive-by refactors, no \"while I am at it\", no speculative generality. A real improvement you spot mid-task gets reported, not applied. Necessary-adjacent is in scope (say why); \"would be nicer\" is not. Dead code your change created is yours to remove; dead code you found is not. Match the surrounding code. Full manual: /scope-keeper. This is a reminder, not a gate — use your judgement. Silence it with SDD_SCOPE_REMINDER=0."}'
 exit 0

@@ -28,7 +28,7 @@ skill, the model-invoked path.
 
 ### Reading list
 
-- `specs/features/035-mindset-reminder-hook/*`
+- `specs/features/036-mindset-reminder-hook/*`
 - `hooks/graphify-scan-reminder.sh` / `.ps1` — the exemplar, read in full (both are short)
 - `hooks/lib/claude-json.sh` — helper contract only (`claude_json_get_field`,
   `claude_json_emit_system_message`)

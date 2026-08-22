@@ -1,7 +1,7 @@
 <#
     scope-keeper-reminder.ps1 - PreToolUse nudge on Edit/Write/NotebookEdit.
 
-    PowerShell mirror of scope-keeper-reminder.sh (spec 035). The mindset skills
+    PowerShell mirror of scope-keeper-reminder.sh (spec 036). The mindset skills
     are declared "always in effect", but a skill is model-invoked: its rules only
     reach context if the assistant chooses to load it. scope-keeper's own
     description names a deterministic trigger - "before your first edit" - and

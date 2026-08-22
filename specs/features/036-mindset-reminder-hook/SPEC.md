@@ -1,5 +1,16 @@
 # Feature Spec: mindset-reminder-hook
 
+> **Renumbered 035 → 036 on 2026-08-22.** `035` was claimed concurrently by
+> `035-counter-guard-and-lifecycle-owner` (PR #21), which merged while this one was in review.
+> `origin/main` topped out at `034` when this number was taken, so both claims were made in good
+> faith — the recurring hazard of picking a number from local disk.
+>
+> This spec ceded the number even though the convention is to renumber the *smaller* reference
+> footprint, and this one is larger (9 textual references against 0). Two other factors outweighed
+> it: the counter-guard spec is already `Done` while this one is still in review, and every
+> reference here lives in files this feature itself introduced — so renumbering touches nobody
+> else's work.
+
 ## Status
 
 In Review

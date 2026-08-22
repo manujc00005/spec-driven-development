@@ -1,6 +1,6 @@
 #Requires -Version 5.1
 <#
-    PowerShell self-test for hooks/scope-keeper-reminder.ps1 (spec 035, AC-012).
+    PowerShell self-test for hooks/scope-keeper-reminder.ps1 (spec 036, AC-012).
 
     The hook runs before EVERY Edit/Write in every session, so its hard contract
     is "never fail an edit" (D002): every case below asserts exit 0, including
