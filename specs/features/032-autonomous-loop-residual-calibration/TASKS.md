@@ -71,7 +71,7 @@ Runs are ordered riskiest-assumption-first (PLAN, "Proposed approach"), not by c
   without a reason that outlived this spec, citing each 032 run that closed it. Append; never
   rewrite a 031 run record. Covers: AC-008.
 
-- [ ] T011 - Run `/spec-review` and `/qa-review` on this feature, then `/spec-close`. If any run in
+- [x] T011 - Run `/spec-review` and `/qa-review` on this feature, then `/spec-close`. If any run in
   Phase 2 found a genuine defect, this task stops and routes it to a scoped follow-up instead of
   closing. Covers: AC-001, AC-002, AC-003, AC-004, AC-005, AC-006, AC-007, AC-008.
 
