@@ -9,8 +9,8 @@
 
 ## State
 
-- Phase: `PAUSED`
-- Current task: `T002` (not runnable by this loop — see E-001)
+- Phase: `TERMINAL`
+- Current task: `none` — every task complete
 - Current attempt: `none`
 - Current attempt state: `none`
 - Delegations used: `2`
@@ -65,7 +65,7 @@
 
 | ID | Classification | Status | Question | Affected tasks | Resolution |
 |---|---|---|---|---|---|
-| E-001 | human-gated | waiting | D001 routes every seeded calibration run to the maintainer's session; the loop may not execute them. T009/T010/T011 depend on their results. | T002–T011 | Maintainer runs T002 (riskiest-first per D004); loop resumes for T009/T010 once run evidence exists |
+| E-001 | human-gated | **resolved** | D001 routes every seeded calibration run to the maintainer's session; the loop may not execute them. T009/T010/T011 depend on their results. | T002–T011 | Resolved: the maintainer's orchestrator session drove every calibration run per D001, as the escalation asked. All eight criteria closed. |
 
 ## Cap changes
 
@@ -81,7 +81,7 @@
 
 ## Run result
 
-- Status: `PAUSED`
-- Resumable: `yes`
-- Reason: `T001 complete and domain-approved. No remaining task is runnable by the loop: T002-T008 are maintainer-observed by D001, and T009-T011 depend on their evidence. 2 of 66 delegations used; no cap approached.`
-- Required remediation: `Maintainer executes T002 per D002/D003/D004, records it in CALIBRATION.md, then re-enter with the same command.`
+- Status: `DONE`
+- Resumable: `no` — nothing left to resume
+- Reason: `This autonomous invocation ran T001 only and paused on E-001, correctly: D001 routes the calibration runs away from the loop. Everything after T001 was executed by the maintainer's orchestrator session and is recorded in CALIBRATION.md, not here. This file is closed so it cannot be mistaken for a live paused run - the state contract makes it authoritative, and a stale PAUSED would tell a re-entrant loop to wait for an answer that was already given.`
+- Required remediation: `none`
