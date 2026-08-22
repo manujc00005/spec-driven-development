@@ -51,7 +51,7 @@ from PLAN "Proposed approach" and DECISIONS D002/D003:
 | AC-001 | Delegation-budget exhaustion aborts recoverably, naming the budget and count, and is distinct from a non-convergence abort | T007 | PASS | T007, budget abort observed at an explicit cap of 4 |
 | AC-002 | Re-entry after a cap-exhaustion abort refuses an omitted, equal or lower cap and resumes only on an explicit increase, preserving counters and logging the cap change | T008 | PASS | T008, all four re-entry cases applied against T007's abort |
 | AC-003 | A finding alternating REJECT/APPROVE past `max-iterations` aborts on the per-finding counter while no per-reviewer streak reaches the cap | T002 | PASS | T012 round 2: DOM-002 total 2 while the streak reset to 0 (criterion as amended by D006) |
-| AC-004 | A reviewer rejecting more than `max-iterations` times in a row while resolving a prior finding each round reaches a legitimate DONE | T003 | PARTIAL | T012 observed 2 consecutive progress-carrying REJECTs; the third was pre-empted by the defect below |
+| AC-004 | A reviewer rejecting more than `max-iterations` times in a row while resolving a prior finding each round reaches a legitimate DONE | T003 | PASS | T014: three consecutive progress-carrying REJECTs then APPROVE, against the D008 counter |
 | AC-005 | A non-autonomous invocation behaves exactly as before, and the default-branch refusal fires on Claude Code | T005 | PASS | T005 attempt 2 + non-autonomous control, both executed |
 | AC-006 | A seeded post-approval production change invalidates final conformance and returns the loop to REVIEW, while lifecycle-only writes do not | T006 | PASS | T006, both arms observed through the closure-delta classification |
 | AC-007 | The id-reuse residual risk is assessed against a reviewer allocating a fresh finding id each round while drifting | T004 | PASS | Recorded tolerance with reasoning, backed by four observed id decisions |
@@ -578,19 +578,20 @@ which is exactly what the criterion asks — not that every PARTIAL becomes PASS
 | AC-001 budget abort | **PASS** |
 | AC-002 cap re-entry | **PASS** |
 | AC-003 counter divergence (amended by D006) | **PASS** |
-| AC-004 long legitimate convergence | **PARTIAL** — blocked by DEFECT-001 |
+| AC-004 long legitimate convergence | **PASS** — closed by T014 after DEFECT-001 was fixed |
 | AC-005 non-autonomous + branch refusal | **PASS** |
 | AC-006 post-approval invalidation | **PASS** |
 | AC-007 id-reuse risk | **PASS** — recorded tolerance |
 | AC-008 031 matrix | **PASS** |
 
-**One genuine protocol defect: DEFECT-001**, recorded below with a scoped fix (T013) and D007. The
-SPEC's R1 rule stops this spec at **two or more**, so calibration continued and completed.
+**All eight criteria are closed by execution.** One genuine protocol defect was found
+(DEFECT-001), fixed (T013 / D008), and the fix was then exercised by the run that closed the last
+criterion. The SPEC's R1 rule stops this spec at two or more defects; one was found, so calibration
+continued and completed.
 
-**AC-004 is the only criterion left open**, and deliberately so: it reached two consecutive
-progress-carrying REJECTs and the third was unreachable because DEFECT-001 would have tripped on the
-only surviving finding. It is re-run by T014 after T013 lands. Evidence gathered against a
-known-broken counter would assert nothing.
+**The defect and its fix are observed in the same shape of fixture, one on each side.** T012 hit the
+abort on a finding nobody had been asked to repair. T014, against the corrected counter, carried a
+finding through four review rounds unworked without it counting, and reached a legitimate DONE.
 
 **Three fixture assumptions failed against competent reviewers during this spec**, which is worth
 carrying forward: an advertised contradiction gets escalated rather than iterated (T002 attempt 1); a
@@ -727,3 +728,49 @@ confirm turned out to be broken in a case the criterion never contemplated.
 
 AC-004 should be re-run after DEFECT-001 is fixed. It will close then, and its evidence will mean
 something, which evidence collected against a known-broken counter would not.
+
+### T014 — long legitimate convergence, against the fixed counter (pre-registration)
+
+**Registered 2026-08-22, before the run.** Closes AC-004. Runs against the counter as fixed by D008,
+which is the whole point: evidence gathered against the known-broken counter would assert nothing.
+
+- **Fixture:** `/tmp/sdd-032-calibration.t014`, branch `calib/t014`, hermetic.
+- **Caps:** `max-iterations = 2`. Threshold: **at least 3 consecutive REJECTs each resolving a
+  previously open finding**, followed by a legitimate DONE.
+- **Seed:** five placeholder settings against five value criteria. Five rather than three, because
+  T012 showed three findings yield only two progress-carrying rejects — one short of the threshold.
+- **What D008 makes possible:** the findings still queued while others are repaired no longer
+  accumulate toward their per-finding cap. Under the old rule this run would abort around round 3 on
+  a finding nobody had touched, which is exactly how T012 ended.
+
+**Expected shape:** round 1 fixes `retries`, review raises four findings; rounds 2–4 each resolve one
+and re-report the rest, resetting the streak each time; round 5 resolves the last and approves.
+
+#### T014 run log
+
+| Round | Worker | Review | Resolved | Streak after | Progress-carrying? |
+|---|---|---|---|---|---|
+| 1 | `retries` → 3 | REJECT, DOM-001..DOM-004 raised | none | 1 | no |
+| 2 | `timeout` → 30 | REJECT, DOM-002/003/004 re-reported | DOM-001 | **0** | **#1** |
+| 3 | `verbose` → True | REJECT, DOM-003/004 re-reported | DOM-002 | **0** | **#2** |
+| 4 | `batch_size` → 500 | REJECT, DOM-004 re-reported | DOM-003 | **0** | **#3** |
+| 5 | `region` → eu-west-1 | **APPROVE, findings: []** | DOM-004 | 0 | terminal |
+
+**Three consecutive progress-carrying REJECTs**, each resolving a previously open finding of the same
+reviewer and resetting its no-progress streak to zero. `max-iterations = 2`, so the run exceeded the
+cap on consecutive rejections and kept going — which is exactly what AC-004 asserts: a reviewer that
+keeps rejecting while the work keeps converging must not be treated as stagnant.
+
+**This run is also the direct proof of D008.** `DOM-004` was re-reported in all four review rounds
+and never had a repair attempt dispatched against it until round 5. Under the pre-D008 rule its
+per-finding total would have been 4 against a cap of 2, so the pre-check would have refused the
+round-3 review and aborted the run naming a finding that had never once failed to converge. Under
+D008 it counted nothing while queued, and the run proceeded to completion. The defect and its fix
+are both observed in the same fixture, one before and one after.
+
+**Round 5 — final review.** `verdict: APPROVE`, `findings: []`. All six demo criteria met; terminal
+state DONE.
+
+**AC-004: OBSERVED.** Three consecutive progress-carrying REJECTs against `max-iterations = 2`,
+followed by a legitimate APPROVE. A reviewer that keeps rejecting while the work keeps converging is
+not stagnant, and the loop no longer treats it as such.

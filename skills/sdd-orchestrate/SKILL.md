@@ -236,9 +236,15 @@ Track three numbers per reviewer and one per finding:
   another reviewer's fix.
 - **Clean re-approval (gates nothing).** A review scheduled only because the fingerprint moved
   consumes the delegation budget and nothing else.
-- **Per-finding REJECT total (gates, cap `max-iterations`).** Count REJECTs carrying the same
-  `<reviewer>:<finding-id>` in its registry row. Monotonic per finding; this is what catches a
-  flip-flop, which a streak reset by intervening approvals would miss.
+- **Per-finding REJECT total (gates, cap `max-iterations`).** Count a `REJECT` carrying the same
+  `<reviewer>:<finding-id>` **only when the loop has already dispatched a repair attempt for that
+  finding** — that is, count failed repairs, not re-reports. A finding re-reported while it still
+  sits unworked in the queue does not increment anything: it has not failed to converge, it has not
+  been asked to. Monotonic per finding once counting starts; this is what catches a flip-flop, which
+  a streak reset by intervening approvals would miss, and every flip-flop follows a repair so none
+  escape. Counting bare re-reports instead would abort any run whose first review raises more
+  findings than `max-iterations`, and would abort it sooner the better the reviewer is at finding
+  real problems in one pass.
 
 Before a reviewer call, pre-check only whether that call *could* exceed a gating cap; an over-cap
 call is never made or counted. The single format-correction re-request consumes a delegation but no
@@ -352,8 +358,9 @@ attempt. State is only the current machine-readable summary. Before any agent ca
 `Delegations used + 1`; if it exceeds the effective budget, abort without allocating an attempt or
 incrementing the counter. Otherwise allocate/persist the attempt and increment exactly once. Before
 a reviewer call, apply the gating pre-checks defined in Convergence caps — the reviewer's
-no-progress streak and, when the reviewer would re-report a known finding, that finding's REJECT
-total. Total invocations and clean re-approvals are recorded but never block a call.
+no-progress streak and, when the reviewer would re-report a finding the loop has already tried to
+repair, that finding's REJECT total. Total invocations and clean re-approvals are recorded but
+never block a call.
 
 On re-entry, reconcile any active `PLANNED`, `DISPATCHED`, or `RESPONDED` attempt before selecting
 work. If the current fingerprint equals its pre-fingerprint, close it as `FAILED` (interrupted with
