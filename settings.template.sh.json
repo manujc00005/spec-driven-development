@@ -23,6 +23,17 @@
             "statusMessage": "Graphify graph-first nudge..."
           }
         ]
+      },
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/scope-keeper-reminder.sh",
+            "timeout": 5,
+            "statusMessage": "Scope-keeper reminder..."
+          }
+        ]
       }
     ],
     "PostToolUse": [

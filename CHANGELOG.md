@@ -11,6 +11,7 @@ under `specs/features/` — the framework is developed with its own workflow.
 
 ## [Unreleased]
 
+Spec 035 · Mindset reminder hook — "always in effect" stops depending on the model remembering.
 Spec 034 · Install manifest coherence — the manifest stops claiming a freshness it never verified.
 Spec 031 · Autonomous orchestration — the loop closes without a human in the middle.
 Spec 029 · Python/SQL/data profile — review coverage for script-and-query work.
@@ -62,6 +63,18 @@ Spec 025 · Workspace SDD — the first coverage of what happens *between* proje
 Spec 024 · Delivery-operations profile — the first coverage of what happens after merge.
 
 ### Added
+
+- **`scope-keeper-reminder` hook (spec 035).** The mindset skills are declared *"always in effect"*,
+  but a skill is **model-invoked**: its rules only enter context if the assistant chooses to load
+  it. Claim and mechanism disagreed — the same shape as the manifest defect below. Measured across
+  the whole spec 034 implementation session (25 tasks, ~1.300 lines): `/scope-keeper` was invoked
+  **zero times**.
+  `scope-keeper`'s own description names a deterministic trigger — *"before your first edit"* — so
+  the hook is the harness observing it: a `PreToolUse` nudge on `Edit`/`Write`/`NotebookEdit` that
+  emits the load-bearing scope rules **once per session**, then stays quiet. It never blocks (scope
+  is a judgement, not a predicate), costs nothing on turns that do not edit, and
+  `SDD_SCOPE_REMINDER=0` disables it. The message is a short excerpt; the skill stays the source of
+  truth and a test fails if the two drift apart.
 
 - **`--remove-profile` / `-RemoveProfile` (spec 034).** A profile could be adopted but never
   dropped: the manifest's profile list only ever grew, and `update.sh` re-installed whatever it

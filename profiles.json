@@ -73,7 +73,8 @@
         "sdd-status-banner",
         "project-init-check",
         "graphify-stale-reminder",
-        "graphify-scan-reminder"
+        "graphify-scan-reminder",
+        "scope-keeper-reminder"
       ],
       "plannedHooks": [],
       "templates": [
@@ -339,14 +340,14 @@
             "data-pipeline-reviewer",
             "python-testing-reviewer"
           ],
-          "note": "All five are primary-owned by domain-reviewer. security-reviewer consumes python-reviewer, sql-query-reviewer and data-pipeline-reviewer as SECONDARY \u2014 string-interpolated SQL, credentials in source, personal data in logs/extracts, and over-privileged database accounts are security findings, not domain ones. A skill is listed under exactly one agentRouting target, the one that owns it; secondary consumption is carried by each skill's SDD Contract secondary_agents (spec 029 D002)."
+          "note": "All five are primary-owned by domain-reviewer. security-reviewer consumes python-reviewer, sql-query-reviewer and data-pipeline-reviewer as SECONDARY — string-interpolated SQL, credentials in source, personal data in logs/extracts, and over-privileged database accounts are security findings, not domain ones. A skill is listed under exactly one agentRouting target, the one that owns it; secondary consumption is carried by each skill's SDD Contract secondary_agents (spec 029 D002)."
         }
       },
       "hooks": [],
       "plannedHooks": [],
       "templates": [],
       "plannedTemplates": [],
-      "note": "Overlay profile (spec 029). Combines with any stack profile, e.g. '--profile java-spring-backend,python-sql-data'. Ships five review skills and nothing else \u2014 no hooks, no templates, no agents. Scope is REVIEW of Python/SQL/data work in a diff; it is not data-engineering coverage (no orchestration design, data modelling, warehouse architecture, lineage or streaming semantics \u2014 see skills/data-pipeline-reviewer/SKILL.md). It replaces no tool: ruff, mypy, pytest, coverage.py, sqlfluff, EXPLAIN and database monitoring all remain the source of truth for what they measure. Engine-agnostic: engine-specific SQL rulings must be stated as assumptions (spec 029 D003)."
+      "note": "Overlay profile (spec 029). Combines with any stack profile, e.g. '--profile java-spring-backend,python-sql-data'. Ships five review skills and nothing else — no hooks, no templates, no agents. Scope is REVIEW of Python/SQL/data work in a diff; it is not data-engineering coverage (no orchestration design, data modelling, warehouse architecture, lineage or streaming semantics — see skills/data-pipeline-reviewer/SKILL.md). It replaces no tool: ruff, mypy, pytest, coverage.py, sqlfluff, EXPLAIN and database monitoring all remain the source of truth for what they measure. Engine-agnostic: engine-specific SQL rulings must be stated as assumptions (spec 029 D003)."
     },
     "blockchain-crypto": {
       "description": "On-chain/wallet/transaction reviews. DISABLED BY DEFAULT.",
