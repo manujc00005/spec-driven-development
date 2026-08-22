@@ -385,8 +385,39 @@ item — bullet plus continuation lines — and the clause is the one following 
 a probe and run over all 35 existing `TASKS.md` files: 35 classified legacy, 0 false adoptions, which
 is AC-003's backward-compatibility requirement met empirically.
 
-**Status of this run: incomplete and honestly so.** T002–T007 of spec 033 remain unimplemented. This
-record is evidence that the loop works on real, non-seeded material and that its review circuit finds
-real defects — it is **not** a claim that spec 033 reached DONE. Per T016's instruction, an
-unfinished real-feature run is recorded as an explicit `/spec-close` blocker for spec 031 rather than
-reported as a pass.
+**Corrected 2026-08-22 after final conformance raised CONF-003.** The paragraph that stood here
+said "T002–T007 of spec 033 remain unimplemented" and "3 delegations". Both were true when written
+and false within the hour, and neither was updated as the run continued. Final conformance caught
+three active documents contradicting each other about this same run — this record, the feature's
+`TASKS.md`, and its `ORCHESTRATION.md` — while this record was the one another spec was about to
+cite. Recording the correction rather than overwriting it, because a stale record that flatters its
+own run is precisely what T023 exists to expose.
+
+**The run as it actually went: 14 delegations of 42, and it did not pass on the first attempt.**
+
+- T001–T008 implemented across six contract surfaces, four of them by workers running in parallel.
+- Three domain-review rounds raising six findings (`DOM-001`..`DOM-006`), all resolved, ending in
+  APPROVE with no findings.
+- Final conformance then **REJECTED** with six findings (`CONF-001`..`CONF-006`).
+
+**What final conformance caught is the most valuable single result of this calibration.** The
+feature adds a `Verify:` criterion so a task records how anyone checks it is done. Its own
+`TASKS.md` carried no such clause. Every task in the run therefore closed through the *no-clause*
+branch — the old checkbox path — so AC-004's "a task closes because its criterion was met" had been
+**written and never once exercised**. A rule about verification, satisfied by the existence of the
+rule.
+
+No fixture would have produced that. A seeded defect is something an agent plants and then finds;
+this is an agent shipping a verification feature without verifying anything, and only the last gate
+noticing. It is the second time in this run that the defect lay in reasoning rather than in code,
+and the third across specs 032 and 033.
+
+**Addressed:** 033's own tasks now carry real criteria, `T009` was closed by mechanically checking
+its criterion against the run record rather than by a worker's word, and this feature's
+`ORCHESTRATION.md` was rebuilt from the delegation history after it was found frozen at
+`T001 / PLANNED / 0 delegations`.
+
+**Status: the loop reached DONE on real, non-seeded work, and needed its own final gate to get
+there honestly.** That is a stronger result than a clean first pass would have been: it shows the
+gate is load-bearing rather than ceremonial. Spec 031 may cite this run, and should cite the
+rejection as well as the outcome.

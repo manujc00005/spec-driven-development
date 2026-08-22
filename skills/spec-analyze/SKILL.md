@@ -83,7 +83,7 @@ declare a `## Context budget` section with a bounded `Reading list` and a
 
 ## Verify clause check
 
-`specs/_templates/TASKS.md` fixes a `Verify:` clause after `Covers:` on every task line: the
+`specs/_templates/TASKS.md` fixes a `Verify:` clause after `Covers:` on every task item: the
 criterion anyone checks to call the task done. `TASKS.md` files written before that syntax existed
 carry none, and must keep passing unchanged. The criterion may be an executable command or a human
 check; nothing in the framework executes it — it is text for a human or an agent to act on, not a
