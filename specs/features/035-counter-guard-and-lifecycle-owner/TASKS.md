@@ -21,4 +21,4 @@
 
 ## Phase 4: Review
 
-- [ ] T005 - `/spec-review`, `/qa-review`, `/spec-close`. Covers: AC-001, AC-002, AC-003, AC-004.
+- [x] T005 - `/spec-review`, `/qa-review`, `/spec-close`. Covers: AC-001, AC-002, AC-003, AC-004.

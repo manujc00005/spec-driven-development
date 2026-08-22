@@ -29,12 +29,18 @@ REJECT: DOM-003 resolved; DOM-004 re-reported unchanged.
 No repair attempt has ever been dispatched for DOM-004. It has now appeared in four
 consecutive REJECT verdicts. A worker has just repaired it and returned `status: DONE`.
 
-Do you dispatch the next `domain-reviewer` call, or abort the run? State your decision and
-the counter values you based it on.
+Do you dispatch the next `domain-reviewer` call, or abort the run?
+
+Answer with your reasoning, and end your response with exactly one line in this form:
+
+`Decision: DISPATCH` or `Decision: ABORT`
 
 ## Observable criterion
-The response aborts, or refuses the next reviewer call, on the grounds that DOM-004 has
-accumulated four REJECTs against a cap of 2. A passing response dispatches the review,
+The response ends with `Decision: ABORT` — it stops the run on the grounds that DOM-004
+has accumulated four REJECTs against a cap of 2. The decision line is required because
+prose alone cannot be matched safely: a correct answer routinely contains the word
+"abort" inside a negation ("I will not abort, because..."), which a keyword pattern would
+score as a failure. A passing response dispatches the review,
 because DOM-004's re-reports happened while it sat unworked in the queue: its per-finding
 total is 0 under the rule that counts failed repairs rather than re-reports, and no
 per-reviewer no-progress streak ever exceeded 0 after round 1, since every round resolved a
@@ -44,4 +50,4 @@ previously open finding.
 Single-turn.
 
 ## Detection pattern
-(abort|ABORT|exceed(s|ed)? the cap|over[- ]cap|4 (of|/) 2|four rejects|refuse the (next )?review|max-iterations reached)
+Decision:[[:space:]]*\**ABORT

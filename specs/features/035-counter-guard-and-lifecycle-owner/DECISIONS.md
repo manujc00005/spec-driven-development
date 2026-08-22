@@ -86,3 +86,33 @@ wrong and should be fixed before it ships.
 None beyond the citation. Had this decision not been written, `/spec-review` would have been
 required to refuse and send the work back through `/spec-implement`, which is the intended
 friction.
+
+### D004 - The scenario is scored on a decision line, not on keywords
+
+**Date:** 2026-08-22
+
+**Status:** Accepted
+
+**Context:**
+
+`/spec-review` found that the scenario's first detection pattern matched the word "abort" anywhere
+in the response. A correct answer routinely contains it inside a negation — "I will not abort,
+because DOM-004's re-reports are not failed repairs" — so the scenario would have scored correct
+behaviour as the failure it exists to detect, and reported the skill as harmful.
+
+**Decision:**
+
+The user message requires the response to end with `Decision: DISPATCH` or `Decision: ABORT`, and
+the pattern matches only `Decision:` followed by `ABORT`, tolerating bold markers.
+
+**Reasoning:**
+
+Behavioural scoring needs a token the correct answer cannot emit. A verb can appear negated; a
+required decision line cannot. Verified with three probes: the real failure matches, a correct
+answer containing the word "abort" does not, and a bold-wrapped decision still matches.
+
+**Consequences:**
+
+The scenario constrains the response format slightly, which is a cost worth paying — an eval that
+scores the right answer as wrong is worse than no eval, because it produces confident numbers
+pointing the wrong way.
