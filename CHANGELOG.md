@@ -11,12 +11,30 @@ under `specs/features/` — the framework is developed with its own workflow.
 
 ## [Unreleased]
 
+Spec 034 · Install manifest coherence — the manifest stops claiming a freshness it never verified.
 Spec 031 · Autonomous orchestration — the loop closes without a human in the middle.
 Spec 029 · Python/SQL/data profile — review coverage for script-and-query work.
 Spec 027 · Query-first graph access — the framework's own default was the expensive path.
 Spec 025 · Workspace SDD — the first coverage of what happens *between* projects.
 
 ### Changed
+
+- **The install manifest records freshness per profile (spec 034).** `.sdd-install.json` moves to
+  `schemaVersion: 2`, adding a `profileState` map of `{commit, version, installedAt}` per profile.
+  A run only installs files for its **active** profiles, but the manifest stored a single
+  top-level `installedCommit` for the whole recorded set — so after
+  `./install.sh --force` with no `--profile`, all 8 recorded profiles were stamped at the new
+  commit while 6 of them still held older files. Observed in the wild: `python-reviewer` sat 45
+  lines behind with nothing reporting it, found only by a hand-run `diff -rq`.
+  A run now names every recorded profile it did **not** refresh, with the commit each is stuck at
+  and the exact command to refresh them, and `update.sh` computes its "what's new" delta from the
+  **oldest** per-profile commit instead of the newest. `schemaVersion: 1` manifests migrate in
+  place — no re-install, and a v1 reader still resolves a v2 file, so the change is revertible.
+
+- **`update.sh`/`update.ps1` replay the recorded profile list verbatim, `core` included
+  (spec 034).** Stripping `core` left an empty `--profile` set whenever core was all that was
+  recorded, and the installer then fell back to `defaults.profile` — silently re-adding a profile
+  the adopter had removed. The same fallback is now suppressed for removal-only runs.
 
 - **The graph access ladder is inverted (spec 027).** Every Graphify-aware artifact used to say
   "check `GRAPH_REPORT.md` first" and mention the CLI's scoped queries as an optional refinement.
@@ -44,6 +62,13 @@ Spec 025 · Workspace SDD — the first coverage of what happens *between* proje
 Spec 024 · Delivery-operations profile — the first coverage of what happens after merge.
 
 ### Added
+
+- **`--remove-profile` / `-RemoveProfile` (spec 034).** A profile could be adopted but never
+  dropped: the manifest's profile list only ever grew, and `update.sh` re-installed whatever it
+  found there — so a profile deleted by hand came back on the next update. Removal now deletes the
+  items **only** that profile owns (anything still shipped by another recorded profile is kept),
+  backs every file up under `_install-backups/<ts>/removed/` before deleting, refuses `core`,
+  refuses unknown or path-like names, and supports `--dry-run` to show exactly what would go.
 
 - **Autonomous orchestration mode (spec 031)** — `/sdd-orchestrate --autonomous
   specs/features/<nnn>-<name>` runs an approved feature through the whole implement → review → fix
@@ -167,6 +192,17 @@ Spec 024 · Delivery-operations profile — the first coverage of what happens a
   with a Dockerfile and a workflow, and stays silent on one with neither.
 
 ### Fixed
+
+- **`agents/README.md` and `hooks/README.md` were write-once (spec 034).** Both were copied only
+  when absent, so `--force` never refreshed them and they sat frozen at whatever commit first
+  created them, with `installedCommit` implicitly vouching for content it had never written. They
+  now go through the same backup-then-overwrite path as every other shipped file.
+
+- **`install.ps1` never produced a byte-identical manifest on a no-op re-run (spec 034).**
+  PowerShell 7's `ConvertFrom-Json` parses ISO-8601 strings into `[datetime]`, and interpolating
+  one back rendered it in the current culture (`08/21/2026 16:25:52`), so spec 015's idempotence
+  guarantee held on bash only. Every timestamp read out of a manifest is now normalised. Found by
+  the new PowerShell suite — exactly the class of divergence a parse-only Windows gate cannot see.
 
 - **`kubernetes-deployment-reviewer` was referenced in shipped artifacts and never existed.**
   `skills/spring-security-reviewer/SKILL.md` handed off to it and `docs/_templates/DEPLOYMENT.md`
