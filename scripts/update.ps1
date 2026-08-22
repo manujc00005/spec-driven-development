@@ -111,6 +111,7 @@ $manifest = Join-Path $CentralDir ".sdd-install.json"
 $oldVersion = ""
 $oldCommit = ""
 $manifestProfiles = @()
+$manifestPState = @()
 $manifestLink = $false
 if (Test-Path $manifest) {
     try {
@@ -119,6 +120,19 @@ if (Test-Path $manifest) {
         $oldCommit = "$($m.installedCommit)"
         if ($m.profiles) { $manifestProfiles = @($m.profiles | Where-Object { $_ -is [string] }) }
         if ($m.linkUserClaude -eq $true) { $manifestLink = $true }
+        # Spec 034 FR-005/AC-002: installedCommit is only "the newest commit any
+        # profile reached". Taking the delta from it is the bug this spec fixes -
+        # a profile left unrefreshed by a partial install would be reported as up
+        # to date. Collect the per-profile commits; the oldest is resolved below.
+        # schemaVersion 1 has no profileState, so this list stays empty and the
+        # top-level commit is used, i.e. exactly the pre-034 behaviour.
+        if ($m.profileState) {
+            foreach ($name in $manifestProfiles) {
+                $entry = $m.profileState.$name
+                if ($entry -and $entry.commit) { $manifestPState += ,@($name, "$($entry.commit)") }
+                elseif ($oldCommit)            { $manifestPState += ,@($name, $oldCommit) }
+            }
+        }
         $profLabel = if ($manifestProfiles.Count) { $manifestProfiles -join ',' } else { 'none' }
         $verLabel = if ($oldVersion) { $oldVersion } else { 'unknown' }
         Write-Action "Recorded install: version $verLabel, profiles: $profLabel"
@@ -139,7 +153,14 @@ if ($manifestLink) {
 } else {
     $installArgs['SkipLink'] = $true
 }
-$recordedProfiles = @($manifestProfiles | Where-Object { $_ -ne "core" })
+# Spec 034 D001: replay the recorded list VERBATIM, core included. Stripping
+# core used to leave an empty -Profile set whenever core was all that was
+# recorded, and install.ps1 then fell back to defaults.profile - silently
+# re-adding a profile the adopter had removed. "-Profile core" resolves
+# correctly (core is a valid, non-disabled profile) and keeps the
+# defaults.profile fallback where it belongs: a direct install.ps1 call with no
+# -Profile at all.
+$recordedProfiles = @($manifestProfiles)
 if ($recordedProfiles.Count -gt 0) {
     $installArgs['Profile'] = $recordedProfiles
     Write-Action "Re-installing with recorded profiles: $($manifestProfiles -join ',')"
@@ -168,7 +189,33 @@ try {
     # "What's new" report (FR-005). From = manifest commit (what the central
     # dir installed) or the clone's pre-pull HEAD in unknown-version mode.
     # -----------------------------------------------------------------------
-    $fromRef = if ($oldCommit) { $oldCommit } else { $oldHead }
+    # Spec 034 AC-002: the delta floor is the OLDEST commit any recorded profile
+    # sits at. Ancestry decides "older"; unrelated candidates (a rebased clone)
+    # fall back to committer date. Candidates git no longer knows are dropped.
+    $oldestCommit = ""
+    $oldestName = ""
+    foreach ($pair in $manifestPState) {
+        $pName = $pair[0]; $pCommit = $pair[1]
+        if (-not $pCommit) { continue }
+        & git -C $RepoRoot cat-file -e $pCommit 2>$null
+        if ($LASTEXITCODE -ne 0) { continue }
+        if (-not $oldestCommit) { $oldestCommit = $pCommit; $oldestName = $pName; continue }
+        if ($pCommit -eq $oldestCommit) { continue }
+        & git -C $RepoRoot merge-base --is-ancestor $pCommit $oldestCommit 2>$null
+        if ($LASTEXITCODE -eq 0) { $oldestCommit = $pCommit; $oldestName = $pName; continue }
+        & git -C $RepoRoot merge-base --is-ancestor $oldestCommit $pCommit 2>$null
+        if ($LASTEXITCODE -ne 0) {
+            $a = (& git -C $RepoRoot show -s --format=%ct $pCommit 2>$null | Out-String).Trim()
+            $b = (& git -C $RepoRoot show -s --format=%ct $oldestCommit 2>$null | Out-String).Trim()
+            if ($a -and $b -and [int]$a -lt [int]$b) { $oldestCommit = $pCommit; $oldestName = $pName }
+        }
+    }
+    if ($oldestCommit -and $oldestCommit -ne $oldCommit) {
+        $shortOldest = $oldestCommit.Substring(0, [Math]::Min(9, $oldestCommit.Length))
+        Write-Action "Oldest recorded profile is '$oldestName' at $shortOldest  - reporting what is new since that, not since the newest recorded commit."
+    }
+
+    $fromRef = if ($oldestCommit) { $oldestCommit } elseif ($oldCommit) { $oldCommit } else { $oldHead }
     & git -C $RepoRoot cat-file -e $fromRef 2>$null
     if ($LASTEXITCODE -ne 0) { $fromRef = $oldHead }
     $fromDesc = (& git -C $RepoRoot describe --tags --always $fromRef 2>$null | Out-String).Trim()

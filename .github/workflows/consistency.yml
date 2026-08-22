@@ -24,6 +24,9 @@ jobs:
       - name: Run graphify hook and setup-script suite
         run: bash scripts/graphify.test.sh
 
+      - name: Run installer suite
+        run: bash scripts/install.test.sh
+
       - name: Run update-script suite
         run: bash scripts/update.test.sh
 
@@ -63,3 +66,15 @@ jobs:
           }
           if ($failed) { exit 1 }
           Write-Output "All $($files.Count) .ps1 files parse cleanly."
+
+      # Spec 034 D005: a BEHAVIOURAL Windows gate, separate from the parse-only
+      # check above. Spec 012 D002 kept hooks out of CI because executing them
+      # is risky; an installer writing into a temp directory is not, and every
+      # Windows claim before this rested on a manual spot-check nobody ran.
+      - name: Run installer suite (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File scripts/install.test.ps1
+
+      - name: Run update-script suite (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File scripts/update.test.ps1

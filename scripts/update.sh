@@ -116,6 +116,7 @@ fi
 MANIFEST="$CENTRAL_DIR/.sdd-install.json"
 OLD_VERSION=""
 OLD_COMMIT=""
+MANIFEST_PSTATE=""
 MANIFEST_PROFILES=""
 MANIFEST_LINK=0
 if [ -f "$MANIFEST" ]; then
@@ -127,9 +128,33 @@ try:
         d = json.load(f)
 except (OSError, ValueError):
     sys.exit(1)
+profiles = [p for p in d.get("profiles", []) if isinstance(p, str)]
+
+# Spec 034 FR-005/AC-002: the top-level installedCommit is only "the newest
+# commit any profile reached". Taking the delta from it is precisely the bug
+# this spec fixes - a profile left unrefreshed by a partial install would be
+# reported as up to date. The honest floor is the OLDEST per-profile commit.
+#
+# schemaVersion 1 has no per-profile record, so its single top-level commit is
+# attributed to every profile (D003) and the oldest degenerates to that value -
+# i.e. exactly the pre-034 behaviour, which is correct for a v1 manifest.
+top_commit = str(d.get("installedCommit", ""))
+state = d.get("profileState")
+oldest_commit, oldest_name = "", ""
+if isinstance(state, dict) and profiles:
+    stamps = []
+    for name in profiles:
+        entry = state.get(name)
+        commit = entry.get("commit") if isinstance(entry, dict) else None
+        stamps.append((name, commit if isinstance(commit, str) and commit else top_commit))
+    # "Oldest" is resolved by the caller against real git history; we only
+    # surface the distinct candidates and let bash pick with git merge-base.
+    for name, commit in stamps:
+        print("PSTATE:" + name + ":" + commit)
+
 print("VERSION:" + str(d.get("installedVersion", "")))
-print("COMMIT:" + str(d.get("installedCommit", "")))
-print("PROFILES:" + ",".join(p for p in d.get("profiles", []) if isinstance(p, str)))
+print("COMMIT:" + top_commit)
+print("PROFILES:" + ",".join(profiles))
 print("LINK:" + ("1" if d.get("linkUserClaude") is True else "0"))
 PYEOF
   )"; then
@@ -137,6 +162,7 @@ PYEOF
       case "$line" in
         VERSION:*)  OLD_VERSION="${line#VERSION:}" ;;
         COMMIT:*)   OLD_COMMIT="${line#COMMIT:}" ;;
+        PSTATE:*)   MANIFEST_PSTATE="${MANIFEST_PSTATE}${line#PSTATE:}"$'\n' ;;
         PROFILES:*) MANIFEST_PROFILES="${line#PROFILES:}" ;;
         LINK:*)     MANIFEST_LINK="${line#LINK:}" ;;
       esac
@@ -160,9 +186,15 @@ else
   INSTALL_ARGS+=(--skip-link)
 fi
 if [ -n "$MANIFEST_PROFILES" ]; then
+  # Spec 034 D001: replay the recorded list VERBATIM, core included. Stripping
+  # core used to leave an empty --profile set whenever core was all that was
+  # recorded, and install.sh then fell back to defaults.profile - silently
+  # re-adding a profile the adopter had removed. Passing "--profile core"
+  # resolves correctly (core is a valid, non-disabled profile) and keeps the
+  # defaults.profile fallback where it belongs: a direct install.sh call with
+  # no --profile at all.
   IFS=',' read -ra _recorded_profiles <<< "$MANIFEST_PROFILES"
   for p in ${_recorded_profiles[@]+"${_recorded_profiles[@]}"}; do
-    [ "$p" = "core" ] && continue  # core is always installed implicitly
     INSTALL_ARGS+=(--profile "$p")
   done
   log "Re-installing with recorded profiles: $MANIFEST_PROFILES"
@@ -197,7 +229,35 @@ COUNT_LOCAL_EDITS="$(grep -c 'differs from the central copy' "$INSTALL_LOG" || t
 # HEAD. Between the two points: added CHANGELOG release headers when the file
 # moved, otherwise a raw git-log fallback.
 # ---------------------------------------------------------------------------
-FROM_REF="${OLD_COMMIT:-$OLD_HEAD}"
+# Spec 034 AC-002: the delta floor is the OLDEST commit any recorded profile
+# sits at, not the newest. Ancestry decides "older" (that is what a
+# "what's new since" range means); when two candidates are unrelated - a
+# rebased or force-pushed clone - committer date breaks the tie. Candidates
+# git no longer knows are dropped rather than guessed at.
+OLDEST_COMMIT=""
+OLDEST_NAME=""
+if [ -n "$MANIFEST_PSTATE" ]; then
+  while IFS=':' read -r _pname _pcommit; do
+    [ -n "${_pcommit:-}" ] || continue
+    git -C "$REPO_ROOT" cat-file -e "$_pcommit" 2>/dev/null || continue
+    if [ -z "$OLDEST_COMMIT" ]; then
+      OLDEST_COMMIT="$_pcommit"; OLDEST_NAME="$_pname"; continue
+    fi
+    [ "$_pcommit" = "$OLDEST_COMMIT" ] && continue
+    if git -C "$REPO_ROOT" merge-base --is-ancestor "$_pcommit" "$OLDEST_COMMIT" 2>/dev/null; then
+      OLDEST_COMMIT="$_pcommit"; OLDEST_NAME="$_pname"
+    elif ! git -C "$REPO_ROOT" merge-base --is-ancestor "$OLDEST_COMMIT" "$_pcommit" 2>/dev/null; then
+      _a="$(git -C "$REPO_ROOT" show -s --format=%ct "$_pcommit" 2>/dev/null || echo 0)"
+      _b="$(git -C "$REPO_ROOT" show -s --format=%ct "$OLDEST_COMMIT" 2>/dev/null || echo 0)"
+      if [ "$_a" -lt "$_b" ]; then OLDEST_COMMIT="$_pcommit"; OLDEST_NAME="$_pname"; fi
+    fi
+  done <<< "$MANIFEST_PSTATE"
+fi
+if [ -n "$OLDEST_COMMIT" ] && [ "$OLDEST_COMMIT" != "$OLD_COMMIT" ]; then
+  log "Oldest recorded profile is '$OLDEST_NAME' at ${OLDEST_COMMIT:0:9}  - reporting what is new since that, not since the newest recorded commit."
+fi
+
+FROM_REF="${OLDEST_COMMIT:-${OLD_COMMIT:-$OLD_HEAD}}"
 git -C "$REPO_ROOT" cat-file -e "$FROM_REF" 2>/dev/null || FROM_REF="$OLD_HEAD"
 from_desc="$(git -C "$REPO_ROOT" describe --tags --always "$FROM_REF" 2>/dev/null || echo "${FROM_REF:0:9}")"
 to_desc="$(git -C "$REPO_ROOT" describe --tags --always "$NEW_HEAD" 2>/dev/null || echo "${NEW_HEAD:0:9}")"

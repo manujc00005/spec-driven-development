@@ -139,6 +139,76 @@ elif ! grep -qi "unknown-version\|default profile\|no recorded" <<< "$out"; then
 elif [ ! -f "$CENTRAL/.sdd-install.json" ]; then fail "AC-007 manifest not written"
 else pass "AC-007 unknown-version mode + manifest written"; fi
 
+# ===========================================================================
+# Spec 034 - the manifest must not overstate freshness, and a removed profile
+# must stay removed across an update.
+# ===========================================================================
+
+# --- AC-002: the delta floor is the OLDEST per-profile commit --------------
+# Reproduces the original defect: a partial install bumps the top-level commit
+# while leaving a profile's files behind. Reading the top-level value makes
+# update.sh report "already up to date" for a profile that is a release stale.
+build_env spec034_ac002
+V1_COMMIT="$( cd "$CLONE" && $GIT rev-parse v0.1.0 )"
+V2_COMMIT="$( cd "$CLONE" && $GIT rev-parse v0.2.0 )"
+python3 - "$CENTRAL/.sdd-install.json" "$V1_COMMIT" "$V2_COMMIT" <<'PYEOF'
+import json, sys
+path, v1, v2 = sys.argv[1:4]
+with open(path, encoding="utf-8") as f:
+    d = json.load(f)
+# Exactly what a partial run used to produce: top level claims the new commit,
+# while a recorded profile's files are still at the old one.
+d["schemaVersion"] = 2
+d["installedCommit"] = v2
+d["installedVersion"] = "v0.2.0"
+d["profileState"] = {
+    name: {"commit": v1 if name == "core" else v2,
+           "version": "v0.1.0" if name == "core" else "v0.2.0",
+           "installedAt": "2026-01-01T00:00:00+00:00"}
+    for name in d.get("profiles", [])
+}
+with open(path, "w", encoding="utf-8") as f:
+    json.dump(d, f, indent=2); f.write("\n")
+PYEOF
+out="$(bash "$CLONE/scripts/update.sh" --central-dir "$CENTRAL" 2>&1)"; rc=$?
+if [ $rc -ne 0 ]; then fail "AC-002/034 exit" "expected 0, got $rc"
+elif grep -q "Already up to date" <<< "$out"; then
+  fail "AC-002/034 delta taken from the newest commit  - the stale profile was reported as current" "$(grep -E 'up to date|Updated:' <<< "$out")"
+elif ! grep -q "v0.1.0 -> v0.2.0" <<< "$out"; then
+  fail "AC-002/034 delta not computed from the oldest per-profile commit" "$(grep -E 'Updated:|Oldest' <<< "$out")"
+elif ! grep -q "Oldest recorded profile" <<< "$out"; then
+  fail "AC-002/034 the oldest-profile basis is not stated in the output" "$out"
+else pass "AC-002/034 delta is computed from the oldest per-profile commit, not the newest"; fi
+
+# --- AC-006: a removed profile is not resurrected by update.sh -------------
+build_env spec034_ac006
+bash "$CLONE/install.sh" --central-dir "$CENTRAL" --skip-link --profile python-sql-data >/dev/null 2>&1
+[ -d "$CENTRAL/skills/python-reviewer" ] || fail "AC-006 setup: python-sql-data did not install"
+bash "$CLONE/install.sh" --central-dir "$CENTRAL" --skip-link --remove-profile python-sql-data >/dev/null 2>&1
+if [ -d "$CENTRAL/skills/python-reviewer" ]; then
+  fail "AC-006 setup: --remove-profile did not delete the profile's files"
+else
+  out="$(bash "$CLONE/scripts/update.sh" --central-dir "$CENTRAL" 2>&1)"; rc=$?
+  if [ $rc -ne 0 ]; then fail "AC-006 update.sh exit" "expected 0, got $rc: $(tail -3 <<< "$out")"
+  elif [ -d "$CENTRAL/skills/python-reviewer" ]; then
+    fail "AC-006 update.sh resurrected the removed profile" "$(grep -i 'recorded profiles' <<< "$out")"
+  else pass "AC-006 a removed profile stays removed across update.sh"; fi
+fi
+
+# --- AC-006b: removing the LAST non-core profile must not re-add the default
+# This is the case D001 and D010 exist for: with core alone recorded, the old
+# code passed no --profile and install.sh fell back to defaults.profile.
+build_env spec034_ac006b
+bash "$CLONE/install.sh" --central-dir "$CENTRAL" --skip-link --profile java-spring-backend >/dev/null 2>&1
+bash "$CLONE/install.sh" --central-dir "$CENTRAL" --skip-link --remove-profile java-spring-backend >/dev/null 2>&1
+recorded="$(python3 -c 'import json,sys;print(",".join(json.load(open(sys.argv[1]))["profiles"]))' "$CENTRAL/.sdd-install.json" 2>/dev/null)"
+out="$(bash "$CLONE/scripts/update.sh" --central-dir "$CENTRAL" 2>&1)"; rc=$?
+if [ "$recorded" != "core" ]; then fail "AC-006b setup: expected only core recorded, got '$recorded'"
+elif [ $rc -ne 0 ]; then fail "AC-006b update.sh exit" "expected 0, got $rc"
+elif [ -d "$CENTRAL/skills/java-spring-reviewer" ]; then
+  fail "AC-006b defaults.profile re-added the removed profile through update.sh" "$(grep -i 'recorded profiles\|default profile' <<< "$out")"
+else pass "AC-006b removing the last non-core profile does not fall back to defaults.profile"; fi
+
 echo ""
 echo "$PASS passed, $FAIL failed."
 [ "$FAIL" -eq 0 ]

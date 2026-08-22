@@ -323,6 +323,24 @@ Useful flags (parity across both scripts):
 
 **The install manifest.** The first time you run `install.sh`/`install.ps1` after this feature, a `<central-dir>/.sdd-install.json` records the installed version, commit, profiles, and whether you linked `~/.claude`. If it's absent (an install predating this feature), `update` runs in "unknown-version mode" — it still updates correctly and writes the manifest for next time.
 
+**Freshness is tracked per profile (`schemaVersion: 2`).** A run only installs files for the profiles it is given, so a single top-level commit could not honestly describe the whole recorded set: after `./install.sh --force` with no `--profile`, every recorded profile was stamped at the new commit while the ones that were not active still held older files. The manifest now carries a `profileState` entry — `{commit, version, installedAt}` — per profile, and:
+
+- a run **names every recorded profile it did not refresh**, with the commit each is stuck at and the exact command to refresh them (it never changes the exit code, and says nothing when the active set covered everything);
+- `update` computes its "what's new" delta from the **oldest** per-profile commit, so a stale profile can no longer be reported as up to date.
+
+A `schemaVersion: 1` manifest migrates in place on the next run — no re-install, and nothing to do by hand.
+
+**Removing a profile** — `--remove-profile <name>` / `-RemoveProfile <name>`, repeatable:
+
+```bash
+./install.sh --dry-run --remove-profile next-prisma-web   # see exactly what would go
+./install.sh --remove-profile next-prisma-web
+```
+
+Without this, a profile adopted once was permanent: the recorded list only ever grew and `update` re-installed whatever it found, so deleting skills by hand just meant they came back. Removal deletes the items **only** that profile owns — anything still shipped by another recorded profile is kept and reported — backs every file up under `_install-backups/<timestamp>/removed/` before deleting, and drops the profile from the manifest so `update` stops re-delivering it.
+
+It refuses `core`, unknown or path-like names, and the same profile named in both `--profile` and `--remove-profile`. A removal-only run does not fall back to the default profile, since that would re-install what you just removed.
+
 **Two things `update` reminds you about but won't do for you** (they edit files you own): wiring newly shipped hook families into a project's `settings.json` (`wire-hooks`), and merging new `CLAUDE.md.example` sections into your `CLAUDE.md`. Both are surfaced explicitly in the report when relevant.
 
 ---

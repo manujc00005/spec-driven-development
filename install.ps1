@@ -47,6 +47,15 @@
   An unknown profile name or a disabled profile (e.g. blockchain-crypto)
   aborts immediately with a clear error  - it is never silently dropped.
 
+.PARAMETER RemoveProfile
+  Remove a profile: delete the items ONLY it owns and drop it from the install
+  manifest, so scripts/update.ps1 stops re-installing it. Repeatable. Items
+  still shipped by another recorded profile are kept; every deleted file is
+  backed up under _install-backups/<ts>/removed/ first. 'core' cannot be
+  removed. Combine with -DryRun to see exactly what would go. A run that only
+  removes does NOT fall back to the default profile  - that would re-install
+  what you just removed.
+
 .PARAMETER Force
   Allow overwriting files/links that already exist and differ. A backup is
   always taken first. Without -Force, differing files are reported and
@@ -95,6 +104,7 @@
 param(
     [string]$CentralDir = "C:\ProgramData\ClaudeConfig",
     [string[]]$Profile,
+    [string[]]$RemoveProfile,
     [switch]$Force,
     [switch]$DryRun,
     [switch]$SkipLink,
@@ -105,6 +115,31 @@ param(
 $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $Timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+
+# --- --RemoveProfile argument validation (spec 034 FR-010, FR-013) ---------
+# Pure argument checks, before anything touches the filesystem. Membership in
+# profiles.json is checked in Remove-Profiles, still before any deletion.
+# @($null) yields a one-element array containing $null, so a bare @($RemoveProfile)
+# is truthy even when the switch was never passed. Normalise once, use everywhere.
+$RemoveProfileList = @()
+if ($null -ne $RemoveProfile) { $RemoveProfileList = @($RemoveProfile | Where-Object { $null -ne $_ }) }
+
+foreach ($rp in $RemoveProfileList) {
+    if ([string]::IsNullOrWhiteSpace($rp)) {
+        Write-Host "[ERROR]   -RemoveProfile needs a profile name. Nothing was changed." -ForegroundColor Red
+        exit 1
+    }
+    if ($rp -eq "core") {
+        Write-Host "[ERROR]   'core' cannot be removed: it is alwaysInstalled and every other profile builds on it. Nothing was changed." -ForegroundColor Red
+        exit 1
+    }
+    foreach ($ap in @($Profile)) {
+        if (@($ap -split ',' | ForEach-Object { $_.Trim() }) -contains $rp) {
+            Write-Host "[ERROR]   profile '$rp' is named in both -Profile and -RemoveProfile. Refusing to guess which you meant. Nothing was changed." -ForegroundColor Red
+            exit 1
+        }
+    }
+}
 
 # ---------------------------------------------------------------------------
 # Profile resolution
@@ -144,6 +179,13 @@ if (Test-Path $ProfilesFile) {
     $requestedProfiles = @()
     if ($Profile.Count -gt 0) {
         foreach ($p in $Profile) { $requestedProfiles += ($p -split ',') | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' } }
+    } elseif ($RemoveProfileList.Count -gt 0) {
+        # Spec 034 D010: a run whose point is -RemoveProfile must not fall back
+        # to defaults.profile - that would delete the profile and re-install it
+        # in the same pass. Removal-only runs resolve to core alone; the
+        # remaining recorded profiles are then reported as unrefreshed by
+        # FR-004, consistent with D007 (report, never auto-refresh).
+        $requestedProfiles = @()
     } elseif ($profilesData.defaults.profile) {
         $requestedProfiles = @($profilesData.defaults.profile)
     } else {
@@ -255,6 +297,18 @@ if (Test-Path $ProfilesFile) {
 function Write-Action([string]$msg) { Write-Host "[install] $msg" }
 function Write-Skip([string]$msg)   { Write-Host "[skip]    $msg" -ForegroundColor DarkYellow }
 function Write-Warn2([string]$msg)  { Write-Host "[warn]    $msg" -ForegroundColor Yellow }
+
+# Spec 034: ConvertFrom-Json in PowerShell 7 parses ISO-8601-looking strings
+# into [datetime] objects, and interpolating one back renders it in the current
+# culture ("08/21/2026 16:25:52") instead of the canonical stamp. That silently
+# broke manifest idempotence on Windows - spec 015 AC-003 held on bash only.
+# Every timestamp read back out of a manifest goes through here.
+function Format-ManifestStamp {
+    param($Value)
+    if ($null -eq $Value) { return $null }
+    if ($Value -is [datetime]) { return $Value.ToUniversalTime().ToString("yyyy-MM-dd'T'HH:mm:ss'Z'") }
+    return "$Value"
+}
 
 # Belt-and-suspenders: never touch these, even if a future source tree somehow contains them.
 $ExcludePatterns = @('settings.local.json')
@@ -408,6 +462,183 @@ if (-not (Test-Path $CentralDir)) {
     else { New-Item -ItemType Directory -Path $CentralDir -Force | Out-Null; Write-Action "Created $CentralDir" }
 }
 
+# ---------------------------------------------------------------------------
+# Profile removal (spec 034 FR-007..FR-014) - PowerShell mirror of the bash
+# remove_profiles(). Same contract: ownership from profiles.json alone (D004),
+# a backup before every deletion with a failed backup aborting the run, and it
+# executes before the install pass.
+# ---------------------------------------------------------------------------
+function Remove-ItemSafely {
+    param([string]$Path, [string]$Label)
+    if (-not (Test-Path $Path)) {
+        Write-Action "  $Label  (not installed - nothing to remove)"
+        return $true
+    }
+    $backup = Join-Path $CentralDir "_install-backups/$Timestamp/removed/$Label"
+    if ($DryRun) {
+        Write-Action "  [dry-run] would back up $Label -> $backup, then delete it"
+        return $true
+    }
+    try {
+        $parent = Split-Path $backup -Parent
+        if (-not (Test-Path $parent)) { New-Item -ItemType Directory -Path $parent -Force | Out-Null }
+        Copy-Item $Path -Destination $backup -Recurse -Force -ErrorAction Stop
+    } catch {
+        Write-Host "[ERROR]   could not back up $Label  - it was NOT deleted. $($_.Exception.Message)" -ForegroundColor Red
+        return $false
+    }
+    try {
+        # A junction/symlink must be unlinked, never recursed into: Remove-Item
+        # -Recurse on a reparse point can delete the content behind it (same
+        # hazard Remove-DirLinkSafely documents above). Central-dir items are
+        # normally real directories, but removal is the one path where being
+        # wrong is unrecoverable.
+        $item = Get-Item $Path -Force
+        if ($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) {
+            $item.Delete()
+        } else {
+            Remove-Item $Path -Recurse -Force -ErrorAction Stop
+        }
+    } catch {
+        Write-Host "[ERROR]   backed up $Label but could not delete it  - central dir may be inconsistent." -ForegroundColor Red
+        return $false
+    }
+    Write-Action "  removed $Label  (backup at $backup)"
+    return $true
+}
+
+function Remove-Profiles {
+    if ($RemoveProfileList.Count -eq 0) { return }
+
+    # AC-010: the name is validated against the closed set of profiles.json keys
+    # BEFORE anything is deleted. Validating against a known set is a stronger
+    # guard than sanitising a path - a traversing name simply is not a profile.
+    $validNames = @($profilesData.profiles.PSObject.Properties.Name)
+    $unknown = @($RemoveProfileList | Where-Object { $validNames -notcontains $_ })
+    if ($unknown.Count -gt 0) {
+        Write-Host "[ERROR]   unknown profile(s): $($unknown -join ', '). Valid profiles: $($validNames -join ', '). Nothing was changed." -ForegroundColor Red
+        exit 1
+    }
+
+    $manifestPath = Join-Path $CentralDir ".sdd-install.json"
+    $recorded = @()
+    if (Test-Path $manifestPath) {
+        try {
+            $m = Get-Content $manifestPath -Raw | ConvertFrom-Json
+            if ($m.profiles) { $recorded = @($m.profiles | Where-Object { $_ -is [string] }) }
+        } catch { }
+    }
+
+    $toRemove = @()
+    foreach ($p in $RemoveProfileList) {
+        if ($recorded -notcontains $p) {
+            Write-Action "Profile '$p' is not recorded in the install manifest  - nothing to remove."
+        } else {
+            $toRemove += $p
+        }
+    }
+    if ($toRemove.Count -eq 0) { return }
+
+    # Ownership is computed against the FINAL profile set, not merely the
+    # recorded one: a profile being installed in this same run (-Profile X
+    # -RemoveProfile Y) is part of the outcome, so an item it ships must be
+    # kept rather than deleted-then-reinstalled.
+    $remaining = @($recorded | Where-Object { $toRemove -notcontains $_ })
+    foreach ($p in @($activeProfileNames)) {
+        if ($toRemove -notcontains $p -and $remaining -notcontains $p) { $remaining += $p }
+    }
+    if ($remaining -notcontains "core") { $remaining += "core" }
+
+    Write-Action "Removing profile(s): $($toRemove -join ', ')"
+
+    $failed = $false
+    $keptCount = 0
+    foreach ($pair in @(@("skills","skill"), @("hooks","hook"), @("templates","template"), @("agents","agent"))) {
+        $key = $pair[0]; $kind = $pair[1]
+        $doomed = @(); $kept = @()
+        foreach ($p in $toRemove)  { if ($profilesData.profiles.$p.$key) { $doomed += @($profilesData.profiles.$p.$key) } }
+        foreach ($p in $remaining) { if ($profilesData.profiles.$p.$key) { $kept  += @($profilesData.profiles.$p.$key) } }
+        foreach ($item in ($doomed | Sort-Object -Unique)) {
+            # Defence in depth: profiles.json is repo content, but an item name is
+            # joined to a path, so anything path-like is refused outright.
+            if ($item -isnot [string] -or $item -match '[\\/]' -or $item.StartsWith(".")) {
+                Write-Host "[ERROR]   refusing to act on suspicious item name '$item'. Nothing further was changed." -ForegroundColor Red
+                exit 1
+            }
+            if ($kept -contains $item) {
+                $keptCount++
+                Write-Action "  keeping $kind/$item  (still shipped by another recorded profile)"
+                continue
+            }
+            switch ($kind) {
+                "skill"  { if (-not (Remove-ItemSafely -Path (Join-Path $CentralDir "skills/$item")    -Label "skills/$item"))   { $failed = $true } }
+                "agent"  { if (-not (Remove-ItemSafely -Path (Join-Path $CentralDir "agents/$item.md") -Label "agents/$item.md")) { $failed = $true } }
+                "template" {
+                    $specTpl = Join-Path $CentralDir "specs/_templates/$item"
+                    $docsTpl = Join-Path $CentralDir "docs/_templates/$item"
+                    if (Test-Path $specTpl)      { if (-not (Remove-ItemSafely -Path $specTpl -Label "specs/_templates/$item")) { $failed = $true } }
+                    elseif (Test-Path $docsTpl)  { if (-not (Remove-ItemSafely -Path $docsTpl -Label "docs/_templates/$item"))  { $failed = $true } }
+                    else { Write-Action "  templates/$item  (not installed - nothing to remove)" }
+                }
+                "hook" {
+                    $hookFiles = @(Get-ChildItem -Path (Join-Path $CentralDir "hooks") -Filter "$item.*" -File -ErrorAction SilentlyContinue)
+                    if ($hookFiles.Count -eq 0) { Write-Action "  hooks/$item  (not installed - nothing to remove)" }
+                    foreach ($hf in $hookFiles) {
+                        if (-not (Remove-ItemSafely -Path $hf.FullName -Label "hooks/$($hf.Name)")) { $failed = $true }
+                    }
+                }
+            }
+        }
+    }
+
+    if ($keptCount -gt 0) { Write-Action "  $keptCount item(s) kept because another recorded profile still ships them." }
+
+    if ($failed) {
+        Write-Host "[ERROR]   removal did not complete (see [ERROR] above). Items reported as 'removed' above ARE deleted and are recoverable from $CentralDir/_install-backups/$Timestamp/removed/; the rest were left in place. The manifest was NOT modified, so re-running the same command retries, and 'install.ps1 -Profile <name>' restores the profile outright." -ForegroundColor Red
+        exit 1
+    }
+
+    # FR-007: drop the profiles from the manifest. Dry-run leaves it untouched
+    # (AC-008) - nothing was deleted either, so the record must still match.
+    if ($DryRun) {
+        Write-Action "[dry-run] would remove $($toRemove -join ', ') from the install manifest"
+        return
+    }
+    try {
+        $m = Get-Content $manifestPath -Raw | ConvertFrom-Json
+        $newProfiles = @($m.profiles | Where-Object { $toRemove -notcontains $_ })
+        $newState = [ordered]@{}
+        if ($m.profileState) {
+            foreach ($name in $newProfiles) {
+                if ($m.profileState.$name) {
+                    $newState[$name] = [ordered]@{
+                        commit      = "$($m.profileState.$name.commit)"
+                        version     = "$($m.profileState.$name.version)"
+                        installedAt = (Format-ManifestStamp $m.profileState.$name.installedAt)
+                    }
+                }
+            }
+        }
+        $data = [ordered]@{
+            schemaVersion    = 2
+            installedVersion = "$($m.installedVersion)"
+            installedCommit  = "$($m.installedCommit)"
+            installedAt      = (Format-ManifestStamp $m.installedAt)
+            profiles         = @($newProfiles)
+            profileState     = $newState
+            linkUserClaude   = [bool]($m.linkUserClaude -eq $true)
+            sourceClone      = "$($m.sourceClone)"
+        }
+        $json = ($data | ConvertTo-Json -Depth 5) + "`n"
+        [System.IO.File]::WriteAllText($manifestPath, $json, (New-Object System.Text.UTF8Encoding($false)))
+        Write-Action "Install manifest updated  - removed: $($toRemove -join ', ')"
+    } catch {
+        Write-Warn2 "profile files were removed but the manifest could not be updated  - re-run the installer to resynchronise it"
+    }
+}
+
+Remove-Profiles
+
 # --- Skills (filtered by profile: each skill is a subdirectory) ---
 $skillsSrc = Join-Path $RepoRoot "skills"
 $skillsDst = Join-Path $CentralDir "skills"
@@ -472,10 +703,11 @@ if ($ProfileFiltering) {
         if (-not (Test-Path $hooksDst)) {
             if (-not $DryRun) { New-Item -ItemType Directory -Path $hooksDst -Force | Out-Null }
         }
-        if (-not (Test-Path $destReadme)) {
-            if ($DryRun) { Write-Action "[dry-run] would create hooks/README.md" }
-            else { Copy-Item $hooksReadme -Destination $destReadme -Force; Write-Action "hooks/README.md  (new)" }
-        }
+        # Spec 034 FR-015/D009: shipped documentation, refreshed like every
+        # other shipped file. The old write-once guard "protected" adopter
+        # edits by going permanently stale and reporting nothing.
+        Copy-FileSafely -SrcFile $hooksReadme -DestPath $destReadme -Label "hooks/README.md" `
+            -BackupPath (Join-Path $CentralDir "_install-backups/$Timestamp/hooks/README.md")
     }
     # Always copy hooks/lib/: it is a shared dependency sourced by several hooks
     # (git-guardrails, sdd-spec-guard, ...), not a per-profile item - without it
@@ -556,14 +788,10 @@ if ($ProfileFiltering) {
     $agentsReadme = Join-Path $agentsSrc "README.md"
     if ((Test-Path $agentsReadme) -and $ActiveAgents.Count -gt 0) {
         $destReadme = Join-Path $agentsDst "README.md"
-        if (-not (Test-Path $destReadme)) {
-            if ($DryRun) { Write-Action "[dry-run] would create agents/README.md" }
-            else {
-                if (-not (Test-Path $agentsDst)) { New-Item -ItemType Directory -Path $agentsDst -Force | Out-Null }
-                Copy-Item $agentsReadme -Destination $destReadme -Force
-                Write-Action "agents/README.md  (new)"
-            }
-        }
+        # Spec 034 FR-015/D009 - see the hooks/README.md note above.
+        if (-not $DryRun -and -not (Test-Path $agentsDst)) { New-Item -ItemType Directory -Path $agentsDst -Force | Out-Null }
+        Copy-FileSafely -SrcFile $agentsReadme -DestPath $destReadme -Label "agents/README.md" `
+            -BackupPath (Join-Path $CentralDir "_install-backups/$Timestamp/agents/README.md")
     }
 } else {
     Copy-TreeSafely $agentsSrc $agentsDst "agents" $CentralDir
@@ -689,14 +917,43 @@ function Write-InstallManifest {
         $existingLink = $false
         $existingAt = $null
         $existingCommit = $null
+        $existingVersion = $null
+        $rawState = $null
         if (Test-Path $manifestPath) {
             try {
                 $old = Get-Content $manifestPath -Raw | ConvertFrom-Json
-                if ($old.profiles) { $existingProfiles = @($old.profiles | Where-Object { $_ -is [string] }) }
-                if ($old.linkUserClaude -eq $true) { $existingLink = $true }
-                $existingAt = $old.installedAt
-                $existingCommit = $old.installedCommit
+                # Spec 034 D003: only schema versions this installer understands
+                # are carried forward. A future version is discarded wholesale
+                # rather than misread key-by-key.
+                $oldSchema = $old.schemaVersion
+                if ($oldSchema -eq 1 -or $oldSchema -eq 2) {
+                    if ($old.profiles) { $existingProfiles = @($old.profiles | Where-Object { $_ -is [string] }) }
+                    if ($old.linkUserClaude -eq $true) { $existingLink = $true }
+                    $existingAt = Format-ManifestStamp $old.installedAt
+                    $existingCommit = $old.installedCommit
+                    $existingVersion = $old.installedVersion
+                    $rawState = $old.profileState
+                }
             } catch { }  # absent or corrupt -> start fresh; never fatal
+        }
+
+        # Normalize into a per-profile map. v1 had no such record, so D003
+        # attributes its single top-level commit to every recorded profile:
+        # knowingly optimistic, but it asserts nothing the v1 format did not
+        # already assert for the whole set.
+        $state = @{}
+        foreach ($name in $existingProfiles) {
+            $entry = $null
+            if ($rawState) { $entry = $rawState.$name }
+            if ($entry -and $entry.commit) {
+                $stateVersion = $entry.version
+                if (-not $stateVersion) { $stateVersion = $entry.commit }
+                $state[$name] = @{ commit = "$($entry.commit)"; version = "$stateVersion"; installedAt = (Format-ManifestStamp $entry.installedAt) }
+            } else {
+                $fallbackVersion = $existingVersion
+                if (-not $fallbackVersion) { $fallbackVersion = $existingCommit }
+                $state[$name] = @{ commit = "$existingCommit"; version = "$fallbackVersion"; installedAt = (Format-ManifestStamp $existingAt) }
+            }
         }
 
         $merged = New-Object System.Collections.ArrayList
@@ -704,30 +961,94 @@ function Write-InstallManifest {
             if ($p -and -not $merged.Contains($p)) { [void]$merged.Add($p) }
         }
 
+        $now = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd'T'HH:mm:ss'Z'")
+
         # installedAt means "when this version was installed", not "last run":
         # preserve it when re-installing the same commit so a no-op update leaves
-        # the manifest byte-identical (idempotence, spec 015 AC-003).
+        # the manifest byte-identical (spec 015 AC-003, spec 034 FR-006).
+        # Applied per profile.
+        foreach ($name in @($activeProfileNames)) {
+            $previous = $state[$name]
+            if ($previous -and $previous.commit -eq $commit -and $previous.installedAt) {
+                $entryAt = Format-ManifestStamp $previous.installedAt
+            } else {
+                $entryAt = $now
+            }
+            $state[$name] = @{ commit = "$commit"; version = "$version"; installedAt = "$entryAt" }
+        }
+
+        # Only profiles still on the list keep a record, in list order.
+        $orderedState = [ordered]@{}
+        foreach ($name in $merged) {
+            if ($state.ContainsKey($name)) {
+                $orderedState[$name] = [ordered]@{
+                    commit      = "$($state[$name].commit)"
+                    version     = "$($state[$name].version)"
+                    installedAt = (Format-ManifestStamp $state[$name].installedAt)
+                }
+            }
+        }
+
+        # Spec 034 FR-004: anything recorded but not active this run kept its old
+        # files, so it is stale by definition. Reported, never silently refreshed
+        # (D007).
+        $unrefreshed = @($merged | Where-Object { @($activeProfileNames) -notcontains $_ })
+
         if ($existingCommit -eq $commit -and $existingAt) {
-            $installedAt = "$existingAt"
+            $topInstalledAt = Format-ManifestStamp $existingAt
         } else {
-            $installedAt = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd'T'HH:mm:ss'Z'")
+            $topInstalledAt = $now
         }
 
         $data = [ordered]@{
-            schemaVersion    = 1
+            schemaVersion    = 2
+            # Spec 034 FR-005: top level means "the newest commit any profile
+            # reached", retained so a pre-034 reader still resolves. It is NOT a
+            # freshness claim about every recorded profile - that is what
+            # profileState is for, and update.ps1 takes its delta from the
+            # oldest entry there.
             installedVersion = "$version"
             installedCommit  = "$commit"
-            installedAt      = "$installedAt"
+            installedAt      = "$topInstalledAt"
             profiles         = @($merged)
+            profileState     = $orderedState
             linkUserClaude   = [bool]($existingLink -or $LinkUserClaude)
             sourceClone      = "$RepoRoot"
         }
-        $json = ($data | ConvertTo-Json -Depth 4) + "`n"
+        $json = ($data | ConvertTo-Json -Depth 5) + "`n"
         [System.IO.File]::WriteAllText($manifestPath, $json, (New-Object System.Text.UTF8Encoding($false)))
         Write-Action "Install manifest written -> $manifestPath"
+
+        Report-UnrefreshedProfiles -Unrefreshed $unrefreshed -State $orderedState
     } catch {
         Write-Warn2 "could not write install manifest $manifestPath  - scripts/update.ps1 will run in unknown-version mode until a later install succeeds. Error: $($_.Exception.Message)"
     }
+}
+
+# Spec 034 FR-004: name every recorded profile this run did not refresh, with
+# the commit it is stuck at and the exact command that fixes it. Informational
+# only - it must never change the exit code, and it prints nothing when the
+# active set already covered every recorded profile.
+function Report-UnrefreshedProfiles {
+    param($Unrefreshed, $State)
+    if (-not $Unrefreshed -or @($Unrefreshed).Count -eq 0) { return }
+    Write-Warn2 "$(@($Unrefreshed).Count) recorded profile(s) were NOT refreshed by this run - their files are still at the commit shown:"
+    foreach ($name in $Unrefreshed) {
+        $stamp = "unknown"
+        if ($State[$name]) {
+            if ($State[$name].version) { $stamp = $State[$name].version }
+            elseif ($State[$name].commit) { $stamp = $State[$name].commit }
+        }
+        Write-Warn2 "    $name  (installed at $stamp)"
+    }
+    $cmd = ".\install.ps1 -Force"
+    foreach ($name in $Unrefreshed) {
+        if ($name -eq "core") { continue }  # always installed implicitly
+        $cmd = "$cmd -Profile $name"
+    }
+    if ($LinkUserClaude) { $cmd = "$cmd -LinkUserClaude" }
+    if ($CentralDir -ne (Join-Path $HOME ".claude-config")) { $cmd = "$cmd -CentralDir $CentralDir" }
+    Write-Warn2 "  refresh them with:  $cmd"
 }
 
 if ($DryRun) {
