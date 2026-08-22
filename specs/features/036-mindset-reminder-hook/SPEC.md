@@ -13,7 +13,7 @@
 
 ## Status
 
-In Review
+Done
 
 ## Problem
 
@@ -197,9 +197,15 @@ None. One marker file under the system temp dir, named from the session id.
 
 ## Open questions
 
-- Non-blocking: should the same treatment eventually cover `threat-modeler` (which has a natural
-  seam — editing a handler, parser or endpoint)? Deliberately out of scope here; revisit once this
-  hook has real usage.
+- **DEFERRED — should the same treatment cover `threat-modeler`?** It has the same shape of seam
+  (editing a handler, parser or endpoint). Deliberately out of scope here; revisit once this hook
+  has real usage.
+- **DEFERRED, found at close — there is no supported way to wire a hook GLOBALLY.**
+  `scripts/wire-hooks.sh` merges the template into a *project's* `.claude/settings.json` only, so
+  an adopter who wants a hook active in every session, SDD project or not, has to hand-edit
+  `~/.claude/settings.json`. That is exactly what this feature's own goal asks for, and it is the
+  one step of delivering it that stays manual. Done by hand on this maintainer's machine (backup at
+  `~/.claude/settings.json.bak-036`). Needs its own spec.
 
 ## Contracted services
 
