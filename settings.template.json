@@ -22,6 +22,17 @@
             "statusMessage": "Graphify graph-first nudge..."
           }
         ]
+      },
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -File ${CLAUDE_PROJECT_DIR}/.claude/hooks/scope-keeper-reminder.ps1",
+            "timeout": 5,
+            "statusMessage": "Scope-keeper reminder..."
+          }
+        ]
       }
     ],
     "PostToolUse": [

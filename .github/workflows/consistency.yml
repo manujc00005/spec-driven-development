@@ -24,6 +24,9 @@ jobs:
       - name: Run graphify hook and setup-script suite
         run: bash scripts/graphify.test.sh
 
+      - name: Run mindset-hook suite
+        run: bash scripts/mindset-hook.test.sh
+
       - name: Run installer suite
         run: bash scripts/install.test.sh
 
@@ -78,3 +81,7 @@ jobs:
       - name: Run update-script suite (PowerShell)
         shell: pwsh
         run: pwsh -NoProfile -File scripts/update.test.ps1
+
+      - name: Run mindset-hook suite (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File scripts/mindset-hook.test.ps1
