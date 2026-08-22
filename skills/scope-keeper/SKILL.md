@@ -36,6 +36,7 @@ provider_specific: true
 - **No "while I'm at it".** A real improvement you spot mid-task gets *reported* (or flagged as a separate task), not applied. Bundling it hides your actual change inside noise.
 - **No speculative generality.** Do not add parameters, interfaces, or handling for inputs nobody asked about. Build for the case in front of you; generalize when a second case actually arrives.
 - **Necessary-adjacent ≠ improvement.** If the requested change genuinely cannot work without touching neighboring code, that touch is in scope — do it, and say why. The line is "required for the change to work," not "would be nicer."
+- **Dead code you created is yours; dead code you found is not.** If your change leaves a function, import, or branch with no callers, remove it — that leftover is part of your diff. Code that was already unused before you arrived gets mentioned, not deleted.
 
 ## Anti-patterns
 
