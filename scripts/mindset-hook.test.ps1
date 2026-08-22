@@ -28,14 +28,20 @@ function Fail([string]$m, [string]$d = "") {
 # Each run gets its own TMP so markers never leak between cases.
 function Invoke-Hook {
     param([string]$Payload, [string]$KillSwitch = $null)
-    $prevTmp = $env:TMPDIR; $prevTemp = $env:TEMP; $prevKill = $env:SDD_SCOPE_REMINDER
-    $env:TMPDIR = $TmpBase; $env:TEMP = $TmpBase
+    # .NET's GetTempPath() resolves TMP before TEMP on Windows, and TMPDIR on
+    # Unix. Redirect all three or the hook writes its marker to the real temp
+    # dir while the assertions look somewhere else - which is exactly how this
+    # test passed on macOS and failed on windows-latest.
+    $prevTmpdir = $env:TMPDIR; $prevTemp = $env:TEMP; $prevTmp = $env:TMP
+    $prevKill = $env:SDD_SCOPE_REMINDER
+    $env:TMPDIR = $TmpBase; $env:TEMP = $TmpBase; $env:TMP = $TmpBase
     if ($null -ne $KillSwitch) { $env:SDD_SCOPE_REMINDER = $KillSwitch }
     try {
         $out = $Payload | & pwsh -NoProfile -File $Hook 2>$null | Out-String
         return [pscustomobject]@{ Out = $out.Trim(); Code = $LASTEXITCODE }
     } finally {
-        $env:TMPDIR = $prevTmp; $env:TEMP = $prevTemp; $env:SDD_SCOPE_REMINDER = $prevKill
+        $env:TMPDIR = $prevTmpdir; $env:TEMP = $prevTemp; $env:TMP = $prevTmp
+        $env:SDD_SCOPE_REMINDER = $prevKill
     }
 }
 function Sid([string]$id) { '{"session_id":"' + $id + '","tool_name":"Edit"}' }
