@@ -276,3 +276,34 @@ A framework follow-up is warranted, outside this spec: either `/spec-review` is 
 the lifecycle gains an owner for maintainer-driven execution. Until then, any spec that legitimately
 executes outside `/spec-implement` will hit this same wall, and the workaround must be a recorded
 decision rather than a silent status edit.
+
+### D010 - A BLOCKED attempt is not a failed repair
+
+**Date:** 2026-08-22
+
+**Status:** Accepted
+
+**Context:**
+
+`/qa-review` found a boundary D008 left undefined. D008 counts a per-finding REJECT "only when the
+loop has already dispatched a repair attempt for that finding". A repair attempt can end in a worker
+`BLOCKED` block, which produces no change at all - the worker stopped on an undocumented decision
+and escalated.
+
+**Decision:**
+
+Only an attempt that completed with a worker `DONE` starts the counting. A `BLOCKED` attempt does not.
+
+**Reasoning:**
+
+Nothing was changed, so the finding cannot have failed to converge - there was no repair to fail.
+Counting it would reintroduce DEFECT-001's exact false positive by another route: a finding waiting
+on a human answer would accumulate toward its cap while nobody can act on it, and the run would abort
+blaming a finding that is blocked, not stagnant. That is the same category error - measuring what
+happened *around* a finding rather than what happened *to* it.
+
+**Consequences:**
+
+One further edit to the counter definition in `skills/sdd-orchestrate/SKILL.md`. Flip-flop detection
+is unaffected: an oscillating finding by definition gets repaired and comes back, so its attempts end
+in `DONE`.
