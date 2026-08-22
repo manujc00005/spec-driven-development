@@ -24,7 +24,7 @@ Runs are ordered riskiest-assumption-first (PLAN, "Proposed approach"), not by c
   families with their values and names the finding that failed to converge.
   Covers: AC-003.
 
-- [ ] T003 - Seeded run: a reviewer rejecting more than `max-iterations` times consecutively while
+- [x] T003 - (superseded by T014, which closed AC-004 against the D008 counter) Seeded run: a reviewer rejecting more than `max-iterations` times consecutively while
   resolving a previously open finding each round must reach a legitimate DONE. Fixture must run
   strictly more rounds than the cap. Done when the record shows the streak resetting on each
   progress-carrying REJECT and a terminal DONE, proving caps measure stagnation and not workload.
@@ -86,4 +86,4 @@ Runs are ordered riskiest-assumption-first (PLAN, "Proposed approach"), not by c
 - [x] T013 - (from DEFECT-001, per D007) Fix the per-finding REJECT counter so it increments only
   when a finding is re-reported after a dispatched repair attempt for that finding, leaving it
   untouched while the finding sits unworked in the queue. Own decision record required. Covers: AC-003.
-- [ ] T014 - Re-run AC-004 after T013 lands. Covers: AC-004.
+- [x] T014 - Re-run AC-004 after T013 lands. Covers: AC-004.
