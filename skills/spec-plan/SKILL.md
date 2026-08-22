@@ -33,6 +33,11 @@ Your task is to transform an existing `SPEC.md` into an implementation plan.
 - Follow existing architecture and naming conventions.
 - If the spec is ambiguous, document the ambiguity instead of inventing behavior.
 - Every implementation task must map back to one or more acceptance criteria.
+- Every task carries a `Verify:` clause after `Covers:`: the criterion anyone checks to call the
+  task done, per the syntax fixed in `specs/_templates/TASKS.md`.
+- If a task's outcome cannot be stated as a criterion, report that instead of inventing one: name
+  the task as underspecified and what is missing, rather than writing a placeholder that passes
+  presence and means nothing.
 - Keep tasks small enough to be implemented independently.
 - After creating PLAN.md, TASKS.md, and DECISIONS.md, update `Status` in `SPEC.md` from `Draft` to `Ready`.
 - **This skill is the only authorized performer of `Draft` → `Ready`.** No other skill, agent, or manual edit may promote a spec to `Ready`, and this skill promotes only after the three documents exist and every acceptance criterion is covered by a task. See `sdd-guardrails` section 11.
@@ -111,21 +116,34 @@ Describe how to revert or disable the change if needed.
 
 # Tasks: <feature-name>
 
+<!-- Each task line gains a `Verify:` clause after `Covers:`: the criterion anyone checks to call
+     the task done. It may be an executable command or an observable human check — nothing in the
+     framework executes it; it is text for a human or an agent to act on, not a runner input. A
+     human check must name who checks and against what: "Verify: reviewed by hand" alone is not a
+     criterion, and must not be reached for as a universal escape from stating one.
+
+     Example (executable): - [ ] T001 - Add rate limiting to the login endpoint. Covers: AC-002.
+     Verify: curl the endpoint 11 times in 60s and confirm the 11th call returns 429.
+
+     Example (human check): - [ ] T002 - Migrate the pricing table to the new schema. Covers:
+     AC-005. Verify: the DB maintainer confirms the migrated totals match last month's invoice
+     totals by hand. -->
+
 ## Phase 1: Preparation
 
-- [ ] T001 - Task description. Covers: AC-XXX.
+- [ ] T001 - Task description. Covers: AC-XXX. Verify: <how anyone checks this is done>.
 
 ## Phase 2: Implementation
 
-- [ ] T002 - Task description. Covers: AC-XXX.
+- [ ] T002 - Task description. Covers: AC-XXX. Verify: <how anyone checks this is done>.
 
 ## Phase 3: Tests
 
-- [ ] T003 - Task description. Covers: AC-XXX.
+- [ ] T003 - Task description. Covers: AC-XXX. Verify: <how anyone checks this is done>.
 
 ## Phase 4: Review
 
-- [ ] T004 - Task description. Covers: AC-XXX.
+- [ ] T004 - Task description. Covers: AC-XXX. Verify: <how anyone checks this is done>.
 
 ## DECISIONS.md template
 

@@ -64,6 +64,7 @@ Check:
 - Are risks documented?
 - Is rollback strategy documented when relevant?
 - Does the plan declare a Context budget (bounded reading list + model routing)? See the "Context budget check" rule below.
+- Does every task carry a `Verify:` clause once `TASKS.md` has adopted the format? See the "Verify clause check" rule below.
 - Is the next implementation task clear?
 
 ## Context budget check
@@ -79,6 +80,35 @@ declare a `## Context budget` section with a bounded `Reading list` and a
   The verdict cannot be `Ready`; treat it like an unmet acceptance criterion.
 - A valid budget can be short (even one line per subsection). Accept brevity;
   reject only emptiness or unfilled template text.
+
+## Verify clause check
+
+`specs/_templates/TASKS.md` fixes a `Verify:` clause after `Covers:` on every task line: the
+criterion anyone checks to call the task done. `TASKS.md` files written before that syntax existed
+carry none, and must keep passing unchanged. The criterion may be an executable command or a human
+check; nothing in the framework executes it — it is text for a human or an agent to act on, not a
+runner input. Apply this rule:
+
+- **Detection unit is the task item, not a line or the raw file.** A task item is a bullet
+  beginning `- [ ]` or `- [x]` together with its continuation lines, up to the next bullet. Within
+  that item, the clause is the one following `Covers:` — it may sit on the bullet's own line or
+  wrap onto a continuation line. Do not match a raw substring of the file (a clause named in prose,
+  not stated as a task's own criterion, does not count) and do not match a single physical line
+  (a clause that wrapped past the bullet's first line still counts).
+- **No task item in the file carries a clause → legacy, passes untouched.** Report nothing; this is
+  not a coverage gap.
+- **At least one task item carries a clause → the file has adopted the format.** Every task item
+  must then carry one. A task item with no `Verify:` at all, or with `Verify:` followed by nothing,
+  is a blocking finding naming that task; the verdict cannot be `Ready` while one remains.
+- **A human check must name who checks and against what.** A blanket phrase with no reviewer and
+  no standard to check against — "Verify: reviewed by hand" and nothing else — does not state a
+  criterion. Treat it the same as a missing or empty clause: a blocking finding naming that task.
+- **A present, named criterion is also checked against FR-008's observability test — warning, not
+  a blocker.** An observable criterion names what is inspected (a command, a file, an output, a
+  recorded run), would produce the same verdict for two different checkers, and can fail. A
+  criterion missing any of the three — "tests pass" names nothing to inspect, "is correct" is not
+  verdict-stable, "code is written" cannot fail — is a warning naming the task and which test it
+  failed; it does not block the verdict.
 
 ## Review detection rules
 
@@ -143,6 +173,12 @@ Ready for implementation | Partial | Not ready
 ## Context budget
 
 Filled | Missing (warning) | Empty/placeholder (blocker) — with a one-line reason. Per the Context budget check rule.
+
+## Verify clauses
+
+Legacy (no task carries one — passes) | Adopted, complete | Adopted, missing on: <task IDs> (blocker). Per the Verify clause check rule.
+
+Observability warnings: none | <task ID>: fails <inspection target | verdict-stable | falsifiable>. Per the observability check rule (warning, not a blocker).
 
 ## Blocking open questions
 

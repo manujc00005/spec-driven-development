@@ -26,6 +26,11 @@ log.
   confirm before overwriting.
 - Inspect the repository; follow existing architecture and naming.
 - **Every task in `TASKS.md` must map to one or more acceptance criteria** (`Covers: AC-XXX`).
+- Every task also carries a `Verify:` clause after `Covers:` — the criterion anyone checks to
+  call the task done, per the syntax fixed in `specs/_templates/TASKS.md`. It may be an
+  executable command or a human check naming who checks and against what; nothing in the
+  framework executes it. If a task's outcome cannot be stated as a criterion, report that instead
+  of inventing one.
 - Keep tasks small enough to implement independently.
 - Record every non-obvious choice in `DECISIONS.md` — do not decide silently.
 
@@ -36,7 +41,7 @@ log.
    model routing note — the token economy contract, see `docs/TOKEN_ECONOMY.md`), Proposed approach,
    Alternatives considered, Dependencies, Risks, Test strategy, Rollback strategy, and the PLAN
    verification checklist.
-3. Write `TASKS.md`: phased, numbered `T001…`, each with `Covers: AC-XXX`.
+3. Write `TASKS.md`: phased, numbered `T001…`, each with `Covers: AC-XXX` and a `Verify:` clause.
 4. Write `DECISIONS.md`: one `D001…` entry per non-obvious decision (Context / Decision / Reasoning /
    Consequences / Status).
 5. Update `SPEC.md` status to `Ready`.

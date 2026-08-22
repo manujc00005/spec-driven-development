@@ -190,8 +190,16 @@ same-context owning-skill calls are logged but do not consume it.
 
 1. Delegate the task using the normal full brief and require the completion block.
 2. On response, persist `RESPONDED`, the raw outcome reference, and post-delegation fingerprint
-   before acting. On `BLOCKED`, follow the escalation protocol below. On `DONE`, verify the claimed
-   task checkbox and command evidence rather than trusting the word DONE, then persist `VERIFIED`.
+   before acting. On `BLOCKED`, follow the escalation protocol below. On `DONE`, verify the claim
+   rather than trusting the word DONE: the detection unit is the task item — the bullet beginning
+   `- [ ]` or `- [x]` together with its continuation lines, up to the next bullet — and within it the
+   clause is the one following `Covers:`. When the task item carries a `Verify:` clause, check the
+   claimed completion against that criterion — the task's stop condition — instead of the worker's
+   own judgement of doneness. "Checking" never means the loop executing the clause itself (FR-010);
+   it means evaluating the claimed completion against it. Record the criterion and the result of
+   checking it in both the attempt row and the state block. When the task item carries no `Verify:`
+   clause, verify the claimed task checkbox and command evidence as before. Either way, persist
+   `VERIFIED`.
 3. Compute the reviewed-diff fingerprint, then run `domain-reviewer` for every implemented diff.
    Run `security-reviewer` when the diff/spec matches the existing Level-3 triggers: auth,
    authorization, personal data, payments, migrations, uploads, secrets, public APIs, schema, or
@@ -308,6 +316,7 @@ Initialize it with this canonical scaffold (replace angle-bracket values; do not
 - Current task: `<TNNN | none>`
 - Current attempt: `<A-NNN | none>`
 - Current attempt state: `<PLANNED | DISPATCHED | RESPONDED | VERIFIED | RECOVERED | FAILED | none>`
+- Current task verification: `<Verify: criterion and the result of checking it, or none>`
 - Delegations used: `<N>`
 - Attributed dirty paths: `<sorted paths or none>`
 - Baseline verification: `<commands and PASS evidence>`
@@ -320,6 +329,10 @@ Initialize it with this canonical scaffold (replace angle-bracket values; do not
 
 | ID | Timestamp | Agent | Task/objective | State | Allowed paths | Pre fingerprint | Post fingerprint | Outcome |
 |---|---|---|---|---|---|---|---|---|
+
+For a task closed on its `Verify:` clause, the `Outcome` cell and the state block's "Current task
+verification" field both record the criterion and the result of checking it, not merely the
+checked box. Checking never means the loop executing the clause itself (FR-010).
 
 ## Findings
 

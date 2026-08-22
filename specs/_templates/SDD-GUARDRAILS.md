@@ -83,7 +83,10 @@ continue "assuming it will be fixed later":
 3. **TASKS vs PLAN**: does every task use the PLAN's names? Does any task describe
    an approach the PLAN abandoned?
 4. **AC ↔ TASKS bidirectional**: every AC covered (`Covers: AC-XXX`) and every task
-   covering a real AC?
+   covering a real AC? Once a `TASKS.md` has adopted the format (at least one task item
+   carries the clause), does every task also carry a `Verify:` clause after `Covers:` —
+   an executable command or a human check naming who checks and against what, never a
+   blanket phrase? Nothing in the framework executes it (see `specs/_templates/TASKS.md`).
 5. **Units and types**: same field, same unit/format across SPEC, PLAN, TASKS?
 6. **Naming consistency**: one name per concept across all four documents?
 7. **Discarded approaches**: no active reference to `Rejected`/`Superseded` options?

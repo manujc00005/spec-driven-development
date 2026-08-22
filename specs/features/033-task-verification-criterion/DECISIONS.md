@@ -78,3 +78,40 @@ AC-007 asserts.
 
 A file half-migrated in a single edit becomes blocking, which is the intended pressure. Nothing is
 backfilled automatically.
+
+### D003 - Parallel workers drift on a shared contract even when told to derive from the source
+
+**Date:** 2026-08-22
+
+**Status:** Accepted
+
+**Context:**
+
+Tasks T002–T005 were run in parallel because they touch disjoint files. They share a contract but do
+not define it — the anchor template does — so the parallelism rule's "same files, same contract" test
+seemed satisfied by the file half.
+
+It was not. The review found `DOM-003`: the Claude gate stated less of the contract than its Codex
+twin, so `Verify: reviewed by hand` blocked on one provider and passed on the other. The fix round
+was then briefed explicitly to derive from FR-008 rather than from each other — and drifted again,
+in the opposite direction: the Claude gate made a blanket phrase blocking while the Codex prompt
+wrote "missing or empty stays the only blocking case", contradicting its own preceding check.
+
+**Decision:**
+
+Recorded as a finding about the method, not patched into the parallelism rule by this spec. The
+second drift was repaired by hand rather than by a third delegation round.
+
+**Reasoning:**
+
+Two independent writers producing prose about the same rule will produce different prose, and
+"different prose about a gating rule" is a behavioural difference, not a stylistic one. Telling each
+to derive from the source removes the copying error but not the interpretation gap. The cheap
+mitigation is not better briefs: it is to have one writer produce all surfaces of a shared contract,
+or to have a single pass reconcile them afterwards, which is what the review round did here — twice.
+
+**Consequences:**
+
+A follow-up worth considering for the framework: the parallelism rule's "same contract" clause
+currently reads as being about files. Two tasks that adopt one contract into different files share
+that contract, and this run is evidence that the rule should say so.

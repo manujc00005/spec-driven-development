@@ -35,6 +35,22 @@ task is implemented.
    token economy contract (`docs/TOKEN_ECONOMY.md`). Missing section → **warning**, verdict may still
    be Ready. Section present but empty or placeholder → **blocker**. A short budget is valid; reject
    only emptiness.
+8. **Verify clause check** — `specs/_templates/TASKS.md` fixes a `Verify:` clause after `Covers:` on
+   every task item once a file has adopted the format (at least one task item carries the clause).
+   Detection unit is the task item — the bullet plus its continuation lines up to the next bullet —
+   not a raw substring of the file and not a single physical line: a clause named only in prose does
+   not count, and a clause that wrapped onto a continuation line still does. A file with no task item
+   carrying one is legacy and passes unchanged. Once adopted, a missing or empty clause on any task
+   item is a blocking finding naming that task. The criterion may be a command or a human check
+   naming who checks and against what — never a blanket phrase — and nothing in the framework
+   executes it.
+9. **Verify clause observability (warning)** — a present, non-empty `Verify:` clause still needs to
+   pass three tests: it names what is inspected (a command, a file, an output, a recorded run); two
+   people checking it would reach the same verdict; and it can fail. This is a warning, not a
+   blocker — missing, empty, or a blanket phrase naming no reviewer and no standard remain the
+   blocking cases (check 8). Flag a clause that fails any
+   test, naming the task and the specific test it failed (what-is-inspected / same-verdict /
+   can-fail), not just "criterion is weak."
 
 ## Verdict rule
 
