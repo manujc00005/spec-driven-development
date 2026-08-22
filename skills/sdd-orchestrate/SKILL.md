@@ -237,8 +237,11 @@ Track three numbers per reviewer and one per finding:
 - **Clean re-approval (gates nothing).** A review scheduled only because the fingerprint moved
   consumes the delegation budget and nothing else.
 - **Per-finding REJECT total (gates, cap `max-iterations`).** Count a `REJECT` carrying the same
-  `<reviewer>:<finding-id>` **only when the loop has already dispatched a repair attempt for that
-  finding** — that is, count failed repairs, not re-reports. A finding re-reported while it still
+  `<reviewer>:<finding-id>` **only when a repair attempt for that finding has already completed with
+  a worker `DONE`** — that is, count failed repairs, not re-reports and not attempts that never
+  produced a change. A `BLOCKED` attempt is not a failed repair: nothing was changed, so the finding
+  cannot have failed to converge, and counting it would reintroduce the same false positive on a
+  finding waiting for a human answer. A finding re-reported while it still
   sits unworked in the queue does not increment anything: it has not failed to converge, it has not
   been asked to. Monotonic per finding once counting starts; this is what catches a flip-flop, which
   a streak reset by intervening approvals would miss, and every flip-flop follows a repair so none

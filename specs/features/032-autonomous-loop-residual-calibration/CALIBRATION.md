@@ -774,3 +774,18 @@ state DONE.
 **AC-004: OBSERVED.** Three consecutive progress-carrying REJECTs against `max-iterations = 2`,
 followed by a legitimate APPROVE. A reviewer that keeps rejecting while the work keeps converging is
 not stagnant, and the loop no longer treats it as such.
+
+## Two limits this calibration cannot close, recorded rather than smoothed over
+
+**The per-finding counter guards a behaviour nobody has ever observed.** It exists to catch a
+flip-flop. No run in 031 or 032 has seen one, before or after D008, and AC-003 was rewritten
+precisely because a flip-flop is unobservable with competent reviewers. The argument that D008 loses
+no detection is sound — every flip-flop follows a repair, so gating on failed repairs cannot miss one
+— but it is an argument, not evidence. Anyone revisiting this counter should know that its protective
+behaviour has never been demonstrated, only reasoned about.
+
+**The counter rules have no automated regression guard.** D008 and D010 are prose in
+`skills/sdd-orchestrate/SKILL.md`. `scripts/check-consistency.sh` validates contracts and artifacts,
+not counter semantics, so nothing would catch a future edit that reworded the rule back to counting
+bare re-reports. The repository has an `evals/` harness; an eval scenario asserting the rule is the
+natural home for that guard. Recorded as a follow-up, outside this spec's scope.
