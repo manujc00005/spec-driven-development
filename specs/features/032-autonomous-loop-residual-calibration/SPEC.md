@@ -2,7 +2,7 @@
 
 ## Status
 
-In Review
+Done
 
 ## Problem
 
@@ -137,6 +137,10 @@ None.
 
 - OQ-1 (non-blocking): should the id-reuse mitigation, if one is needed, live in the reviewer agent
   contracts or in the orchestrator's finding-registry logic? Answerable only after AC-007's run.
+  **Resolved — moot.** AC-007 closed with a recorded tolerance rather than a mitigation (see
+  `CALIBRATION.md`), so there is no mitigation to place. Four observed id decisions showed reviewers
+  reasoning correctly about finding identity every time. The tolerance is conditioned: revisit it if
+  the reviewer contracts are weakened or a cheaper model is routed to review, and answer OQ-1 then.
 
 ## Contracted services
 
