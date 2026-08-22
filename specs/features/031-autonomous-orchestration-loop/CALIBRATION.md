@@ -356,7 +356,7 @@ in this repository, with no seeded defects, planned and executed through the aut
 
 - **Worktree:** `/Users/manu/Proyectos/sdd-t023`, branch `feat/033-task-verification-criterion`,
   baseline `4f3542d`. Entry gate: all six conditions PASS. Budget `max(25, 6 × 7) = 42`.
-- **Delegations used: 3** — one worker for T001, one domain review, one worker for the finding task.
+- **Delegations used: 3** *(superseded: the run reached 15; see the correction below)* — one worker for T001, one domain review, one worker for the finding task.
   No cap approached.
 
 **What the circuit did.** T001 implemented, reviewed, REJECTed with `DOM-001`; the finding became
@@ -417,7 +417,9 @@ its criterion against the run record rather than by a worker's word, and this fe
 `ORCHESTRATION.md` was rebuilt from the delegation history after it was found frozen at
 `T001 / PLANNED / 0 delegations`.
 
-**Status: the loop reached DONE on real, non-seeded work, and needed its own final gate to get
-there honestly.** That is a stronger result than a clean first pass would have been: it shows the
+**Status: pending. Final conformance has rejected twice** (CONF-001..CONF-006, then
+CONF-007..CONF-012) and has not yet ruled on the third round. Claiming DONE here before the gate
+spoke was itself the CONF-010 finding - the same premature claim CONF-003 had just corrected, made
+again one paragraph later. Recorded rather than quietly fixed, because twice is a pattern. That is a stronger result than a clean first pass would have been: it shows the
 gate is load-bearing rather than ceremonial. Spec 031 may cite this run, and should cite the
 rejection as well as the outcome.

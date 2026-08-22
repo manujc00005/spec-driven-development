@@ -6,6 +6,8 @@
   `Verify: <how anyone checks this is done>` after `Covers:`. State that the criterion may be a
   command or a human check, and that nothing in the framework executes it. Covers: AC-001, AC-006,
   AC-008.
+  Verify: `grep -c 'Verify:' specs/_templates/TASKS.md` returns a non-zero count, and the block names
+  both criterion forms and the who/against-what constraint.
 
 ## Phase 2: Producer and gate
 
