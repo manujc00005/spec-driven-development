@@ -420,8 +420,11 @@ the checker does not author. That is the observation AC-004 asks for, and the ro
 `ORCHESTRATION.md` was rebuilt from the delegation history after it was found frozen at
 `T001 / PLANNED / 0 delegations`.
 
-**Status: pending. Final conformance has rejected twice** (CONF-001..CONF-006, then
-CONF-007..CONF-012) and has not yet ruled on the third round. Claiming DONE here before the gate
+**Status: pending. Final conformance has rejected four times** (CONF-001..006; CONF-007..012; a refusal to certify
+anything when the worktree was destroyed, CONF-013/014; and CONF-015..017), with a fifth round
+outstanding on CONF-018. Round four accepted AC-004 as genuinely observed and found the feature
+conformant across all six contract surfaces; every rejection since has been about the evidence
+record rather than the code. Claiming DONE here before the gate
 spoke was itself the CONF-010 finding - the same premature claim CONF-003 had just corrected, made
 again one paragraph later. Recorded rather than quietly fixed, because twice is a pattern. That is a stronger result than a clean first pass would have been: it shows the
 gate is load-bearing rather than ceremonial. Spec 031 may cite this run, and should cite the
@@ -452,3 +455,8 @@ Does that break disqualify this run as T023's evidence?
 **This blocks spec 031's close until answered.** It is deliberately not resolved here. Re-running
 gates until one passes would answer it by attrition rather than by judgement, and a calibration
 spec that does that is worth less than no calibration at all.
+
+**Outstanding merge.** `main` carries a version of this feature predating the second conformance
+round: CONF-008 through CONF-012 were not in what was merged and exist only on
+`review/033-conformance`. Until that branch reaches `main`, the shipped feature is the version round
+two rejected. Recorded here because nothing else in either record said the merge was still owed.
