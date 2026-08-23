@@ -34,7 +34,7 @@
     structurally conformant and consistent with their families; no domain error found.
   - **Not claimed:** this is a review of the checklists as written, not calibration against real
     diffs. The same gap DEBT-004 records for the python-sql-data reviewers applies here.
-- [ ] T16 (Future) plannedHooks remain planned: `openapi-contract-reminder`, `messaging-review-reminder`, `stripe-review-reminder`, `prisma-migration-guard`; plannedTemplate `OBSERVABILITY.md`
-  **SKIPPED at close (2026-08-23) → DEBT-006.** Labelled `(Future)` by its own author; the
-  four hooks are scope for a later spec, not debt for this one. Carrying a future item as an
-  open task is what kept this spec from ever closing. Tracked, not dropped.
+- [x] T16 (Future) plannedHooks remain planned: `openapi-contract-reminder`, `messaging-review-reminder`, `stripe-review-reminder`, `prisma-migration-guard`; plannedTemplate `OBSERVABILITY.md`
+  **SKIPPED (2026-08-23) → DEBT-006.** Labelled `(Future)` by its own author: scope for a later
+  spec, not debt for this one. Carrying a future item as an open task is what kept a finished
+  spec from closing for thirteen months.

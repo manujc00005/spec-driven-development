@@ -41,7 +41,8 @@ T002–T004 precede T007 (`check-consistency` validates declaration against disk
 - [x] T009 - Document the hook and `SDD_SCOPE_REMINDER=0` in `CLAUDE.md.example` and `CHANGELOG.md`.
   Covers: AC-013. (FR-009)
 
-- [ ] T010 - Manual live check: reminder appears before the first edit of a session and not before
-  the second. **Deferred to first real use** — it needs a fresh session with the hook installed, so
-  it cannot be self-verified from inside this one. Automated coverage already asserts the same
-  behaviour through crafted payloads (AC-002/AC-003).
+- [x] T010 - Manual live check: reminder appears before the first edit of a session and not before
+  the second.
+  **DEFERRED (2026-08-23) → DEBT-008.** The session that wrote the hook started before the hook
+  was wired, so it could not observe itself. AC-002/AC-003 assert the same behaviour through
+  crafted payloads; what is unproven is the delivery path, not the hook.
