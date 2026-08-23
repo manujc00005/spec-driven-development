@@ -1,6 +1,6 @@
 ---
 name: sdd-workspace-init
-description: Initialize a folder of related projects as a fully-wired SDD workspace, end to end - detect projects, build or refresh each one's Graphify graph, write the .sdd-workspace/ map (projects, dependencies, contracts, decisions), install the generated-state machinery (board, drift, link scripts + workspace skills + hooks), and link every child project back to the workspace layer. Idempotent - re-run to fill gaps; it never overwrites what exists. Use when the user says "init this workspace", "set up SDD across these projects", or asks for one place that knows what every project does. For the mapping phase alone, /sdd-workspace-onboarding still works standalone.
+description: Initialize a folder of related projects as a fully-wired SDD workspace: detect the projects, refresh each Graphify graph, write the .sdd-workspace/ map, install the board and drift machinery, and link every child back to the workspace layer. Idempotent - never overwrites what exists. Use for "init this workspace". For mapping alone, /sdd-workspace-onboarding.
 triggers:
   - When the user says "init the workspace", "sdd-workspace-init", or "set up SDD across these projects"
   - When several related repos share a folder and no .sdd-workspace/ exists, or it exists but children are not linked
@@ -9,15 +9,33 @@ triggers:
 ## SDD Contract
 
 ```yaml
-category: workspace-lifecycle
+category: lifecycle
 inputs: [workspace-root, child-project-manifests, graphify-reports?]
-outputs:
-  - .sdd-workspace/ (map + scripts + BOARD.md + HOW-TO-WORK.md + workspace.json)
-  - .claude/skills/{sdd-status,sdd-workspace-link}/ + .claude/settings.json hooks
-  - SDD-WORKSPACE block in each child's instruction file
-side_effects: writes only listed outputs; never overwrites existing files; no commit/push
-composes: [sdd-workspace-onboarding, graphify]
+outputs: [.sdd-workspace/, BOARD.md, HOW-TO-WORK.md, workspace.json, sdd-status-skill, sdd-workspace-link-skill, settings.json-hooks, SDD-WORKSPACE-block]
+side_effects: writes-specs
+writes_code: false
+writes_specs: true
+analysis_only: false
+primary_agent: codebase-researcher
+secondary_agents: [solution-architect]
+profile_scope: all
+provider_specific: true
 ```
+
+## Composes
+
+This skill orchestrates two others rather than reimplementing them: `sdd-workspace-onboarding`
+builds the map, and `graphify` supplies each project's graph. Either can still be run standalone.
+
+## What it writes
+
+The contract's `outputs` names the artifacts; this is what they are:
+
+- `.sdd-workspace/` — the map, the generated-state scripts, `BOARD.md`, `HOW-TO-WORK.md` and
+  `workspace.json`.
+- In each child project — `.claude/skills/sdd-status/` and `.claude/skills/sdd-workspace-link/`,
+  plus the matching hook wiring in `.claude/settings.json`.
+- An `SDD-WORKSPACE` block in each child's instruction file.
 
 ## Purpose
 
