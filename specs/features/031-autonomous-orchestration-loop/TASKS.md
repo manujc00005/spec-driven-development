@@ -101,7 +101,7 @@
 - [x] T015 - Run `bash scripts/check-consistency.sh` and
   `bash scripts/check-consistency.test.sh` after all contract edits; record actual exit codes and
   resolve only in-scope regressions. Covers: AC-003, AC-007.
-- [ ] T023 - **Maintainer-owned, cannot be delegated.** Run `--autonomous` once against a real,
+- [x] T023 - **Maintainer-owned, cannot be delegated.** Run `--autonomous` once against a real,
   non-seeded small feature in a repository you actually work on, and record the outcome in
   `CALIBRATION.md` as a pass or as an explicit `/spec-close` blocker. Every other run in this
   feature used a fixture designed by the same agent that then reviewed it, and one of those

@@ -2,7 +2,7 @@
 
 ## Status
 
-In Progress
+Done
 
 ## Problem
 
@@ -423,7 +423,7 @@ No database, no schema files — markdown only, human-readable first.
   recovery is the worktree's uncommitted tree plus `ORCHESTRATION.md` re-entry
   (FR-008/FR-011). Checkpoint commits are deferred to the phase-2 SDK runner, which is
   not an agent and could own them.
-- OQ-2 (non-blocking): Should `/spec-status` learn to read `ORCHESTRATION.md` and show
+- **DEFERRED at close (2026-08-22)** — OQ-2 (non-blocking): Should `/spec-status` learn to read `ORCHESTRATION.md` and show
   loop state? Natural follow-up; not required for the loop to function.
 
 ## Contracted services
