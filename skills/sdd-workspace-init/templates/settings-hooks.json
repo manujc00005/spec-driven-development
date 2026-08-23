@@ -1,0 +1,21 @@
+{
+  "$comment": "Merge into <workspace>/.claude/settings.json — do not overwrite an existing file; append the hooks and permissions. The three SessionStart hooks: regenerate the board, run drift quietly, warn if a child project is unlinked.",
+  "permissions": {
+    "allow": [
+      "Bash(node ${CLAUDE_PROJECT_DIR}/.sdd-workspace/scripts/board.mjs:*)",
+      "Bash(node ${CLAUDE_PROJECT_DIR}/.sdd-workspace/scripts/drift.mjs:*)",
+      "Bash(node ${CLAUDE_PROJECT_DIR}/.sdd-workspace/scripts/link-workspace.mjs:*)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node \"${CLAUDE_PROJECT_DIR}/.sdd-workspace/scripts/board.mjs\" 2>/dev/null || true" },
+          { "type": "command", "command": "node \"${CLAUDE_PROJECT_DIR}/.sdd-workspace/scripts/drift.mjs\" --quiet 2>/dev/null || true" },
+          { "type": "command", "command": "node \"${CLAUDE_PROJECT_DIR}/.sdd-workspace/scripts/link-workspace.mjs\" --check 2>/dev/null || echo \"  ⚠︎ Projects unlinked from the workspace. Run /sdd-workspace-link\"" }
+        ]
+      }
+    ]
+  }
+}

@@ -28,6 +28,13 @@ provider_specific: false
 
 ## Purpose
 
+> **Part of a larger flow.** `/sdd-workspace-init` is the end-to-end setup: it runs THIS skill as
+> its mapping phase, then adds what this one deliberately leaves out — the generated-state
+> machinery (board/drift/link scripts, workspace skills, hooks) and the block that tells each
+> child project it belongs to the workspace. Use init for a new workspace; use this standalone to
+> (re)build the map alone.
+
+
 Onboard a folder containing multiple related projects into Workspace SDD: detect the projects, and
 produce a bounded, evidence-backed map of how they depend on each other — without reading any
 project in full.

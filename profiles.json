@@ -53,7 +53,8 @@
         "scout",
         "decomposer",
         "root-causer",
-        "sdd-workspace-onboarding"
+        "sdd-workspace-onboarding",
+        "sdd-workspace-init"
       ],
       "plannedSkills": [],
       "agents": [
