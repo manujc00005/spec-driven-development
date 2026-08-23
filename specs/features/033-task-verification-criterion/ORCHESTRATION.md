@@ -18,15 +18,15 @@
 ## State
 
 - Phase: `REVIEW`
-- Current task: `T009`
+- Current task: `T007` (closed on its clause as A-016; T009 closed earlier and is retained as the weaker prior instance)
 - Current attempt: `A-016`
 - Current attempt state: `VERIFIED`
-- Delegations used: `15`
+- Delegations used: `14` (A-015 and A-016 are orchestrator-local and do not consume budget, per the skill's own rule)
 - Current task verification: `T007 - criterion "check-consistency.sh exits 0 and git status --porcelain byte-identical before and after". Result: MET (exit 0; hashes equal). This is the non-circular observation CONF-008 required. The earlier T009 closure satisfied AC-004's letter only and is retained below for the record.`
 - Attributed dirty paths: `specs/_templates/`, `skills/{spec-plan,spec-analyze,sdd-orchestrate}/SKILL.md`, `adapters/codex/prompts/`, and this feature folder
 - Baseline verification: `./scripts/check-consistency.sh → exit 0; tree byte-identical before and after`
 - No-progress streaks (gating): `domain=0, final-conformance=1`
-- Total invocations (audit only): `domain=3, final-conformance=1`
+- Total invocations (audit only): `domain=3, final-conformance=4`
 - Approvals: `domain=APPROVE on the six-surface diff`
 - Frozen implementation fingerprint: `pending final-conformance re-approval`
 
@@ -99,12 +99,23 @@ explicitly rather than absorbed by re-running the gate until something passes.
 | domain:DOM-004 | fix round | Medium | resolved | A-013 APPROVE |
 | domain:DOM-005 | fix round | Medium | resolved | A-013 APPROVE |
 | domain:DOM-006 | fix round | Low | resolved | A-013 APPROVE |
-| final-conformance:CONF-001 | T009 + clauses | blocker | addressed | pending re-review |
-| final-conformance:CONF-002 | this file | blocker | addressed | pending re-review |
-| final-conformance:CONF-003 | 031 CALIBRATION | blocker | addressed | pending re-review |
-| final-conformance:CONF-004 | 033 TASKS clauses | blocker | addressed | pending re-review |
-| final-conformance:CONF-005 | T009 | major | addressed | pending re-review |
-| final-conformance:CONF-006 | spec-analyze:86 | minor | addressed | pending re-review |
+| final-conformance:CONF-001 | T009 + clauses | blocker | resolved | round 4 |
+| final-conformance:CONF-002 | this file | blocker | resolved | round 4 |
+| final-conformance:CONF-003 | 031 CALIBRATION | blocker | resolved | round 4 |
+| final-conformance:CONF-004 | 033 TASKS clauses | blocker | resolved | round 4 |
+| final-conformance:CONF-005 | T009 | major | resolved | round 4 |
+| final-conformance:CONF-006 | spec-analyze:86 | minor | resolved | round 4 |
+| final-conformance:CONF-007 | T001 clause | blocker | resolved | round 4 |
+| final-conformance:CONF-008 | T007 via A-016 | major | resolved | round 4, AC-004 accepted |
+| final-conformance:CONF-009 | this file | major | resolved | round 4, judged honest |
+| final-conformance:CONF-010 | 031 CALIBRATION | major | resolved | round 4 |
+| final-conformance:CONF-011 | 031 CALIBRATION | minor | resolved | round 4 |
+| final-conformance:CONF-012 | D003 + probe counts | minor | D003 resolved round 4; probe count missed, reopened as CONF-015 |
+| final-conformance:CONF-013 | unreadable tree | blocker | resolved | readable tree at `/Users/manu/Proyectos/sdd-033-gate` |
+| final-conformance:CONF-014 | provenance | blocker | escalated | open maintainer question, blocks spec 031's close |
+| final-conformance:CONF-015 | probe counts | major | resolved | round 4 |
+| final-conformance:CONF-016 | 031 T023 record | major | resolved | round 4 |
+| final-conformance:CONF-017 | counters | minor | addressed | pending re-review |
 
 ## Delegation log
 
