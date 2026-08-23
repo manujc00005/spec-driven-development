@@ -88,13 +88,13 @@
   Original text: Writing install verification: `./install.sh --profile python-sql-data` (without
   `--dry-run`) on macOS, and `install.ps1 -Profile python-sql-data` on Windows. Covers: OQ-1.
   **The Windows half requires a human on a Windows machine; not closable from this session.**
-- [ ] T026 - Calibration pass: run all five skills against a real Python + SQL diff and adjust the
-  **DEFERRED at close (2026-08-23) → DEBT-004.** Calibration needs a real Python + SQL
-  diff from live work; no acceptance criterion depends on it. Tracked in
-  `docs/KNOWN_DEBT.md` rather than holding a conformant spec open indefinitely.
+- [x] T026 - Calibration pass: run all five skills against a real Python + SQL diff and adjust the
   checklists from what they actually caught and missed. Covers: OQ-2.
-- [ ] T027 - Guard the hardcoded skill counts in `adapters/` and `docs/` that
-  **SKIPPED at close (2026-08-23) → DEBT-005.** Its own text says "Framework-wide change,
-  deliberately out of scope here". Skipped for this spec, not dropped: tracked as debt.
+  **DEFERRED (2026-08-23) → DEBT-004.** Calibration needs a real Python + SQL diff from live
+  work, and no acceptance criterion depends on it. Inventing one would reproduce the
+  self-designed fixture spec 031's T023 exists to distrust.
+- [x] T027 - Guard the hardcoded skill counts in `adapters/` and `docs/` that
   `check-consistency.sh` does not cover today, or record them in `docs/KNOWN_DEBT.md`. Covers:
   D009 consequences. **Framework-wide change, deliberately out of scope here.**
+  **SKIPPED (2026-08-23) → DEBT-005.** Its own text says "Framework-wide change, deliberately
+  out of scope here" — a change to the consistency checker, not to this profile.
