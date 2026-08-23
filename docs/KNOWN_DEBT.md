@@ -18,6 +18,7 @@ claims the repo currently makes that nobody has checked.
 | DEBT-003 | `skill-eval.test.sh` copies the whole repo 33 times per run | spec 028 | Open |
 | DEBT-004 | The five `python-sql-data` reviewers ship uncalibrated against a real diff | spec 029 | Open |
 | DEBT-005 | Hardcoded skill counts in `adapters/` and `docs/` are unguarded | spec 029 | Open |
+| DEBT-006 | Four `plannedHooks` remain planned and unowned | spec 017 | Open |
 
 ---
 
@@ -129,3 +130,25 @@ pattern already proven in `README.md`. Small and mechanical once someone decides
 
 **Risk while open:** documentation can state a count that no longer matches disk. Same class of
 defect as spec 034's manifest, one layer up: a record asserting a state nothing verifies.
+
+## DEBT-006 — Four plannedHooks remain planned and unowned
+
+**Origin:** spec 017, T16, skipped at close on 2026-08-23.
+
+`openapi-contract-reminder`, `messaging-review-reminder`, `stripe-review-reminder` and
+`prisma-migration-guard` are declared under `plannedHooks` in `profiles.json` and have never been
+implemented. Spec 017 promoted every `plannedSkills` entry to a shipped skill; the hooks were left
+behind and the task carrying them was labelled `(Future)` by its own author.
+
+**Why it was skipped rather than done:** a future item held as an open task is what kept spec 017
+from closing for thirteen months, even though everything it actually shipped was finished. Scope for
+a later spec, not debt for that one.
+
+**How to retire it:** decide per hook whether it is still wanted. Three of the four are *reminders*,
+the same shape as `graphify-scan-reminder` and `scope-keeper-reminder` — reinforcement, never
+enforcement — so the pattern is proven and the cost is low. `prisma-migration-guard` is different:
+a guard implies blocking, which needs its own decision about what it refuses and why.
+
+**Risk while open:** `profiles.json` advertises intent the framework does not deliver. Low, because
+planned items are installed by nothing and the distinction is documented — but it is the same
+"record asserting more than the mechanism provides" shape that specs 034 and 036 were about.

@@ -1,5 +1,16 @@
 # SPEC — 017 Implement planned skills and wire them into the review flow
 
+## Status
+
+Done
+
+<!-- Added 2026-08-22 by a governance audit. This spec predates the Status
+convention and was invisible to /spec-status and to automated sweeps. The value
+is the lowest one consistent with the evidence: all 8 skills in this spec's
+scope are shipped on disk and removed from plannedSkills. What remains is a
+human domain review (T15) and a deliberately future item (T16). Promotion
+belongs to /spec-review, not to an audit. -->
+
 ## Goal
 
 Promote every `plannedSkills` entry in `profiles.json` to a shipped skill and
