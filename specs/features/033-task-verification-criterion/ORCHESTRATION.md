@@ -3,7 +3,7 @@
 - Feature: `specs/features/033-task-verification-criterion`
 - Mode: `autonomous`
 - Started at: `2026-08-22T13:42:00Z` (entry gate passed; see the table below)
-- Updated at: `2026-08-22T14:05:08Z`
+- Updated at: `2026-08-23T08:13:27Z`
 - Effective max iterations: `3`
 - Effective max delegations: `42` (`max(25, 6 × 7 unchecked tasks at first entry)`)
 - Purpose: this run is spec 031's T023 — the only calibration evidence drawn from a real,
@@ -125,18 +125,29 @@ are recorded as absent rather than back-filled. A fabricated fingerprint is wors
 
 | Agent | Objective | Outcome |
 |---|---|---|
-| fast-worker x 8 | T001-T005, T008, and the three finding-fix rounds | all DONE |
-| domain-reviewer x 3 | T001, the six-surface diff, and its re-review | REJECT, REJECT, APPROVE |
-| final-conformance x 2 | full evidence chain, twice | REJECT, REJECT |
+| fast-worker x 9 | T001-T005, T008, and the three finding-fix rounds | all DONE |
+| domain-reviewer x 4 | T001, its re-review, the six-surface diff, and that re-review | REJECT, REJECT, REJECT, APPROVE |
+| final-conformance x 5 | full evidence chain, five rounds | REJECT x 4, then this round |
 
 **Not reconstructible:** per-attempt `Timestamp`, `Allowed paths`, `Pre fingerprint`, `Post fingerprint`.
 
+**Why only A-014 has an attempt row for final conformance:** rounds two through five were invoked
+outside the recorded loop, after the run had already reached its review phase. They are counted in
+the audit total and listed here, but no attempt was allocated for them, and back-filling rows now
+would fabricate a history the loop did not execute. The delegation budget is unaffected either way:
+`14` counts workers and reviewers dispatched by the loop, and A-015/A-016 are orchestrator-local.
+
 ## Escalations
 
-None. No worker returned BLOCKED at any point in this run.
+| ID | Classification | Status | Question | Addressed to |
+|---|---|---|---|---|
+| CONF-014 | human-gated | **open - blocks spec 031's close** | The worktree this run executed in was destroyed before the third conformance round could read it, and its branch is orphaned. The content is intact and conformance-approved; the provenance chain has a documented break. Does that break disqualify this run as spec 031's T023 evidence? | Maintainer. Deliberately not answered by any skill - re-running gates until one passes would settle it by attrition rather than judgement. |
+
+No worker returned BLOCKED at any point in this run. The escalation above came from the conformance
+gate, not from an implementation task.
 
 ## Run result
 
 - Status: `ACTIVE`
 - Resumable: `yes`
-- Reason: `Final conformance rejected twice. Round two (CONF-007..CONF-012) found T001 missing its own clause, the AC-004 observation partly circular, and this file's own rebuild had deleted the entry gate. All addressed; awaiting the third gate. Status stays ACTIVE until it rules - claiming otherwise is exactly the CONF-010 error.`
+- Reason: `Final conformance has run five rounds: CONF-001..006, CONF-007..012, a refusal to certify when the worktree was destroyed (CONF-013/014), CONF-015..017, and CONF-018. Every content finding is resolved and round four accepted AC-004 as genuinely observed. What remains is CONF-018's bookkeeping, addressed in this commit, and the open provenance escalation CONF-014, which is the maintainer's to answer.`
