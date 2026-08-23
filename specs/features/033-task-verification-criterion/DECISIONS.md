@@ -100,7 +100,10 @@ wrote "missing or empty stays the only blocking case", contradicting its own pre
 **Decision:**
 
 Recorded as a finding about the method, not patched into the parallelism rule by this spec. The
-second drift was repaired by hand rather than by a third delegation round.
+second drift - the two gates disagreeing on whether a blanket phrase blocks - was repaired by hand.
+The three finding-fix rounds themselves were delegated (attempts A-010 to A-012); only that final
+one-sentence reconciliation was not, because a third delegation on one sentence risked a third
+interpretation.
 
 **Reasoning:**
 

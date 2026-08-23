@@ -40,9 +40,33 @@ proof the run started legitimately.
 | lifecycle-status | `SPEC.md` Status = `Ready`; no prior `ORCHESTRATION.md` -> first entry | PASS |
 | no-open-decisions | D001, D002 both Accepted; 0 Proposed | PASS |
 | runnable-task-queue | 7 unchecked tasks; T001 had no unchecked prerequisite | PASS |
-| isolated-git-location | branch `feat/033-task-verification-criterion`; default `main`; dedicated linked worktree | PASS |
+| isolated-git-location | branch `feat/033-task-verification-criterion`; default `main`; dedicated linked worktree at `/Users/manu/Proyectos/sdd-t023` | PASS **at entry** - see the provenance note below |
 | clean-working-tree | `git status --porcelain` empty | PASS |
 | green-baseline-suite | `./scripts/check-consistency.sh` exit 0; tree byte-identical after | PASS |
+
+### Provenance note (CONF-014)
+
+The worktree this run executed in, `/Users/manu/Proyectos/sdd-t023`, **was removed before the third
+conformance round could read it**, and its branch no longer exists. The third gate refused to
+certify anything as a result, and was right to: the loop's contract treats ambiguous provenance as a
+fail-closed abort, not as something to reason past.
+
+Reconstructed sequence, from what is verifiable rather than from memory:
+
+- The run's own commits (`4f3542d`, `4f7e606`, `40d4ffb`, `7fbfc18`, `687a6f1`) still exist as
+  objects but are reachable from no branch.
+- The maintainer merged the branch. `main` at `bff425d` carries the feature, and its
+  `specs/_templates/TASKS.md` is **ahead of** the run's last commit rather than behind it.
+- The second conformance round's fixes (CONF-008 through CONF-012) were **not** in what merged. They
+  were recovered from the orphaned commit and cherry-picked onto `review/033-conformance`, which is
+  the tree the third gate reads.
+
+**What this costs.** The entry gate's isolation condition passed when the run started and is no
+longer demonstrable from the filesystem. This record does not claim otherwise. For spec 031's T023,
+that matters: T023 asks for evidence from a real, non-seeded feature, and the *content* of this run
+is intact and re-readable, but the *provenance chain* has a documented break in the middle. Whether
+that break disqualifies the run as T023 evidence is a maintainer's call, and it should be made
+explicitly rather than absorbed by re-running the gate until something passes.
 
 ## Attempts
 
