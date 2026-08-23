@@ -19,6 +19,8 @@ claims the repo currently makes that nobody has checked.
 | DEBT-004 | The five `python-sql-data` reviewers ship uncalibrated against a real diff | spec 029 | Open |
 | DEBT-005 | Hardcoded skill counts in `adapters/` and `docs/` are unguarded | spec 029 | Open |
 | DEBT-006 | Four `plannedHooks` remain planned and unowned | spec 017 | Open |
+| DEBT-007 | `install.ps1` has never been run on real Windows outside CI | spec 016 | Open |
+| DEBT-008 | The scope-keeper hook has never been observed firing in a live session | spec 036 | Open |
 
 ---
 
@@ -152,3 +154,44 @@ a guard implies blocking, which needs its own decision about what it refuses and
 **Risk while open:** `profiles.json` advertises intent the framework does not deliver. Low, because
 planned items are installed by nothing and the distinction is documented — but it is the same
 "record asserting more than the mechanism provides" shape that specs 034 and 036 were about.
+
+## DEBT-007 — install.ps1 has never been run on real Windows outside CI
+
+**Origin:** spec 016, T07, deferred at close on 2026-08-23. Also inherited from spec 015's
+`update.ps1` backlog.
+
+`install.ps1` and `update.ps1` carry code parity with their bash counterparts, and spec 034 D005 put
+a behavioural PowerShell suite on the `windows-latest` runner, so their **logic** is now exercised on
+real Windows every PR. What has never been checked is a human running them **as an adopter would**:
+`C:\ProgramData` defaults, drive letters, an interactive PowerShell profile, an existing central dir
+with real content.
+
+**Why it never blocked a spec:** spec 016's AC-04 requires code parity and defers runtime
+verification by its own wording. The deferral was correct; what was wrong was leaving it as an open
+task with no owner and no id for thirteen months.
+
+**Why it shrank:** before spec 034 this needed a full manual pass. Now CI covers the logic, so what
+remains is a much narrower environment check — and CI would already have caught a logic regression.
+
+**How to retire it:** one adopter-style install on a Windows machine, recorded in spec 016's TASKS.md.
+
+**Risk while open:** a Windows-only path issue could survive CI. Bounded — the suites do install,
+remove, refresh and read manifests on Windows, so a broad breakage would surface.
+
+## DEBT-008 — The scope-keeper hook has never been observed firing in a live session
+
+**Origin:** spec 036, T010, deferred at close on 2026-08-23.
+
+`scope-keeper-reminder` is asserted by 19 automated tests across both languages, driven with crafted
+`PreToolUse` payloads. Nobody has yet watched it fire in a real session: reminder before the first
+edit, silence before the second.
+
+**Why it could not be closed with the spec:** the session that wrote the hook started before the hook
+was wired, so it could not observe itself. That is a genuine limitation, not an excuse — but it is
+also why this is a one-time observation rather than ongoing work.
+
+**How to retire it:** open any new session, make an edit, confirm the `[scope-keeper]` message
+appears; make a second edit, confirm silence. Tick T010 in spec 036 with what was seen.
+
+**Risk while open:** the wiring could be wrong in a way the tests cannot see — they invoke the hook
+directly rather than through the harness. The hook itself is proven; the delivery path is not.
