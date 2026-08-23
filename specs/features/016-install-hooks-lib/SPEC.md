@@ -1,5 +1,17 @@
 # SPEC — 016 Install hooks/lib in profile mode
 
+## Status
+
+Done
+
+<!-- Added 2026-08-22 by a governance audit. This spec predates the Status
+convention, so it was invisible to /spec-status and to every automated sweep -
+worse than being stuck, because nothing could report it. The value is the
+lowest one consistent with the evidence: AC-01, AC-02, AC-03 and AC-05 are met
+and covered by scripts/install.test.sh, which now runs in CI; AC-04's code
+parity is met and its runtime half is deferred by the AC's own wording.
+Promotion beyond this point belongs to /spec-review, not to an audit. -->
+
 ## Problem
 
 In profile-filtering mode (the default — a profile is always resolved), both
