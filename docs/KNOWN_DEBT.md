@@ -16,6 +16,8 @@ claims the repo currently makes that nobody has checked.
 | DEBT-001 | Codex isolation flags in `skill-eval.sh` are enforced but unverified | spec 028 | Open |
 | DEBT-002 | Codex adapter advertised as prompt-based/unverified | spec 019 | Open |
 | DEBT-003 | `skill-eval.test.sh` copies the whole repo 33 times per run | spec 028 | Open |
+| DEBT-004 | The five `python-sql-data` reviewers ship uncalibrated against a real diff | spec 029 | Open |
+| DEBT-005 | Hardcoded skill counts in `adapters/` and `docs/` are unguarded | spec 029 | Open |
 
 ---
 
@@ -88,3 +90,42 @@ its runtime is paid by whoever is iterating — the person most likely to start 
 **What closes it.** The gate cases are pure refusals that abort before output-path resolution and
 never write into the tree; they can share one copy. Only the mutating cases need isolation:
 `missing-scenario`, the two `out-inside-skills` variants, and `unresolvable-out`.
+
+## DEBT-004 — The five python-sql-data reviewers ship uncalibrated
+
+**Origin:** spec 029, T026, deferred at close on 2026-08-23.
+
+`python-reviewer`, `python-testing-reviewer`, `sql-query-reviewer`,
+`database-performance-reviewer` and `data-pipeline-reviewer` were written from domain knowledge and
+never run against a real Python + SQL diff. Every acceptance criterion spec 029 defined is met and
+verified — the profile installs, the contracts are well-formed, the routing is correct — but **none
+of them asks whether the checklists actually catch anything**. Structural conformance is not the
+same as usefulness, and the spec closed on the former.
+
+**Why it was not closed with the spec:** calibration needs a real diff from live work. Inventing one
+would produce exactly the self-designed fixture that spec 031's T023 was written to distrust: the
+same agent authoring the diff, the checklist and the verdict.
+
+**How to retire it:** run all five skills against a genuine Python + SQL change and adjust the
+checklists from what they caught and what they missed. The maintainer works in Python and SQL daily,
+so the input exists — it just has to be a real one.
+
+**Risk while open:** the reviewers may be verbose where it does not matter and silent where it does.
+They are advisory, so the failure mode is wasted attention, not a broken build.
+
+## DEBT-005 — Hardcoded skill counts in adapters/ and docs/ are unguarded
+
+**Origin:** spec 029, T027, skipped at close on 2026-08-23.
+
+`scripts/check-consistency.sh` guards the count markers in `README.md`, but equivalent hardcoded
+counts in `adapters/` and `docs/` have no guard. They drift silently every time a skill is added —
+and spec 029 added five.
+
+**Why it was skipped rather than done:** T027's own text says *"Framework-wide change, deliberately
+out of scope here"*. It is a change to the consistency checker, not to the profile spec 029 shipped.
+
+**How to retire it:** extend the existing count-marker mechanism to those files, following the
+pattern already proven in `README.md`. Small and mechanical once someone decides to own it.
+
+**Risk while open:** documentation can state a count that no longer matches disk. Same class of
+defect as spec 034's manifest, one layer up: a record asserting a state nothing verifies.

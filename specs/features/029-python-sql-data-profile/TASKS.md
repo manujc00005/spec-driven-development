@@ -81,11 +81,20 @@
 
 ## Deferred (not this feature)
 
-- [ ] T025 - Writing install verification: `./install.sh --profile python-sql-data` (without
+- [x] T025 - **Verified 2026-08-23.** macOS: real install into a temp central dir, exit 0,
+  all five skills present and byte-identical to the repo, profile recorded in the manifest,
+  re-run byte-identical. Windows: covered by CI, not by a spot-check — `scripts/install.test.ps1`
+  installs `-Profile python-sql-data` on the `windows-latest` runner on every PR (spec 034 D005).
+  Original text: Writing install verification: `./install.sh --profile python-sql-data` (without
   `--dry-run`) on macOS, and `install.ps1 -Profile python-sql-data` on Windows. Covers: OQ-1.
   **The Windows half requires a human on a Windows machine; not closable from this session.**
 - [ ] T026 - Calibration pass: run all five skills against a real Python + SQL diff and adjust the
+  **DEFERRED at close (2026-08-23) → DEBT-004.** Calibration needs a real Python + SQL
+  diff from live work; no acceptance criterion depends on it. Tracked in
+  `docs/KNOWN_DEBT.md` rather than holding a conformant spec open indefinitely.
   checklists from what they actually caught and missed. Covers: OQ-2.
 - [ ] T027 - Guard the hardcoded skill counts in `adapters/` and `docs/` that
+  **SKIPPED at close (2026-08-23) → DEBT-005.** Its own text says "Framework-wide change,
+  deliberately out of scope here". Skipped for this spec, not dropped: tracked as debt.
   `check-consistency.sh` does not cover today, or record them in `docs/KNOWN_DEBT.md`. Covers:
   D009 consequences. **Framework-wide change, deliberately out of scope here.**
