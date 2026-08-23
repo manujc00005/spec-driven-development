@@ -429,7 +429,7 @@ again one paragraph later. Recorded rather than quietly fixed, because twice is 
 gate is load-bearing rather than ceremonial. Spec 031 may cite this run, and should cite the
 rejection as well as the outcome.
 
-#### T023 provenance break - open, and it blocks spec 031's close
+#### T023 provenance break - resolved 2026-08-23: tolerated, with the limitation named
 
 The worktree this run executed in, `/Users/manu/Proyectos/sdd-t023`, **was destroyed before the
 third conformance round could read it**, and its branch no longer exists. The gate refused to
@@ -451,9 +451,32 @@ isolation condition passed when the run started and is no longer demonstrable fr
 
 Does that break disqualify this run as T023's evidence?
 
-**This blocks spec 031's close until answered.** It is deliberately not resolved here. Re-running
-gates until one passes would answer it by attrition rather than by judgement, and a calibration
-spec that does that is worth less than no calibration at all.
+**Answered by the maintainer on 2026-08-23: the break does not disqualify the run.** The reasoning
+is recorded here rather than left as a bare verdict, because a tolerance nobody has to justify is
+the same defect as a claim nobody has to verify.
+
+**Why it holds.** T023 exists to supply evidence not contaminated by a fixture the reviewing agent
+designed. That is the flaw it guards, and the run satisfies it completely: spec 033 is a real
+feature, nothing was seeded, and the findings it produced are of a class a fixture cannot generate -
+the largest being an agent shipping a verification feature that verified nothing, which is an error
+of reasoning rather than a planted defect. What the destroyed worktree cost is the ability to
+re-audit the *execution environment*, which is not the property T023 was written to establish. The
+content survives, was reconstructed with git rather than from memory, and was approved by a
+conformance gate that read the actual files rather than a report about them.
+
+**The limitation, stated rather than assumed.** This run's execution environment cannot be
+re-audited. Anyone re-deriving these findings must do so from the recorded content, not by replaying
+the run. That is a real reduction in assurance and it is the price of the tolerance.
+
+**Why not the alternatives.** Re-running would spend another full multi-round cycle to establish
+what this run already established, and the conformance gate itself warned that answering by
+re-running is settlement by attrition. Carrying it as open debt would have been worse than either:
+it looks prudent while assigning the question to nobody.
+
+**One thing worth saying plainly:** this run is *better* evidence than a clean pass would have been.
+A clean pass would have shown the loop works on real work. This showed the loop's final gate
+catching an agent publishing unverified verification, across six rounds - which is the stronger
+claim, and the one 031 actually needed.
 
 **Outstanding merge.** `main` carries a version of this feature predating the second conformance
 round: CONF-008 through CONF-012 were not in what was merged and exist only on

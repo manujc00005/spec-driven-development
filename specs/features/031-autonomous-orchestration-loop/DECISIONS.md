@@ -445,3 +445,38 @@ recoverable.
 AC-007, AC-008, AC-010 and AC-011 will close as PARTIAL with the gap named in the matrix — an
 explicit, auditable debt rather than an unstated one. Risk accepted: those five clauses ship
 unexercised.
+
+### D020 - The T023 provenance break is tolerated, and the limitation is recorded with it
+
+**Date:** 2026-08-23
+
+**Status:** Accepted
+
+**Context:**
+
+T023's run executed in a worktree that was destroyed before the third conformance round could read
+it, leaving its branch orphaned. The conformance gate refused to certify from a prose report and
+raised the question as CONF-014, addressed to the maintainer and blocking this spec's close. This
+spec had meanwhile been marked `Done`, so the repository asserted two incompatible things about it.
+
+**Decision:**
+
+The break does not disqualify the run as T023 evidence. CONF-014 is closed.
+
+**Reasoning:**
+
+T023 guards one flaw: evidence contaminated by a fixture the reviewing agent designed. The run does
+not have it - spec 033 is a real feature, nothing was seeded, and its findings are of a kind no
+fixture produces. The destroyed worktree cost re-auditability of the execution environment, which is
+a different property. The content was reconstructed with git rather than recalled, and approved by a
+gate that read the files.
+
+Re-running was rejected as settlement by attrition, which the gate itself warned against. Carrying
+it as open debt was rejected as the worst option: prudent-looking, and assigned to nobody.
+
+**Consequences:**
+
+The assurance this run offers is bounded: its execution environment cannot be re-audited, so the
+findings must be re-derived from the recorded content rather than by replay. That limitation is
+written into the T023 section rather than left implicit. This spec's `Done` status is now consistent
+with its own evidence record.
