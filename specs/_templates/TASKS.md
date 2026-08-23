@@ -15,6 +15,22 @@
      AC-005. Verify: the DB maintainer confirms the migrated totals match last month's invoice
      totals by hand. -->
 
+<!-- CLOSING A TASK THAT WAS NOT PERFORMED. `[x]` means "closed out of this spec", not always
+     "the work was done". A spec cannot reach Done while its list still shows open items, but
+     silently ticking something nobody did is worse than leaving it open. So a task closed
+     without being performed keeps the tick AND states how it was closed, on the line below:
+
+       - [x] T007 - Windows runtime spot-check.
+         **DEFERRED (2026-08-23) -> DEBT-007.** <why it did not block, and where it now lives>
+
+     Three markers, and they are not interchangeable:
+       DEFERRED - still worth doing; tracked in docs/KNOWN_DEBT.md with an id.
+       SKIPPED  - deliberately not doing it; the reason must outlive the decision.
+       RESOLVED - the work happened, just not through this task (say where).
+
+     DEFERRED and SKIPPED must carry a DEBT id. RESOLVED must not - nothing is pending.
+     A tick with no marker means the task was performed, which is the ordinary case. -->
+
 ## Phase 1: Preparation
 
 - [ ] T001 - Task description. Covers: AC-XXX. Verify: <how anyone checks this is done>.
