@@ -355,8 +355,8 @@ reviewed it.** Run on 2026-08-22 against spec 033 (`task-verification-criterion`
 in this repository, with no seeded defects, planned and executed through the autonomous loop.
 
 - **Worktree:** `/Users/manu/Proyectos/sdd-t023`, branch `feat/033-task-verification-criterion`,
-  baseline `4f3542d`. Entry gate: all six conditions PASS. Budget `max(25, 6 × 7) = 42`.
-- **Delegations used: 3** *(superseded: the run reached 15; see the correction below)* — one worker for T001, one domain review, one worker for the finding task.
+  baseline `4f3542d`. Entry gate: all six conditions PASS **at entry** - see the provenance break below. Budget `max(25, 6 × 7) = 42`.
+- **Delegations used: 3** *(superseded: the run reached 14; see the correction below)* — one worker for T001, one domain review, one worker for the finding task.
   No cap approached.
 
 **What the circuit did.** T001 implemented, reviewed, REJECTed with `DOM-001`; the finding became
@@ -382,7 +382,7 @@ exhibited it twice in three delegations.
 
 **Final rule, validated against the corpus rather than by argument:** the detection unit is the task
 item — bullet plus continuation lines — and the clause is the one following `Covers:`. Implemented as
-a probe and run over all 35 existing `TASKS.md` files: 35 classified legacy, 0 false adoptions, which
+a probe and run over all 35 existing `TASKS.md` files: 34 legacy and 1 adopted - the adopted file being `specs/features/033-task-verification-criterion/TASKS.md`, which adopted the format during this run - with 0 false adoptions among the 34, which
 is AC-003's backward-compatibility requirement met empirically.
 
 **Corrected 2026-08-22 after final conformance raised CONF-003.** The paragraph that stood here
@@ -412,8 +412,11 @@ this is an agent shipping a verification feature without verifying anything, and
 noticing. It is the second time in this run that the defect lay in reasoning rather than in code,
 and the third across specs 032 and 033.
 
-**Addressed:** 033's own tasks now carry real criteria, `T009` was closed by mechanically checking
-its criterion against the run record rather than by a worker's word, and this feature's
+**Addressed:** 033's own tasks now carry real criteria, `T009` was closed by checking its criterion against the run record - which the fourth
+conformance round judged **partly circular**, since the criterion targeted the artifact that closing
+the task produces. It was replaced by attempt **A-016**: `T007` re-closed on its own clause,
+`check-consistency.sh` exit 0 plus a byte-identical `git status --porcelain`, which targets tooling
+the checker does not author. That is the observation AC-004 asks for, and the round accepted it, and this feature's
 `ORCHESTRATION.md` was rebuilt from the delegation history after it was found frozen at
 `T001 / PLANNED / 0 delegations`.
 
@@ -423,3 +426,29 @@ spoke was itself the CONF-010 finding - the same premature claim CONF-003 had ju
 again one paragraph later. Recorded rather than quietly fixed, because twice is a pattern. That is a stronger result than a clean first pass would have been: it shows the
 gate is load-bearing rather than ceremonial. Spec 031 may cite this run, and should cite the
 rejection as well as the outcome.
+
+#### T023 provenance break - open, and it blocks spec 031's close
+
+The worktree this run executed in, `/Users/manu/Proyectos/sdd-t023`, **was destroyed before the
+third conformance round could read it**, and its branch no longer exists. The gate refused to
+certify from a prose report and was right to.
+
+Established with git rather than from memory:
+
+- The run's commits survive as objects, reachable from no branch.
+- The branch was merged. `main` carries the feature and is *ahead* of the run's last commit on
+  `specs/_templates/TASKS.md`.
+- **The second conformance round's fixes were not in what merged.** CONF-008 through CONF-012 lived
+  only in the orphaned commit; they were recovered by cherry-pick onto `review/033-conformance`,
+  which is the tree the fourth round finally certified the content of.
+
+**The open question, addressed to the maintainer and not to a skill:** T023 asks for evidence from a
+real, non-seeded feature. The *content* of this run is intact, re-readable and now
+conformance-approved. The *provenance chain* has a documented break in the middle: the entry gate's
+isolation condition passed when the run started and is no longer demonstrable from the filesystem.
+
+Does that break disqualify this run as T023's evidence?
+
+**This blocks spec 031's close until answered.** It is deliberately not resolved here. Re-running
+gates until one passes would answer it by attrition rather than by judgement, and a calibration
+spec that does that is worth less than no calibration at all.
