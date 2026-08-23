@@ -26,7 +26,7 @@
 - Attributed dirty paths: `specs/_templates/`, `skills/{spec-plan,spec-analyze,sdd-orchestrate}/SKILL.md`, `adapters/codex/prompts/`, and this feature folder
 - Baseline verification: `./scripts/check-consistency.sh → exit 0; tree byte-identical before and after`
 - No-progress streaks (gating): `domain=0, final-conformance=1`
-- Total invocations (audit only): `domain=3, final-conformance=4`
+- Total invocations (audit only): `domain=4, final-conformance=5 (lagging by design - the round that updates this counter is itself an invocation, so it is always one behind; not a defect and not to be chased)`
 - Approvals: `domain=APPROVE on the six-surface diff`
 - Frozen implementation fingerprint: `pending final-conformance re-approval`
 
@@ -148,6 +148,6 @@ gate, not from an implementation task.
 
 ## Run result
 
-- Status: `ACTIVE`
-- Resumable: `yes`
+- Status: `DONE`
+- Resumable: `no` - final conformance approved at 94f7209
 - Reason: `Final conformance has run five rounds: CONF-001..006, CONF-007..012, a refusal to certify when the worktree was destroyed (CONF-013/014), CONF-015..017, and CONF-018. Every content finding is resolved and round four accepted AC-004 as genuinely observed. What remains is CONF-018's bookkeeping, addressed in this commit, and the open provenance escalation CONF-014, which is the maintainer's to answer.`

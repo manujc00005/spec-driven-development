@@ -420,9 +420,8 @@ the checker does not author. That is the observation AC-004 asks for, and the ro
 `ORCHESTRATION.md` was rebuilt from the delegation history after it was found frozen at
 `T001 / PLANNED / 0 delegations`.
 
-**Status: pending. Final conformance has rejected four times** (CONF-001..006; CONF-007..012; a refusal to certify
-anything when the worktree was destroyed, CONF-013/014; and CONF-015..017), with a fifth round
-outstanding on CONF-018. Round four accepted AC-004 as genuinely observed and found the feature
+**Status: pending. Final conformance has rejected four times and then approved** (CONF-001..006; CONF-007..012; a refusal to certify
+anything when the worktree was destroyed, CONF-013/014; and CONF-015..017), The sixth round approved commit `94f7209` with no findings. Round four accepted AC-004 as genuinely observed and found the feature
 conformant across all six contract surfaces; every rejection since has been about the evidence
 record rather than the code. Claiming DONE here before the gate
 spoke was itself the CONF-010 finding - the same premature claim CONF-003 had just corrected, made
