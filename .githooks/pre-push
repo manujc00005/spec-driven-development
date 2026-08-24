@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+#
+# pre-push — keeps `main` green by running the fast half of the gate before the push
+# instead of after it.
+#
+# Why this exists: on 2026-08-23 a skill was committed and pushed with nine contract
+# errors in its own SKILL.md. CI caught it — but CI runs on push-to-main, so the
+# baseline was already red on the default branch. While it was red, no `--autonomous`
+# orchestration run could start anywhere in the repo (entry-gate condition 6 of
+# /sdd-orchestrate). The gate existed and was documented; nobody ran it.
+#
+# What it runs, and why only this: the checks below cost ~6 seconds total, which is
+# the point — a gate slow enough to be annoying gets bypassed with --no-verify every
+# time, and then it protects nothing. check-consistency.sh alone (0.2s) catches the
+# exact class of break that motivated this hook.
+#
+# Deliberately NOT here, left to CI where wall-clock does not matter:
+#   check-consistency.test.sh  (~86s — the checker's own mutation suite)
+#   install.test.sh / update.test.sh  (minutes — full installer runs)
+#
+# Enable once per clone (git does not pick hooks up on its own):
+#
+#     git config core.hooksPath .githooks
+#
+# Bypass deliberately with `git push --no-verify`.
+set -uo pipefail
+
+cd "$(git rev-parse --show-toplevel)" || exit 1
+
+fail() { printf '\n\033[31m✗ pre-push blocked:\033[0m %s\n\n' "$1"; exit 1; }
+
+printf '→ check-consistency… '
+if out=$(bash scripts/check-consistency.sh 2>&1); then
+  printf 'ok\n'
+else
+  printf '\n%s\n' "$out"
+  fail "profiles.json, disk artifacts, settings wiring or README counts are out of sync.
+  Most drifts self-heal with:  bash scripts/check-consistency.sh --fix"
+fi
+
+for suite in mindset-hook graphify; do
+  script="scripts/${suite}.test.sh"
+  [ -f "$script" ] || continue
+  printf '→ %s.test… ' "$suite"
+  if out=$(bash "$script" 2>&1); then
+    printf 'ok\n'
+  else
+    printf '\n%s\n' "$out"
+    fail "$script failed."
+  fi
+done
+
+printf '\033[32m✓ fast gate green — pushing.\033[0m CI still runs the full suite.\n'

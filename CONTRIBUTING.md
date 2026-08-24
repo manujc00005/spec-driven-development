@@ -33,6 +33,32 @@ Every non-trivial change carries a spec.
 
 ## The merge gate
 
+### Enable the pre-push hook first
+
+Git does not pick up shipped hooks on its own. Once per clone:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+`.githooks/pre-push` runs the fast half of the gate — `check-consistency.sh` plus the two quick
+test suites, **about six seconds** — and refuses the push if any of it is red. The slow suites
+(`check-consistency.test.sh` at ~86s, the installer tests at minutes) stay in CI on purpose: a
+gate slow enough to be annoying gets bypassed with `--no-verify` every time, and then it protects
+nothing.
+
+This is not hypothetical hygiene. A skill once shipped with nine contract errors in its own
+`SKILL.md`; CI caught it, but CI runs on push-to-`main`, so the baseline was already red on the
+default branch — and while `check-consistency.sh` is red, **no `--autonomous` orchestration run
+can start anywhere in this repo** (entry-gate condition 6 of `/sdd-orchestrate`). The gate was
+documented right here and simply not run.
+
+**Adding or editing a skill is the highest-risk change in this repo** for exactly that reason: a
+`SKILL.md` must satisfy the contract schema (required keys, `category` enum, flow-list `outputs`,
+the 400-character description cap), and none of that is visible by reading the file.
+
+### The full gate
+
 All of these must pass locally before you open a PR (CI runs them too):
 
 ```bash
