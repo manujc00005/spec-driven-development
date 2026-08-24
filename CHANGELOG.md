@@ -11,6 +11,7 @@ under `specs/features/` — the framework is developed with its own workflow.
 
 ## [Unreleased]
 
+Spec 037 · Workspace init — the map alone was never enough; state now generates itself.
 Spec 036 · Mindset reminder hook — "always in effect" stops depending on the model remembering.
 Spec 034 · Install manifest coherence — the manifest stops claiming a freshness it never verified.
 Spec 031 · Autonomous orchestration — the loop closes without a human in the middle.
@@ -63,6 +64,39 @@ Spec 025 · Workspace SDD — the first coverage of what happens *between* proje
 Spec 024 · Delivery-operations profile — the first coverage of what happens after merge.
 
 ### Added
+
+- **`/sdd-workspace-init` — end-to-end workspace setup** (spec 037). Takes a folder of related
+  projects from nothing to fully wired in seven phases: detect and confirm the project list,
+  refresh each project's Graphify graph at zero token cost, write the `.sdd-workspace/` map
+  (delegating to `/sdd-workspace-onboarding`, which stays usable standalone), install the state
+  machinery, link every child project back to the workspace layer, and verify. Copy-if-absent
+  throughout: re-running fills gaps and never overwrites local adaptation.
+
+  Ships three deterministic scripts as templates, extracted from a six-project workspace where
+  they were built and field-tested rather than designed on paper:
+
+  - `board.mjs` — generates `BOARD.md` from spec headers. Parses the five status formats and two
+    task conventions found in real repositories, so adoption requires no migration. Warns on
+    unblocked WIP > 1, closed-with-open-tasks, `Merged` with nothing pending, and unparseable
+    status.
+  - `drift.mjs` — checks whether governance documents still match the files they cite.
+    Declarative: contracts are workspace-specific, so it ships as a skeleton with a worked
+    example and exits 0 when none are declared.
+  - `link-workspace.mjs` — writes an idempotent delimited block into each child project's
+    instruction file. This closes the gap that mapping alone leaves: the map lives at the
+    workspace root, while most sessions open inside a repository and never see it.
+
+  Also ships `/sdd-status` and `/sdd-workspace-link` as workspace-local skills, a working guide,
+  and the `SessionStart` hook wiring.
+
+- **`Merged` / `Live` as distinct closing states.** `Merged` means the code is in `main` with
+  zero unchecked tasks; `Live` means the behaviour was verified in production, with a date and
+  pasted evidence. Conflating the two is how features accumulate as merged-but-never-activated.
+
+- **Cross-project scoping rule.** A workspace-level parent spec is warranted only when a change
+  moves a shared contract or requires ordering between repositories; otherwise the work is
+  sibling specs linked by `Blocked-by:`. Independent repositories admit no atomic merge, so a
+  single spec spanning all of them can never fully close.
 
 - **`scope-keeper-reminder` hook (spec 036).** The mindset skills are declared *"always in effect"*,
   but a skill is **model-invoked**: its rules only enter context if the assistant chooses to load
