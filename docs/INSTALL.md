@@ -374,3 +374,37 @@ This workflow includes **Graphify-aware skills** (`/context-manager`, `/graphify
 1. Run `scripts/setup-graphify.sh --project-dir <your project>` from this repo's checkout (add `--yes` for non-interactive install).
 2. The skills and hook automatically detect `.graphify/GRAPH_REPORT.md` and use it for impact analysis and graph-first context (fewer tokens per plan/review).
 3. Freshness is automatic: the `graphify-stale-reminder` hook (wired on `SessionStart` by both settings templates) refreshes the graph in a detached background run when it is missing or >7 days stale and the CLI is installed. Set `SDD_GRAPHIFY_AUTO=0` to disable auto-refresh (reminder-only).
+
+## Carrying your personal config to a new machine
+
+`install.sh` restores the framework. The **personal layer** — your `CLAUDE.md`, `settings.json`,
+custom agents and per-project memory — travels separately, because this repository is public.
+
+**On the old machine:**
+
+```bash
+bash scripts/export-personal-config.sh --dry-run   # see what would go, and what is refused
+bash scripts/export-personal-config.sh
+```
+
+It writes `~/.claude-config/personal/`. Commit and push that repository — **it must be private**:
+memory files routinely name clients, hosts and infrastructure. The export aborts if it finds a
+credential-shaped value, naming file and line; `--allow-suspicious` proceeds once you have looked.
+`settings.local.json` is never exported, under any name.
+
+**On the new machine:** nothing extra. `install.sh` imports the payload automatically when
+`<central-dir>/personal/` is present. `--no-personal` skips it.
+
+**The import never overwrites.** Per file:
+
+| Situation | What happens |
+|---|---|
+| The file is missing | Copied |
+| The file exists, identical | Skipped |
+| The file exists, different | **Left untouched.** The incoming version lands beside it as `<name>.incoming`, and the run reports a conflict for you to resolve |
+
+Two additive exceptions: a `MEMORY.md` index gains only the lines it lacks, under a dated marker;
+`settings.json` gains only top-level keys it lacks, and a key you already have always wins.
+
+Windows: `.\scripts\personal-config.ps1 -Mode Export|Import`, same semantics.
+

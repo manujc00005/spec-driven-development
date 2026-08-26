@@ -95,12 +95,19 @@
   fast gate (well under the ~2s bar). `install.test.sh` re-run: 29 passed, 0 failed — no
   regression on the no-payload path.
 
-- [ ] T015 - `/security-review` on the diff: leak vectors, `settings.local.json` exclusion, file
+- [x] T015 - `/security-review` on the diff: leak vectors, `settings.local.json` exclusion, file
   permissions on restored files. Covers: AC-002.
   Verify: the review verdict is Pass and its findings are recorded, or every finding is fixed and
   re-reviewed. No finding is closed by assertion.
+  **Pass, 2026-08-24.** Vectors checked by execution, not by reading: (1) path traversal from a
+  crafted payload — not reachable, `find` returns resolved real paths so `..` never appears in a
+  relative path; (2) symlink in the payload pointing outside — `find -type f` skips it, verified
+  with a link to a file outside the tree that was not copied; (3) `settings.local.json` refused on
+  both sides; (4) restored `settings.json` and memory are `0600`, asserted in the suite.
+  *(My first traversal test was invalid — it asserted on a file the setup itself had created. Redone
+  correctly before recording this verdict.)*
 
-- [ ] T016 - Document in `README.md` and `docs/INSTALL.md`: export/import usage, the
+- [x] T016 - Document in `README.md` and `docs/INSTALL.md`: export/import usage, the
   never-overwrite contract, and that the payload repository **must be private**. CHANGELOG entry.
   Covers: AC-009.
   Verify: the owner reads the INSTALL section and confirms it states the private-repo requirement

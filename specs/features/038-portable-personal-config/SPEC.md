@@ -2,7 +2,14 @@
 
 ## Status
 
-Ready
+Merged
+
+> `Merged` 2026-08-24 — 16/16 tasks, all gates green: 33 new tests, `install.test.sh` 29 passed
+> (no regression on the no-payload path), `check-consistency.sh` exit 0, PowerShell parity verified
+> by execution on this machine (`copied: 0 identical: 4` matching bash on the same payload).
+>
+> **Not `Live`:** nobody has yet run export on one machine and import on another. That is the
+> company Windows box, and it is the only evidence that promotes this.
 
 ## Problem
 

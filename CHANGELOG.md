@@ -11,6 +11,7 @@ under `specs/features/` — the framework is developed with its own workflow.
 
 ## [Unreleased]
 
+Spec 038 · Portable personal config — the framework restored; the person did not.
 Spec 037 · Workspace init — the map alone was never enough; state now generates itself.
 Spec 036 · Mindset reminder hook — "always in effect" stops depending on the model remembering.
 Spec 034 · Install manifest coherence — the manifest stops claiming a freshness it never verified.
