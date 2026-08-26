@@ -71,10 +71,18 @@
   detector false-positive fixture, a disjoint-only `MEMORY.md`). Covers: AC-002, AC-005, AC-006.
   Verify: each function's cases appear as named PASS lines in the suite output.
 
-- [ ] T013 - E2E on this machine: export the real config, import into a scratch `HOME`, diff
+- [x] T013 - E2E on this machine: export the real config, import into a scratch `HOME`, diff
   against source. Covers: AC-001, AC-003.
   Verify: `diff -r` between the scratch `HOME` slice and the source reports no differences for the
   manifest categories.
+  **Done 2026-08-24 — and it found two real defects that fixtures had not.** The first dry-run on
+  the real config aborted with 14 files. Analysed one by one: 13 were prose (an agent that reviews
+  security says "secrets" constantly; `~354 tokens` is a token count) and one was genuine
+  (`twenty-crm-admin-access.md` names a VPS IP). Two fixes followed: `.bak-*` and scratch files are
+  now excluded from the manifest (7 stale agent backups were being exported), and the detector
+  matches credential **values** — assignment-shaped, `Bearer <long>`, PEM, known prefixes — rather
+  than the words. Bare 40-char hex was dropped after it flagged git commit SHAs, which live in
+  `installed_plugins.json` by design. Result: **78 files, 7 refused, 0 suspicious.**
 
 ## Phase 4: Review
 

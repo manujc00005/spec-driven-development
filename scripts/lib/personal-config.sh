@@ -36,11 +36,27 @@ PERSONAL_MANIFEST=(
 # constitutionally for its own writes; FR-002 extends it to the payload.
 PERSONAL_NEVER=("settings.local.json")
 
+# Backup and scratch files are not config. Exporting them carried seven stale
+# `.bak-<timestamp>` agent copies into the payload on the first real dry-run —
+# noise that also tripled the credential scan's output.
+PERSONAL_EXCLUDE_RE='\.(bak|orig|rej|swp|tmp)$|\.bak-[0-9-]+$|(^|/)\.DS_Store$|\.incoming$'
+
 # --- T003: credential detector ----------------------------------------------
 #
-# Best-effort and deliberately noisy: a false positive costs one --allow-suspicious,
-# a false negative costs a credential in a git repo. Refuses on suspicion.
-PERSONAL_SECRET_RE='(token|secret|api[-_]?key|password|passwd|Bearer [A-Za-z0-9._-]{8,}|-----BEGIN [A-Z ]*PRIVATE KEY-----)'
+# Best-effort, and its limits are stated below rather than assumed.
+# Refuses on suspicion: a false negative costs a credential in a git repo.
+# Matches credential VALUES, not credential words. The first real dry-run flagged
+# 14 files, and nearly all were prose: an agent that reviews security says
+# "secrets" constantly, and "~354 tokens" is a token count. A detector that always
+# fires is a detector nobody reads - everyone just passes --allow-suspicious, and
+# then it protects nothing.
+#
+# Limit worth stating: this finds assigned secrets and high-entropy strings. It
+# does NOT judge prose that merely *describes* where a secret lives, and it no
+# longer flags bare 40-char hex (git commit SHAs live in installed_plugins.json by
+# design). That is why
+# the payload repository must be private - the scan is a net, not a guarantee.
+PERSONAL_SECRET_RE="((password|passwd|secret|api[-_]?key|apikey|access[-_]?token|auth[-_]?token|client[-_]?secret|private[-_]?key)[[:punct:]]?[[:space:]]*[:=][[:space:]]*[[:punct:]]?[A-Za-z0-9._/+-]{8,}|Bearer[[:space:]]+[A-Za-z0-9._-]{20,}|-----BEGIN[A-Z ]*PRIVATE KEY-----|(sk|pk|ghp|gho|xox[baprs])-[A-Za-z0-9_-]{16,})"
 
 # scan_for_secrets <file> -> prints "<file>:<lineno>:<line>" for each hit, rc 1 if any
 scan_for_secrets() {

@@ -63,6 +63,8 @@ payload_path() {
 is_never() {
   local base; base="$(basename "$1")"
   for n in "${PERSONAL_NEVER[@]}"; do [ "$base" = "$n" ] && return 0; done
+  # Backups and scratch files are not config.
+  printf '%s' "$1" | grep -qE "$PERSONAL_EXCLUDE_RE" && return 0
   return 1
 }
 
