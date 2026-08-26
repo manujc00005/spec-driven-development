@@ -53,6 +53,8 @@
 #   --dry-run              Preview actions without writing anything
 #   --skip-link            Do not attempt any ~/.claude linking
 #   --link-user-claude     Opt-in: link ~/.claude/skills, hooks, CLAUDE.md to the central dir, and copy agents per-file into ~/.claude/agents
+#   --no-personal          Skip restoring the personal layer from <central-dir>/personal/
+#                          (spec 038). Without a payload present this is a no-op anyway.
 #   -h, --help             Show this help
 #
 # Note on the central directory default: this repo's Windows install target is
@@ -71,6 +73,7 @@ FORCE=0
 DRY_RUN=0
 SKIP_LINK=0
 LINK_USER_CLAUDE=0
+NO_PERSONAL=0
 PROFILE_ARGS=()
 REMOVE_PROFILE_ARGS=()
 
@@ -92,6 +95,7 @@ while [ $# -gt 0 ]; do
     --dry-run) DRY_RUN=1; shift ;;
     --skip-link) SKIP_LINK=1; shift ;;
     --link-user-claude) LINK_USER_CLAUDE=1; shift ;;
+    --no-personal) NO_PERSONAL=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown option: $1"; usage; exit 1 ;;
   esac
@@ -1119,6 +1123,20 @@ if [ "$DRY_RUN" -eq 1 ]; then
   log "[dry-run] would write install manifest $CENTRAL_DIR/.sdd-install.json"
 else
   write_install_manifest
+fi
+
+# --- Personal layer (spec 038) ---------------------------------------------
+# Restores CLAUDE.md, settings.json, agents and memory from <central-dir>/personal/.
+# ADDITIVE ONLY: never overwrites an existing file. Absent payload -> silent no-op,
+# so a fresh clone installs exactly as it did before this existed.
+if [ "$NO_PERSONAL" -eq 0 ] && [ -d "$CENTRAL_DIR/personal" ]; then
+  if [ "$DRY_RUN" -eq 1 ]; then
+    log "[dry-run] would import the personal layer from $CENTRAL_DIR/personal"
+  else
+    log "Restoring personal layer from $CENTRAL_DIR/personal ..."
+    CENTRAL_DIR="$CENTRAL_DIR" CLAUDE_HOME="$CLAUDE_HOME" \
+      bash "$REPO_ROOT/scripts/import-personal-config.sh" || true
+  fi
 fi
 
 log "Done."

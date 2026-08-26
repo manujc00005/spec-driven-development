@@ -38,7 +38,7 @@ else
   Most drifts self-heal with:  bash scripts/check-consistency.sh --fix"
 fi
 
-for suite in mindset-hook graphify; do
+for suite in mindset-hook graphify personal-config; do
   script="scripts/${suite}.test.sh"
   [ -f "$script" ] || continue
   printf '→ %s.test… ' "$suite"

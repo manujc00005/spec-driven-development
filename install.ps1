@@ -109,6 +109,7 @@ param(
     [switch]$DryRun,
     [switch]$SkipLink,
     [switch]$LinkUserClaude,
+    [switch]$NoPersonal,
     [string]$ClaudeHome = "$env:USERPROFILE\.claude"
 )
 
@@ -1055,6 +1056,19 @@ if ($DryRun) {
     Write-Action "[dry-run] would write install manifest $(Join-Path $CentralDir '.sdd-install.json')"
 } else {
     Write-InstallManifest
+}
+
+# --- Personal layer (spec 038) ---------------------------------------------
+# Restores CLAUDE.md, settings.json, agents and memory from <central-dir>\personal\.
+# ADDITIVE ONLY: never overwrites an existing file. Absent payload -> silent no-op.
+if (-not $NoPersonal -and (Test-Path -LiteralPath (Join-Path $CentralDir 'personal'))) {
+    if ($DryRun) {
+        Write-Action "[dry-run] would import the personal layer from $CentralDir\personal"
+    } else {
+        Write-Action "Restoring personal layer from $CentralDir\personal ..."
+        & (Join-Path $PSScriptRoot 'scripts\personal-config.ps1') -Mode Import `
+            -CentralDir $CentralDir -ClaudeHome $ClaudeHome
+    }
 }
 
 Write-Action "Done."
