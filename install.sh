@@ -904,6 +904,42 @@ log "scripts/setup-graphify.sh --project-dir <path> — it installs the CLI afte
 log "confirmation, generates .graphify/, and scaffolds the curated docs."
 echo ""
 
+# Spec 039: links $CLAUDE_HOME/CLAUDE.md to the central one. Returns 0 when the
+# question is SETTLED (linked now, already correct, or deliberately left alone)
+# and 1 ONLY when the central CLAUDE.md does not exist yet - the one case the
+# caller can fix by retrying after the personal import.
+#
+# No symlink/hardlink/copy ladder here, unlike install.ps1: `ln -s` needs no
+# privilege on macOS/Linux, so there is no failure to fall back from (D004).
+link_central_claude_md() {
+  local claude_md_target="$CENTRAL_DIR/CLAUDE.md"
+  local claude_md_link="$CLAUDE_HOME/CLAUDE.md"
+  local current
+
+  [ -f "$claude_md_target" ] || return 1
+
+  if [ -L "$claude_md_link" ]; then
+    current="$(readlink "$claude_md_link")"
+    if [ "$current" = "$claude_md_target" ]; then
+      log "CLAUDE.md already correctly linked -> $claude_md_target (no-op)"
+    else
+      skip "$claude_md_link already exists and is not linked to $claude_md_target  - resolve manually"
+    fi
+  elif [ -e "$claude_md_link" ]; then
+    skip "$claude_md_link exists as a real file  - resolve manually; this script will not touch an existing real CLAUDE.md without you reviewing it first"
+  elif [ "$DRY_RUN" -eq 1 ]; then
+    log "[dry-run] would create file symlink $claude_md_link -> $claude_md_target"
+  else
+    ln -s "$claude_md_target" "$claude_md_link"
+    log "CLAUDE.md linked -> $claude_md_target"
+  fi
+  return 0
+}
+
+# Spec 039 BUG-1: raised when the link could not be made because the central
+# CLAUDE.md did not exist yet, and the personal import may still create it.
+CLAUDE_MD_PENDING=0
+
 if [ "$SKIP_LINK" -eq 1 ]; then
   log "Skipping ~/.claude linking (--skip-link)."
 elif [ "$LINK_USER_CLAUDE" -ne 1 ]; then
@@ -930,27 +966,12 @@ else
     copy_file_safely "$src_agent" "$CLAUDE_HOME/agents/$agent_name.md" "~/.claude/agents/$agent_name.md" "$CLAUDE_HOME/agents/$agent_name.md.bak-$TIMESTAMP"
   done
 
-  claude_md_target="$CENTRAL_DIR/CLAUDE.md"
-  claude_md_link="$CLAUDE_HOME/CLAUDE.md"
-  if [ ! -f "$claude_md_target" ]; then
-    skip "CLAUDE.md link skipped  - $claude_md_target does not exist yet (this repo only ships CLAUDE.md.example)"
-  elif [ -L "$claude_md_link" ]; then
-    current="$(readlink "$claude_md_link")"
-    if [ "$current" = "$claude_md_target" ]; then
-      log "CLAUDE.md already correctly linked -> $claude_md_target (no-op)"
-    else
-      skip "$claude_md_link already exists and is not linked to $claude_md_target  - resolve manually"
-    fi
-  elif [ -e "$claude_md_link" ]; then
-    skip "$claude_md_link exists as a real file  - resolve manually; this script will not touch an existing real CLAUDE.md without you reviewing it first"
-  else
-    if [ "$DRY_RUN" -eq 1 ]; then
-      log "[dry-run] would create file symlink $claude_md_link -> $claude_md_target"
-    else
-      ln -s "$claude_md_target" "$claude_md_link"
-      log "CLAUDE.md linked -> $claude_md_target"
-    fi
-  fi
+  # Spec 039 BUG-1: on a FIRST install $CENTRAL_DIR/CLAUDE.md does not exist yet
+  # - the personal layer, imported near the end of this script, is what creates
+  # it. A pending result is retried after that import, and the "does not exist
+  # yet" message is deferred to the retry so the transcript never says "skipped"
+  # and then "linked" about the same file (D002).
+  if ! link_central_claude_md; then CLAUDE_MD_PENDING=1; fi
 fi
 
 echo ""
@@ -1136,6 +1157,15 @@ if [ "$NO_PERSONAL" -eq 0 ] && [ -d "$CENTRAL_DIR/personal" ]; then
     log "Restoring personal layer from $CENTRAL_DIR/personal ..."
     CENTRAL_DIR="$CENTRAL_DIR" CLAUDE_HOME="$CLAUDE_HOME" \
       bash "$REPO_ROOT/scripts/import-personal-config.sh" || true
+  fi
+fi
+
+# Spec 039 BUG-1: the personal import above is what creates $CENTRAL_DIR/CLAUDE.md
+# on a first install, so the link attempted earlier must be retried here. Only
+# now, if the file still is not there, is the skip reported (D002).
+if [ "$CLAUDE_MD_PENDING" -eq 1 ]; then
+  if ! link_central_claude_md; then
+    skip "CLAUDE.md link skipped  - $CENTRAL_DIR/CLAUDE.md does not exist yet (this repo only ships CLAUDE.md.example)"
   fi
 fi
 

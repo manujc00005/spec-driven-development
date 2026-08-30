@@ -223,6 +223,143 @@ try {
     } else {
         Fail "AC-012 shipped files differ from the repo" ($mismatched -join ", ")
     }
+
+    # --- Spec 039 AC-001: first install links the CLAUDE.md the personal import
+    # creates. Regression for BUG-1, where the link step ran BEFORE the personal
+    # layer and never retried, leaving ~/.claude/CLAUDE.md missing on every fresh
+    # machine. Hermetic via -ClaudeHome.
+    $c11 = Join-Path $TmpBase "first-central"
+    $h11 = Join-Path $TmpBase "first-home"
+    New-Item -ItemType Directory -Path (Join-Path $c11 "personal\central") -Force | Out-Null
+    Set-Content -Path (Join-Path $c11 "personal\central\CLAUDE.md") -Value "# personal global instructions" -Encoding utf8
+    $firstOut = Invoke-Install @("-CentralDir", $c11, "-ClaudeHome", $h11, "-LinkUserClaude", "-Profile", "python-sql-data")
+    $centralMd = Join-Path $c11 "CLAUDE.md"
+    $homeMd    = Join-Path $h11 "CLAUDE.md"
+    if (Test-Path $centralMd) {
+        Pass "AC-001 the personal import creates <central>\CLAUDE.md on a first install"
+    } else {
+        Fail "AC-001 the personal import did not create <central>\CLAUDE.md" ($firstOut -split "`n" | Select-Object -Last 5)
+    }
+    if (Test-Path $homeMd) {
+        Pass "AC-001 ClaudeHome CLAUDE.md exists after a first install"
+    } else {
+        Fail "AC-001 ClaudeHome CLAUDE.md missing after a first install" ($firstOut -split "`n" | Select-Object -Last 8)
+    }
+    # D002: the deferred message must not appear when the retry succeeded.
+    if ($firstOut -notmatch "CLAUDE\.md link skipped") {
+        Pass "AC-001 no contradictory 'link skipped' line when the retry linked the file"
+    } else {
+        Fail "AC-001 the run reported 'link skipped' for a file it went on to link"
+    }
+
+    # --- Spec 039 AC-009: no payload -> unchanged behaviour. The retry must not
+    # invent a link, and the skip must still be reported exactly once.
+    $c12 = Join-Path $TmpBase "nopayload-central"
+    $h12 = Join-Path $TmpBase "nopayload-home"
+    $noPayloadOut = Invoke-Install @("-CentralDir", $c12, "-ClaudeHome", $h12, "-LinkUserClaude", "-Profile", "python-sql-data")
+    $skipCount = ([regex]::Matches($noPayloadOut, "CLAUDE\.md link skipped")).Count
+    if (-not (Test-Path (Join-Path $h12 "CLAUDE.md")) -and $skipCount -eq 1) {
+        Pass "AC-009 with no personal payload the skip is reported exactly once and no link is invented"
+    } else {
+        Fail "AC-009 payload-free path changed behaviour" "link=$(Test-Path (Join-Path $h12 'CLAUDE.md')) skips=$skipCount"
+    }
+
+    # --- Spec 039 AC-002/AC-003: the -CentralDir default and $DefaultCentralDir
+    # are two literals of the same value (PowerShell cannot read a param()
+    # default from inside param(), D005). Guard them against drift, and pin the
+    # documented Windows default while we are here.
+    $installSrc = Get-Content (Join-Path $RepoRoot "install.ps1") -Raw
+    $paramDefault   = [regex]::Match($installSrc, '\[string\]\$CentralDir\s*=\s*"([^"]+)"').Groups[1].Value
+    $constantValue  = [regex]::Match($installSrc, '\$DefaultCentralDir\s*=\s*"([^"]+)"').Groups[1].Value
+    if ($paramDefault -eq "C:\ProgramData\ClaudeConfig" -and $constantValue -eq $paramDefault) {
+        Pass 'AC-002/AC-003 the PowerShell default is C:\ProgramData\ClaudeConfig and $DefaultCentralDir agrees'
+    } else {
+        Fail "AC-002/AC-003 central-dir default drifted" "param='$paramDefault' constant='$constantValue'"
+    }
+    # The bash default must no longer appear in the refresh-command decision.
+    $reportFn = [regex]::Match($installSrc, '(?s)function Report-UnrefreshedProfiles.*?\n\}').Value
+    if ($reportFn -match '\$CentralDir -ne \$DefaultCentralDir' -and $reportFn -notmatch 'Join-Path \$HOME "\.claude-config"') {
+        Pass "AC-003 Report-UnrefreshedProfiles compares against the PowerShell default, not the bash one"
+    } else {
+        Fail "AC-003 Report-UnrefreshedProfiles still uses the wrong default"
+    }
+
+    # --- Spec 039 AC-004/AC-005/AC-006: consumer discovery. $HOME is redirected
+    # at a temp dir so the case is hermetic and does not depend on this machine
+    # having a real ~/.claude-config. HOME and USERPROFILE are both set so the
+    # child resolves $HOME the same way on Unix and on Windows.
+    function Invoke-WithFakeHome {
+        param([string]$Script, [string[]]$Arguments, [string]$FakeHome)
+        $prevHome = $env:HOME; $prevProfile = $env:USERPROFILE
+        try {
+            $env:HOME = $FakeHome; $env:USERPROFILE = $FakeHome
+            $out = & pwsh -NoProfile -File (Join-Path $RepoRoot $Script) @Arguments 2>&1 | Out-String
+            return @{ Output = $out; ExitCode = $LASTEXITCODE }
+        } finally { $env:HOME = $prevHome; $env:USERPROFILE = $prevProfile }
+    }
+
+    # A real install at the fallback location, and nothing at the Windows default.
+    $fakeHome = Join-Path $TmpBase "fakehome"
+    $fallbackCentral = Join-Path $fakeHome ".claude-config"
+    Invoke-Install @("-CentralDir", $fallbackCentral, "-SkipLink", "-Profile", "python-sql-data") | Out-Null
+    $proj = Join-Path $TmpBase "proj"
+    New-Item -ItemType Directory -Path $proj -Force | Out-Null
+
+    $lp = Invoke-WithFakeHome -Script "link-project.ps1" -Arguments @("-ProjectDir", $proj, "-DryRun") -FakeHome $fakeHome
+    if ($lp.ExitCode -eq 0 -and $lp.Output -match [regex]::Escape($fallbackCentral)) {
+        Pass 'AC-004 link-project.ps1 discovers the $HOME\.claude-config fallback when the default is absent'
+    } else {
+        Fail "AC-004 link-project.ps1 did not discover the fallback" "rc=$($lp.ExitCode) $($lp.Output)"
+    }
+
+    $wh = Invoke-WithFakeHome -Script "scripts/wire-hooks.ps1" -Arguments @("-ProjectDir", $proj, "-DryRun") -FakeHome $fakeHome
+    if ($wh.ExitCode -eq 0 -and $wh.Output -notmatch "settings\.template\.json not found") {
+        Pass 'AC-005 wire-hooks.ps1 discovers the $HOME\.claude-config fallback when the default is absent'
+    } else {
+        Fail "AC-005 wire-hooks.ps1 did not discover the fallback" "rc=$($wh.ExitCode) $($wh.Output)"
+    }
+
+    # Nothing installed anywhere: NOW "run install.ps1 first" is true, and the
+    # warning must name every path it checked.
+    $emptyHome = Join-Path $TmpBase "emptyhome"
+    New-Item -ItemType Directory -Path $emptyHome -Force | Out-Null
+    $lpMissing = Invoke-WithFakeHome -Script "link-project.ps1" -Arguments @("-ProjectDir", $proj, "-DryRun") -FakeHome $emptyHome
+    if ($lpMissing.ExitCode -ne 0 -and
+        $lpMissing.Output -match "C:\\ProgramData\\ClaudeConfig" -and
+        $lpMissing.Output -match [regex]::Escape((Join-Path $emptyHome ".claude-config"))) {
+        Pass "AC-006 link-project.ps1 names every path it checked before giving up"
+    } else {
+        Fail "AC-006 link-project.ps1 warning does not enumerate the checked paths" "rc=$($lpMissing.ExitCode) $($lpMissing.Output)"
+    }
+    # wire-hooks.ps1's not-found branch is unreachable from inside this repo -
+    # $RepoRoot always holds a settings.template.json, which is the last
+    # candidate - so its enumeration is asserted on the source, not at runtime.
+    $wireSrc = Get-Content (Join-Path $RepoRoot "scripts/wire-hooks.ps1") -Raw
+    if ($wireSrc -match 'not found\. Checked: \$\(\(\$templateRoots') {
+        Pass "AC-006 wire-hooks.ps1 names every template path it checked before giving up (structural: branch unreachable from this repo)"
+    } else {
+        Fail "AC-006 wire-hooks.ps1 warning does not enumerate the checked paths"
+    }
+
+    # --- Spec 039 AC-007/AC-008/AC-012: the symlink -> hardlink -> copy ladder.
+    # NOT executable here: on macOS/Linux the symlink rung always succeeds, so no
+    # fallback ever runs. Asserted structurally, and verified for real only by the
+    # manual Windows procedure in the spec's PLAN.md.
+    $ladderFn = [regex]::Match($installSrc, '(?s)function Invoke-ClaudeMdLink.*?\n\}').Value
+    $symIdx  = $ladderFn.IndexOf("ItemType SymbolicLink")
+    $hardIdx = $ladderFn.IndexOf("ItemType HardLink")
+    $copyIdx = $ladderFn.IndexOf("Copy-Item")
+    if ($symIdx -ge 0 -and $hardIdx -gt $symIdx -and $copyIdx -gt $hardIdx) {
+        Pass "AC-007 Invoke-ClaudeMdLink attempts symlink, then hard link, then copy (structural: not runnable off Windows)"
+    } else {
+        Fail "AC-007 the symlink -> hardlink -> copy order is not present" "sym=$symIdx hard=$hardIdx copy=$copyIdx"
+    }
+    if ($ladderFn -match "Fell back to a HARD LINK" -and $ladderFn -match "Fell back to a COPY" -and
+        $ladderFn -match "drift apart" -and $ladderFn -match "NOT kept in sync") {
+        Pass "AC-008/AC-012 each downgrade warns, and neither claims to stay synchronized"
+    } else {
+        Fail "AC-008/AC-012 a downgrade is silent or overstates what it guarantees"
+    }
 }
 finally {
     Remove-Item -Path $TmpBase -Recurse -Force -ErrorAction SilentlyContinue

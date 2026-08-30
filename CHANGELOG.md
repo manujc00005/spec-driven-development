@@ -11,6 +11,7 @@ under `specs/features/` — the framework is developed with its own workflow.
 
 ## [Unreleased]
 
+Spec 039 · Windows first-run install fixes — the global instructions that never loaded.
 Spec 038 · Portable personal config — the framework restored; the person did not.
 Spec 037 · Workspace init — the map alone was never enough; state now generates itself.
 Spec 036 · Mindset reminder hook — "always in effect" stops depending on the model remembering.
@@ -240,6 +241,36 @@ Spec 024 · Delivery-operations profile — the first coverage of what happens a
   with a Dockerfile and a workflow, and stays silent on one with neither.
 
 ### Fixed
+
+- **`~/.claude/CLAUDE.md` was never linked on a first install (spec 039).** Both installers linked
+  it *before* restoring the personal layer — but this repo only ships `CLAUDE.md.example`, and the
+  personal import is what creates the real `<central-dir>/CLAUDE.md`. So a fresh machine printed
+  `CLAUDE.md link skipped`, created the central file seconds later, and never retried: the user's
+  global instructions silently did not load. The link step is now retried after the import, and the
+  "does not exist yet" message is deferred to that retry so it only prints when it is true. Found
+  by a real Windows 11 install, not by the eval suite — every installer test ran with `--skip-link`.
+
+- **`install.ps1` suggested refresh commands with the wrong `-CentralDir` (spec 039).**
+  `Report-UnrefreshedProfiles` decided whether the flag was needed by comparing against the *bash*
+  default (`$HOME/.claude-config`), which is backwards in both directions on Windows: an install at
+  the PowerShell default got a redundant flag, and one at `$HOME\.claude-config` lost the flag
+  exactly where the command is wrong without it. The documented default,
+  `C:\ProgramData\ClaudeConfig`, is unchanged.
+
+- **`link-project.ps1` and `scripts/wire-hooks.ps1` could not find an install away from the Windows
+  default (spec 039).** Both stopped at `C:\ProgramData\ClaudeConfig` and exited 1 with "Run
+  install.ps1 first" — false advice about an installer that had already succeeded at
+  `$HOME\.claude-config`. They now fall back to that location when the default is absent, and when
+  they genuinely find nothing they name every path they checked. An explicitly passed `-CentralDir`
+  is still honoured as given, never silently swapped.
+
+- **An unprivileged Windows install gave up on the `CLAUDE.md` link (spec 039).** `New-Item
+  -ItemType SymbolicLink` needs Administrator or Developer Mode; on corporate Windows it fails and
+  the installer simply warned and moved on, leaving no `~/.claude/CLAUDE.md` at all. It now steps
+  down symlink → hard link → copy, warning at each downgrade about exactly what the weaker
+  mechanism costs — a hard link drifts silently if the central file is replaced by rename, and a
+  copy is a snapshot that is not kept in sync. Unchanged on macOS/Linux, where `ln -s` needs no
+  privilege and there is no failure to fall back from.
 
 - **`agents/README.md` and `hooks/README.md` were write-once (spec 034).** Both were copied only
   when absent, so `--force` never refreshed them and they sat frozen at whatever commit first
