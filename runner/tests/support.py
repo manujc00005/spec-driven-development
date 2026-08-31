@@ -64,3 +64,27 @@ def make_repo(tmpdir, tasks=TASKS, spec=SPEC, feature="specs/features/900-fixtur
     git("commit", "-qm", "fixture baseline")
     git("checkout", "-q", "-b", "feat/fixture")
     return repo, feature_dir
+
+
+# Finalization (031 FR-013) costs four delegations beyond the task cycle:
+# final-conformance-reviewer, then the three owning lifecycle skills.
+FINALIZATION_CALLS = 4
+
+
+def approve_block():
+    return "Looks right.\n\n```yaml\nverdict: APPROVE\nfindings: []\n```\n"
+
+
+def finalization_flat():
+    """Responses a flat-list stub needs appended for a run that should reach DONE."""
+    return [approve_block()] * FINALIZATION_CALLS
+
+
+def finalization_keys(each=1):
+    """The same, for an agent-keyed stub script."""
+    return {
+        "final-conformance-reviewer": [approve_block()] * each,
+        "lifecycle:spec-review": [approve_block()] * each,
+        "lifecycle:spec-close": [approve_block()] * each,
+        "lifecycle:pr-description": [approve_block()] * each,
+    }

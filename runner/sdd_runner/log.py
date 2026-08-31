@@ -12,23 +12,36 @@ import json
 import os
 import re
 
-# Environment variables whose VALUES must never appear in the log. The value is
-# redacted wherever it occurs, not just when logged under its own name.
+# Environment variables whose VALUES must never appear in an artifact. The value
+# is redacted wherever it occurs, not just when logged under its own name.
+#
+# Deliberately broad (SEC-003): the original list required the NAME to contain
+# API_KEY/TOKEN/SECRET/PASSWORD/CREDENTIAL/AUTH/SESSION_KEY, which misses
+# OPENAI_KEY, DB_PASS, GH_PAT, PRIVATE_KEY and anything else people actually
+# name their credentials. A false positive costs one over-redacted string in a
+# maintainer's log; a false negative costs a credential in clear. Err the cheap
+# way. `SAFE_NAMES` keeps the everyday variables whose names collide out of it.
 SECRET_ENV_HINTS = (
-    "API_KEY", "TOKEN", "SECRET", "PASSWORD", "CREDENTIAL", "AUTH", "SESSION_KEY",
+    "KEY", "TOKEN", "SECRET", "PASS", "PWD", "CREDENTIAL", "AUTH", "PAT",
+    "PRIVATE", "SIGNATURE", "SIGNING",
 )
+
+# Ordinary variables whose names collide with a hint but never hold a secret.
+SAFE_NAMES = frozenset({"PWD", "OLDPWD", "KEYMAP", "PASSWD", "AUTHOR", "PATH"})
 
 _MIN_SECRET_LEN = 8
 REDACTED = "[REDACTED]"
 
 
-def _secret_values(environ=None):
+def secret_values(environ=None):
     env = environ if environ is not None else os.environ
     values = []
     for name, value in env.items():
         if not value or len(value) < _MIN_SECRET_LEN:
             continue
         upper = name.upper()
+        if upper in SAFE_NAMES:
+            continue
         if any(hint in upper for hint in SECRET_ENV_HINTS):
             values.append(value)
     # Longest first so a longer secret containing a shorter one redacts fully.
@@ -37,7 +50,7 @@ def _secret_values(environ=None):
 
 def redact(obj, secrets=None):
     """Recursively replace any known secret value with [REDACTED]."""
-    secrets = _secret_values() if secrets is None else secrets
+    secrets = secret_values() if secrets is None else secrets
     if not secrets:
         return obj
     if isinstance(obj, str):
@@ -59,7 +72,7 @@ class RunLog:
     def __init__(self, path, clock, environ=None):
         self.path = path
         self._clock = clock
-        self._secrets = _secret_values(environ)
+        self._secrets = secret_values(environ)
         self.events = []
 
     def emit(self, event, **fields):

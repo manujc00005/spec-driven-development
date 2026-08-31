@@ -12,6 +12,12 @@ completion against it.
 import re
 from dataclasses import dataclass, field
 
+# A repair task carries the finding it repairs in its title: `(from DOM-001)`.
+# 031 FR-007 requires that traceability; the loop also uses it to tell a repair
+# task (owned by the Findings registry) from an independently runnable one, so
+# the same repair is never scheduled by two mechanisms.
+_FROM_FINDING = re.compile(r"\(from ([^)]+)\)")
+
 _BULLET = re.compile(r"^- \[(?P<mark>[ x~])\]\s*(?P<rest>.*)$")
 _ID = re.compile(r"^(?P<id>T\d{3})\b\s*-?\s*(?P<title>.*)$")
 
@@ -30,6 +36,12 @@ class Task:
     @property
     def runnable(self):
         return not self.checked and not self.deferred
+
+    @property
+    def repairs(self):
+        """The finding id this task repairs, or "" for an ordinary task."""
+        m = _FROM_FINDING.search(self.title)
+        return m.group(1) if m else ""
 
 
 def _clause(text, label):
@@ -88,9 +100,51 @@ def unchecked(text):
     return [t for t in parse(text) if t.runnable]
 
 
+def independently_runnable(text):
+    """Unchecked tasks the loop may pick up on its own.
+
+    Repair tasks are excluded: they are scheduled by the Findings registry as
+    part of their task's convergence cycle. Treating them as ordinary pending
+    work would delegate the same repair twice.
+    """
+    return [t for t in parse(text) if t.runnable and not t.repairs]
+
+
 def next_task_id(text):
     ids = [int(t.id[1:]) for t in parse(text) if t.id[1:].isdigit()]
     return "T%03d" % ((max(ids) + 1) if ids else 1)
+
+
+def check_task(text, task_id):
+    """Mark one task item `[x]`. Returns the text unchanged if it is already checked."""
+    out = []
+    for line in text.splitlines(True):
+        m = _BULLET.match(line.rstrip("\n"))
+        if m and m.group("rest").strip().startswith(task_id + " "):
+            line = line.replace("- [ ]", "- [x]", 1)
+        out.append(line)
+    return "".join(out)
+
+
+def uncheck_task(text, task_id):
+    """Return a task item to `[ ]`. Used when a re-review stales an approval and
+    the task goes back to REVIEW - leaving it checked would make a later resume
+    skip work that is no longer done."""
+    out = []
+    for line in text.splitlines(True):
+        m = _BULLET.match(line.rstrip("\n"))
+        if m and m.group("rest").strip().startswith(task_id + " "):
+            line = line.replace("- [x]", "- [ ]", 1)
+        out.append(line)
+    return "".join(out)
+
+
+def task_for_finding(text, finding_id):
+    """The existing repair task for this finding, or None. Never allocate a second."""
+    for task in parse(text):
+        if task.repairs == finding_id:
+            return task
+    return None
 
 
 def append_finding_task(text, task_id, title, finding_id, covers, required_action):

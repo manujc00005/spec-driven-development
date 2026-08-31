@@ -27,13 +27,16 @@ two runners end up in the same worktree.
 import os
 from dataclasses import dataclass, field
 
+from . import closure as closure_mod
 from . import state as state_mod
 from .counters import CounterState, FindingRow
 
 TERMINAL_RESULTS = ("DONE",)
 
-# The Attempts-row objective that marks a task complete. Must match loop.py.
+# Attempts-row objectives. Must match loop.py.
 TASK_COMPLETE_OBJECTIVE = "task complete"
+IMPLEMENTATION_OBJECTIVE = "implementation"
+REPAIR_OBJECTIVE_PREFIX = "repair "
 RECOVERABLE_RESULTS = ("PAUSED", "ABORTED")
 
 
@@ -54,6 +57,7 @@ class ConcurrentRun(RuntimeError):
 class ResumeState:
     completed_tasks: set = field(default_factory=set)
     blocked_tasks: set = field(default_factory=set)
+    implemented_tasks: set = field(default_factory=set)
     budget_used: int = 0
     budget_cap: int = 0
     iteration: int = 0
@@ -63,6 +67,7 @@ class ResumeState:
     open_escalations: list = field(default_factory=list)
     prior_result: str = ""
     recovered_from_interrupt: bool = False
+    closure: dict = None
 
 
 def _pid_alive(pid):
@@ -137,7 +142,8 @@ def render_counters(counters):
 
 
 def render_approvals(approvals):
-    return "; ".join("%s=%s" % (r, fp) for r, fp in sorted(approvals.items()))
+    """`domain@T001=abc123; security@T001=abc123` - keyed by reviewer AND task."""
+    return "; ".join("%s=%s" % (key, fp) for key, fp in sorted(approvals.items()))
 
 
 def _parse_approvals(raw, doc_path):
@@ -186,7 +192,8 @@ def _load_findings(doc, counters, doc_path):
             identity=identity,
             reviewer=reviewer,
             finding_id=finding_id,
-            task=row.get("Task", ""),
+            task=row.get("Task", "").strip().lstrip("-") or "",
+            task_ref=row.get("Repair task", "").strip().lstrip("-") or "",
             severity=row.get("Severity", ""),
             required_action=row.get("Required action", ""),
             status=row.get("Status", "open"),
@@ -194,12 +201,18 @@ def _load_findings(doc, counters, doc_path):
             last_seen=int(row["Last seen"]) if row.get("Last seen", "").isdigit() else 0,
             reject_total=int(rejects),
             repair_done=row.get("Repair done", "no").strip().lower() in ("yes", "true"),
+            synthetic=row.get("Synthetic", "no").strip().lower() in ("yes", "true"),
             resolving_verdict=row.get("Resolving verdict/fingerprint", ""),
         )
 
 
 def _load_attempts(doc, doc_path):
-    """Return (completed_tasks, blocked_tasks, highest_attempt_number)."""
+    """Return (completed, blocked, implemented, highest_attempt_number).
+
+    `implemented` is what stops a resume from repairing the same finding twice:
+    a worker that already came back DONE for this task did its work, and what is
+    pending is the review, not another delegation.
+    """
     try:
         headers, rows = state_mod.parse_table(doc.body("Attempts"))
     except ValueError as exc:
@@ -216,7 +229,7 @@ def _load_attempts(doc, doc_path):
             "this document was written by a different executor. Resuming it would mean guessing "
             "which tasks already ran. Finish that run with the executor that started it.")
 
-    completed, blocked, highest = set(), set(), 0
+    completed, blocked, implemented, highest = set(), set(), set(), 0
     for row in rows:
         attempt = row.get("Attempt", "")
         if attempt.startswith("A-") and attempt[2:].isdigit():
@@ -241,7 +254,10 @@ def _load_attempts(doc, doc_path):
             completed.add(task)
         elif outcome == "BLOCKED":
             blocked.add(task)
-    return completed, blocked - completed, highest
+        if outcome == "DONE" and (objective == IMPLEMENTATION_OBJECTIVE
+                                  or objective.startswith(REPAIR_OBJECTIVE_PREFIX)):
+            implemented.add(task)
+    return completed, blocked - completed, implemented, highest
 
 
 def _open_escalations(doc):
@@ -311,9 +327,21 @@ def inspect(doc, doc_path, max_iterations, hostname, pid_alive=_pid_alive):
             "the budget is inconsistent, and re-entering would run on a number nobody can trust. "
             "Inspect the file, or delete it to start a fresh run.")
 
+    body = doc.body("Closure delta")
+    closure_record = None
+    if "frozen fingerprint" in body:
+        try:
+            closure_record = closure_mod.parse(body)
+        except closure_mod.CorruptClosureRecord as exc:
+            raise UnresumableState(
+                "the Closure delta section of %s is corrupt: %s" % (doc_path, exc),
+                "the freeze record is what proves the run was closed safely. A partially readable "
+                "one would let the runner claim a closure it cannot demonstrate. Inspect it, or "
+                "delete the state file to start a fresh run.")
+
     counters = _parse_counters(fields.get("counters", ""), max_iterations, doc_path)
     _load_findings(doc, counters, doc_path)
-    completed, blocked, highest = _load_attempts(doc, doc_path)
+    completed, blocked, implemented, highest = _load_attempts(doc, doc_path)
 
     recorded_completed = {t.strip() for t in fields.get("completed tasks", "").split(",")
                           if t.strip()}
@@ -328,6 +356,7 @@ def inspect(doc, doc_path, max_iterations, hostname, pid_alive=_pid_alive):
     return ResumeState(
         completed_tasks=completed,
         blocked_tasks=blocked,
+        implemented_tasks=implemented,
         budget_used=used,
         budget_cap=cap,
         iteration=_int(fields.get("iteration", "0"), "iteration", doc_path),
@@ -337,4 +366,5 @@ def inspect(doc, doc_path, max_iterations, hostname, pid_alive=_pid_alive):
         open_escalations=_open_escalations(doc),
         prior_result=result,
         recovered_from_interrupt=recovered,
+        closure=closure_record,
     )

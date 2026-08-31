@@ -104,7 +104,7 @@ def check(repo, feature_dir, baseline_cmd=None, first_entry=True):
                 "default branch", "HEAD is on %r" % branch,
                 "check out a dedicated feature branch or worktree before running"))
 
-        _, dirty, _ = _git(repo, "status", "--porcelain")
+        _, dirty, _ = _git(repo, "status", "--porcelain", "-uall")
         unattributed = [ln for ln in dirty.splitlines()
                         if ln.strip() and os.path.relpath(feature_dir, repo) not in ln]
         if unattributed:

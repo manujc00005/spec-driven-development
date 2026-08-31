@@ -2,8 +2,21 @@
 
 ## Status
 
-Ready
+In Review
 
+> `In Review` 2026-08-31 — `/spec-review` **Pass**. All 14 acceptance criteria are met **as
+> written**, which for AC-001 and AC-002 means as downgraded by D030 and observed by D031's
+> subprocess suite. 24 tasks closed, 2 recorded `NOT OBSERVED` against [[DEBT-009]]. 186 tests;
+> `check-consistency.sh` exit 0; installers and manifests byte-identical to `main`.
+>
+> **`Done` is blocked** and this promotion does not weaken that: DEBT-009 holds four things nobody
+> has seen work — a prompt reaching a real provider, a lifecycle skill executing,
+> `PR_DESCRIPTION.md` on disk, and a real `codex exec`.
+>
+> `In Progress` 2026-08-31 — 19 of 25 tasks closed, one deferred as not observable on this
+> machine (T018, D026). The status had been left at `Ready` while implementation ran; corrected
+> here by its owning skill.
+>
 > `Ready` 2026-08-31 — PLAN.md, TASKS.md and DECISIONS.md exist; OQ-1, OQ-2 and OQ-3 resolved by
 > the maintainer and recorded as D001, D003 and D005; every acceptance criterion AC-001…AC-014 is
 > covered by at least one task.
@@ -220,9 +233,19 @@ having an observed track record — the same reasoning that keeps checkpoint com
 - FR-012: The runner never runs `git commit`, `git push`, or `git merge`, never edits a spec
   `Status` line directly, and never writes outside the feature folder and the paths the delegated
   agents are scoped to.
-- FR-013: Exit codes are distinct and documented: `0` converged; and separate non-zero codes for
-  gate refusal, human-gated escalation, cap non-convergence abort, budget exhaustion, backend
-  precondition failure, and internal error. A scheduler can branch on the code alone.
+- FR-013: Exit codes are distinct and documented, so a scheduler can branch on the code alone:
+  `0` converged; `10` gate refusal; `11` human-gated escalation; `12` cap non-convergence abort;
+  `13` budget exhaustion; `14` backend precondition failure; `15` a concurrent run already owns
+  the feature folder; `16` the persisted state cannot be resumed (corrupt, written by another
+  executor, or contradicting itself); `17` every task was processed but the run did not converge;
+  `18` closure could not be proven (an unexpected closure delta, or an owning lifecycle skill that
+  refused); `70` internal error.
+
+  > **Amended 2026-08-31 (D023).** The original clause named six non-zero codes. Four more were
+  > added during implementation — 15 by T013, 16 and 17 by T013/T014, 18 by T014 — because each
+  > names an outcome a scheduler must be able to tell apart from the others, and folding any of
+  > them into an existing code would have made a corrupt state file indistinguishable from a
+  > product question. The list above is now the contract.
 - FR-014: The runner is fully contained. `install.sh`, `install.ps1`, `profiles.json`, the install
   manifest, and `check-consistency.sh`'s rules are **not modified by this feature**; the runner
   declares its own dependencies in its own manifest under `runner/`. On a machine with neither the
@@ -310,13 +333,26 @@ No database, no schema files. New files only:
 
 ## Acceptance criteria
 
-- AC-001: With the Claude backend, a `Ready` fixture feature with at least two unchecked tasks runs
-  from a non-interactive shell with no TTY (`</dev/null`) to exit `0`, leaving an unstaged tree on
-  a non-default branch, an `ORCHESTRATION.md` whose sections match 031's schema, a `run.jsonl`, and
-  a `PR_DESCRIPTION.md`. No commit exists that the runner created.
-- AC-002: The same feature launched from `cron` (or an equivalent detached scheduler) with no
-  inherited interactive session reaches the same outcome, and the scheduler's captured exit code
-  is `0`.
+- AC-001: A `Ready` fixture feature with at least two unchecked tasks runs from a non-interactive
+  shell with no TTY (`</dev/null`) to exit `0`, leaving an unstaged tree on a non-default branch,
+  an `ORCHESTRATION.md` whose sections match 031's schema and a `run.jsonl`. No commit exists that
+  the runner created.
+
+  > **Downgraded 2026-08-31 (D030, [[DEBT-009]]).** Two clauses were removed because no evidence
+  > for them can be produced on this machine: *"With the Claude backend"* and *"and a
+  > `PR_DESCRIPTION.md`"*. What remains is observed against the deterministic stub backend
+  > (`test_finalization.HappyPath`). The provider half and the generated PR description move to
+  > DEBT-009 and gate `Done`.
+- AC-002: The runner is invocable with no controlling terminal and no inherited interactive
+  session: it requires no TTY, never reads stdin, never prompts, and returns an exit code a
+  scheduler can branch on.
+
+  > **Downgraded 2026-08-31 (D030, [[DEBT-009]]).** The original criterion required an actual
+  > `cron`-launched run reaching exit `0`, and **it had no evidence at all** — its only coverage
+  > was T018 and T022, both blocked on a provider this machine does not have. What remains is the
+  > property the code can demonstrate here: the CLI's non-interactive contract, exercised with
+  > `</dev/null` and asserted through the exit-code mapping. **Nobody has watched this runner start
+  > from `cron`**, and that sentence is the debt, not a footnote to it.
 - AC-003: Each entry-gate precondition is violated in turn; each run exits with the gate exit code,
   names that specific condition and its remediation, and leaves `git status` byte-identical.
 - AC-004: Fixture responses covering a missing block, malformed YAML, an unknown verdict value, and
@@ -327,8 +363,11 @@ No database, no schema files. New files only:
   another reviewer's fingerprint move).
 - AC-006: With `--max-delegations` set to N, exactly N delegations are dispatched and the N+1st is
   refused before any provider call is made. Observed by a stub backend counting invocations.
-- AC-007: A run killed with SIGTERM mid-delegation, then restarted, re-enters without
-  re-delegating a completed task, without duplicating a finding, and without resetting any counter.
+- AC-007: A run interrupted mid-delegation, then restarted, re-enters without re-delegating a
+  completed task, without duplicating a finding, and without resetting any counter. **Observed
+  against the state an interruption leaves behind** — an `ACTIVE` record whose writing process is
+  gone — rather than by delivering a real signal to a live run. The distinction is recorded in
+  D024: the state is faithful, the path to it is simulated.
 - AC-008: A human-gated escalation (a fixture BLOCKED response naming a product decision) halts the
   run, writes the escalation verbatim to `ORCHESTRATION.md`, invokes the `--notify` command once
   with valid JSON on stdin, and exits with the escalation exit code.
@@ -346,7 +385,10 @@ No database, no schema files. New files only:
 - AC-011: A second runner started against a feature folder with an ACTIVE run refuses to start,
   naming the in-flight run, and makes no provider call.
 - AC-012: `grep` over `run.jsonl` and `ORCHESTRATION.md` from a run performed with a sentinel value
-  in `ANTHROPIC_API_KEY` finds no occurrence of that sentinel.
+  in `ANTHROPIC_API_KEY` finds no occurrence of that sentinel. **Met 2026-08-31**, both halves:
+  redaction is applied at the `run.jsonl` writer and at the `ORCHESTRATION.md` writer. It was not
+  met until then — the state file carried a secret an agent echoed, verbatim, on the human-gated
+  escalation path — and the gap was found by review, not by the suite. See D025.
 - AC-013: Invoking `--backend codex` without `--allow-unverified-backend` refuses before any
   subprocess is spawned, names `DEBT-001`/`DEBT-002`, and exits with the backend-precondition code.
   A `grep` over `README.md`, `CHANGELOG.md`, and `docs/` finds no claim of verified multi-backend

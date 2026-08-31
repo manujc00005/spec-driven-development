@@ -17,7 +17,7 @@ from sdd_runner import exits, resume, state
 from sdd_runner.backends.stub import StubBackend
 from sdd_runner.log import RunLog
 from sdd_runner.loop import Loop
-from tests.support import TASKS, fixture, make_repo
+from tests.support import TASKS, finalization_flat, fixture, make_repo
 
 HOST = socket.gethostname()
 DEAD_PID = 999_999          # not a live process; asserted below
@@ -52,6 +52,10 @@ class ResumeHarness(unittest.TestCase):
     def fields(self):
         return state.parse_fields(self.doc().body("State"))
 
+    def tasks_text(self):
+        with open(os.path.join(self.feature_dir, "TASKS.md"), encoding="utf-8") as fh:
+            return fh.read()
+
     def set_result(self, result, resumable="yes"):
         doc = self.doc()
         doc.set_body("Run result", "\n%s\n\nresumable: %s\n\n" % (result, resumable))
@@ -82,14 +86,16 @@ class ResumeAfterCompletedTask(ResumeHarness):
         self.assertEqual(self.fields()["completed tasks"], "T001")
 
         # Run 2: only T002 may be dispatched.
-        second, stub2, loop2, log2 = self.run_once([
-            fixture("worker_done.md"), fixture("reviewer_approve.md"),
-        ])
+        second, stub2, loop2, log2 = self.run_once(
+            [fixture("worker_done.md"), fixture("reviewer_approve.md")] + finalization_flat())
         self.assertEqual(second.code, exits.OK)
-        self.assertEqual(stub2.invocations, 2, "T001 must not be re-delegated")
+        self.assertEqual(stub2.invocations, 2 + len(finalization_flat()),
+                         "T001 must not be re-delegated")
         plan = [e for e in log2.events if e["event"] == "plan"][0]
-        self.assertEqual(plan["skipped"], ["T001"])
+        # T001 does not even appear as pending: converging checked its box in
+        # TASKS.md, which is what 031's first DONE condition reads.
         self.assertEqual(plan["runnable"], ["T002"])
+        self.assertIn("- [x] T001", self.tasks_text())
         self.assertEqual(self.fields()["completed tasks"], "T001, T002")
 
     def test_the_budget_carries_over_and_never_resets(self):
@@ -127,20 +133,34 @@ class ResumeAfterBlockedTask(ResumeHarness):
         doc.set_body("Escalations", "\n- **resolved** (money) on T001: answered in DECISIONS.md\n\n")
         doc.save(self.state_path)
 
-        second, stub2, _loop2, log2 = self.run_once([
-            fixture("worker_done.md"), fixture("reviewer_approve.md"),
-            fixture("worker_done.md"), fixture("reviewer_approve.md"),
-        ])
+        second, stub2, _loop2, log2 = self.run_once(
+            [fixture("worker_done.md"), fixture("reviewer_approve.md"),
+             fixture("worker_done.md"), fixture("reviewer_approve.md")] + finalization_flat())
         self.assertEqual(second.code, exits.OK)
         plan = [e for e in log2.events if e["event"] == "plan"][0]
         self.assertEqual(plan["skipped"], [], "a blocked task was never completed")
         self.assertEqual(plan["runnable"], ["T001", "T002"])
 
-    def test_a_technical_block_does_not_mark_the_task_complete(self):
-        self.run_once([fixture("worker_blocked.md"), fixture("reviewer_approve.md"),
-                       fixture("worker_done.md"), fixture("reviewer_approve.md")])
-        # T001 came back BLOCKED, so it is not complete even though the review approved.
-        self.assertEqual(self.fields()["completed tasks"], "T002")
+    def test_a_technical_block_stops_the_run_and_completes_nothing(self):
+        outcome, stub, _loop, _log = self.run_once([
+            fixture("worker_blocked.md"), fixture("reviewer_approve.md"),
+            fixture("worker_done.md"), fixture("reviewer_approve.md"),
+        ])
+        # T001 came back BLOCKED. The run stops there rather than reviewing work
+        # the worker never did, and nothing is marked complete.
+        self.assertEqual(outcome.code, exits.HUMAN_ESCALATION)
+        self.assertEqual(self.fields()["completed tasks"], "")
+        self.assertEqual(stub.invocations, 1, "no review is dispatched for un-done work")
+
+    def test_a_blocked_task_is_retried_from_scratch_on_re_entry(self):
+        self.run_once([fixture("worker_blocked.md")])
+        _outcome, _stub, _loop, log2 = self.run_once([
+            fixture("worker_done.md"), fixture("reviewer_approve.md"),
+            fixture("worker_done.md"), fixture("reviewer_approve.md"),
+        ])
+        plan = [e for e in log2.events if e["event"] == "plan"][0]
+        self.assertEqual(plan["skipped"], [])
+        self.assertEqual(plan["runnable"], ["T001", "T002"])
 
 
 class ResumeWithExhaustedBudget(ResumeHarness):
@@ -164,13 +184,13 @@ class ResumeWithExhaustedBudget(ResumeHarness):
 
     def test_an_explicit_increase_resumes_and_is_logged_as_a_cap_change(self):
         self.run_once([fixture("worker_done.md")] * 4, max_delegations=2)
-        second, stub2, loop2, _log2 = self.run_once([
-            fixture("worker_done.md"), fixture("reviewer_approve.md"),
-            fixture("worker_done.md"), fixture("reviewer_approve.md"),
-        ], max_delegations=12)
+        second, stub2, loop2, _log2 = self.run_once(
+            [fixture("worker_done.md"), fixture("reviewer_approve.md"),
+             fixture("worker_done.md"), fixture("reviewer_approve.md")] + finalization_flat(),
+            max_delegations=20)
         self.assertEqual(second.code, exits.OK)
-        self.assertEqual(loop2.budget.cap, 12)
-        self.assertIn("max-delegations 2 -> 12", self.doc().body("Cap changes"))
+        self.assertEqual(loop2.budget.cap, 20)
+        self.assertIn("max-delegations 2 -> 20", self.doc().body("Cap changes"))
 
 
 class ResumeWithCorruptState(ResumeHarness):
@@ -264,14 +284,14 @@ class ConcurrencyAndInterruption(ResumeHarness):
         self.set_result("ACTIVE")
         self.set_field("runner pid", str(DEAD_PID))
         self.set_field("runner host", HOST)
-        outcome, stub, _loop, log = self.run_once([
-            fixture("worker_done.md"), fixture("reviewer_approve.md"),
-        ])
+        outcome, stub, _loop, log = self.run_once(
+            [fixture("worker_done.md"), fixture("reviewer_approve.md")] + finalization_flat())
         self.assertEqual(outcome.code, exits.OK)
         resumed = [e for e in log.events if e["event"] == "resume"][0]
         self.assertTrue(resumed["recovered_from_interrupt"])
         self.assertEqual(resumed["completed"], ["T001"])
-        self.assertEqual(stub.invocations, 2, "only the unfinished task is re-delegated")
+        self.assertEqual(stub.invocations, 2 + len(finalization_flat()),
+                         "only the unfinished task is re-delegated")
 
     def test_an_active_run_on_another_host_blocks_rather_than_guessing(self):
         self.set_result("ACTIVE")
@@ -320,16 +340,17 @@ class ResumeDoesNotDuplicate(ResumeHarness):
         ])
         self.assertEqual(stub1.invocations, 3)      # T001 worker + review, then T002 worker
         self.assertEqual(self.fields()["completed tasks"], "T001")
+        self.assertIn("- [x] T001", self.tasks_text())
 
-        outcome, stub2, _loop2, _log2 = self.run_once([
-            fixture("worker_done.md"), fixture("reviewer_approve.md"),
-        ])
+        outcome, stub2, _loop2, log2 = self.run_once(
+            [fixture("worker_done.md"), fixture("reviewer_approve.md")] + finalization_flat())
         self.assertEqual(outcome.code, exits.OK)
-        self.assertEqual(stub2.invocations, 2,
+        self.assertEqual(stub2.invocations, 2 + len(finalization_flat()),
                          "only T002 is dispatched; T001 is never delegated again")
-        tasks_seen = set()
-        for call in stub2.calls:
-            tasks_seen.update(re.findall(r"\bT\d{3}\b", call["prompt"]))
+        # Only task delegations count: the finalization calls legitimately quote
+        # the whole of TASKS.md, T001 included.
+        tasks_seen = {e["task"] for e in log2.events
+                      if e["event"] == "dispatch" and e["task"] not in ("", "-")}
         self.assertEqual(tasks_seen, {"T002"})
 
 

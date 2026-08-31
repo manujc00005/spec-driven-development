@@ -28,13 +28,42 @@ No TTY is required, stdin is never read, and nothing is ever prompted.
 | `--max-delegations` | hard budget (default `max(25, 6 x unchecked tasks)`) |
 | `--baseline` | baseline suite; must be green and must not mutate the tree |
 | `--notify` | command run without a shell, event delivered as JSON on stdin |
-| `--dry-run` | gate + plan + budget, dispatching nothing |
+| `--stub-script` | JSON responses for `--backend stub`: the way to exercise a full run without a provider |
+| `--dry-run` | gate + plan + budget, dispatching nothing — and needing no usable backend |
 
 ### Exit codes
 
 `0` converged · `10` gate refused · `11` human-gated escalation · `12` cap abort
 · `13` budget exhausted · `14` backend precondition · `15` concurrent run ·
-`16` state unresumable · `17` processed but not converged · `70` internal error.
+`16` state unresumable · `17` processed but not converged · `18` closure not proven ·
+`70` internal error.
+
+### Finalization, freeze and closure delta
+
+A converged task list is not a closed run. Before it may say `DONE` the runner
+re-checks 031's DONE conditions — no unconverged task, no open finding, no
+waiting escalation, a coherent budget, every `TASKS.md` item checked — then
+re-reviews any approval a later task's change staled, runs
+`final-conformance-reviewer` once, and only then **freezes**: it records the
+approved implementation fingerprint together with a per-path content map of the
+tree at that instant.
+
+After the freeze it delegates the owning lifecycle skills (`/spec-review`,
+`/spec-close`, `/pr-description`) and requires each one's APPROVE. It never
+writes a spec `Status` itself. Finally it compares the tree against the frozen
+map: generated artifacts, a `SPEC.md` change confined to its `## Status` section
+and `TASKS.md` checkbox bookkeeping are **allowed**; anything else is
+**unexpected** and returns the run to REVIEW with the paths named.
+
+`--baseline` is 031's second DONE condition. Declared, it must pass and must not
+mutate the tree. Undeclared, the closure record says
+`NOT DECLARED - condition 2 of 031's termination contract is unobserved`, and so
+does the run's reason line.
+
+The whole record lives in `ORCHESTRATION.md`'s `## Closure delta` section and is
+re-read on re-entry: a run interrupted after the freeze resumes into the
+lifecycle steps without redoing the task work, a corrupt record blocks, and a
+frozen fingerprint that no longer matches the tree voids the freeze.
 
 ### Re-entry
 

@@ -15,7 +15,8 @@ import subprocess
 import time
 from dataclasses import dataclass, field
 
-from . import blocks, exits, resume as resume_mod, state, tasks as tasks_mod
+from . import blocks, closure as closure_mod, exits, resume as resume_mod, state
+from . import tasks as tasks_mod
 from .backends import BackendPrecondition
 from .budget import Budget, BudgetExhausted, default_cap
 from .counters import CounterState
@@ -24,6 +25,17 @@ from .resume import ConcurrentRun, UnresumableState
 from .retry import DelegationFailedClosed, RetryPolicy, call_with_retry
 
 REVIEWERS = ("domain", "security", "final-conformance")
+
+# Agents whose own contracts say "Read-only - it never modifies code". Their
+# recorded allowed-path scope is therefore EMPTY, and any change to the tree
+# during their delegation is an out-of-scope write (031 FR-008, SEC-002). The
+# worker and the lifecycle skills legitimately write, so they keep the repo scope.
+READ_ONLY_AGENTS = REVIEWERS
+# The owning lifecycle skills, in the order 031's termination contract runs them.
+# The runner delegates them; it never sets a spec Status itself. "The loop may
+# invoke the owning lifecycle skills; that is not a direct transition."
+LIFECYCLE_STEPS = ("spec-review", "spec-close", "pr-description")
+
 AGENT_FILES = {
     "worker": "agents/implementer.md",
     "domain": "agents/domain-reviewer.md",
@@ -35,6 +47,14 @@ AGENT_FILES = {
 # Level-3 triggers for security review. Do not invent a second trigger list.
 SECURITY_TRIGGERS = ("auth", "authorization", "personal data", "payment", "migration",
                      "upload", "secret", "public api", "schema", "persistence")
+
+
+class UnattributedWrite(RuntimeError):
+    """A read-only agent changed the tree.
+
+    031's abort contract files unexplained out-of-scope writes with corrupt
+    provenance: ABORTED, resumable: no, never guess.
+    """
 
 
 @dataclass
@@ -50,7 +70,8 @@ class Outcome:
 class Loop:
     def __init__(self, repo, feature_dir, backend, log, max_iterations=3,
                  max_delegations=None, clock=time.time, sleep=lambda s: None,
-                 retry_policy=None, notify=None, hostname=None, pid=None):
+                 retry_policy=None, notify=None, hostname=None, pid=None,
+                 baseline_cmd=None):
         self.repo = repo
         self.feature_dir = feature_dir
         self.backend = backend
@@ -67,9 +88,16 @@ class Loop:
         self.doc = None
         self.attempt_seq = 0
         self.iteration = 0
-        self.approvals = {}            # reviewer -> fingerprint it approved
+        # "<reviewer>@<task>" -> the fingerprint that reviewer approved for that
+        # task. Keyed by task on purpose: an APPROVE of T001's diff is not an
+        # approval of T002's work, and a reviewer-only key would let one leak into
+        # the next task whenever the tree happened not to move.
+        self.approvals = {}
         self.completed_tasks = set()
-        self.resumed = None            # the ResumeState this run re-entered from
+        self.implemented_tasks = set()   # a worker came back DONE; the review is what is pending
+        self.resumed = None              # the ResumeState this run re-entered from
+        self.closure = None              # the persisted freeze/closure record, if any
+        self.baseline_cmd = baseline_cmd  # PLAN-mandated verification, when declared
 
     # -- paths ------------------------------------------------------------
     @property
@@ -87,10 +115,19 @@ class Loop:
         Lifecycle artifacts the loop writes itself are excluded: including them
         would make every state write invalidate its own approvals.
         """
-        proc = subprocess.run(["git", "-C", self.repo, "status", "--porcelain=v1"],
-                              capture_output=True, text=True)
+        # `-uall` is load-bearing: without it a wholly-untracked directory collapses
+        # to a single `?? src/` line and every file created inside it is invisible
+        # to the fingerprint.
+        proc = subprocess.run(
+            ["git", "-C", self.repo, "status", "--porcelain=v1", "-uall"],
+            capture_output=True, text=True)
         digest = hashlib.sha256()
-        excluded = ("ORCHESTRATION.md", "run.jsonl", "PR_DESCRIPTION.md")
+        # TASKS.md is loop bookkeeping, not implementation: the runner itself
+        # writes repair rows into it (031 FR-007) and checks them off when their
+        # finding resolves. Counting those writes as an implementation change
+        # would invalidate an approval the runner had just been given and force a
+        # re-review of a tree nobody touched.
+        excluded = ("ORCHESTRATION.md", "run.jsonl", "PR_DESCRIPTION.md", "TASKS.md")
         for line in sorted(proc.stdout.splitlines()):
             path = line[3:].strip()
             if any(path.endswith(x) for x in excluded):
@@ -100,7 +137,11 @@ class Loop:
             if os.path.isfile(full):
                 with open(full, "rb") as fh:
                     digest.update(hashlib.sha256(fh.read()).digest())
-        diff = subprocess.run(["git", "-C", self.repo, "diff", "HEAD"],
+        # The same exclusions must apply to the diff, not only to the file walk:
+        # a tracked TASKS.md the runner edited shows up in `git diff HEAD` even
+        # though it never appears as an untracked status line.
+        pathspec = ["."] + [":(exclude)*%s" % name for name in excluded]
+        diff = subprocess.run(["git", "-C", self.repo, "diff", "HEAD", "--"] + pathspec,
                               capture_output=True, text=True)
         digest.update(diff.stdout.encode("utf-8"))
         return digest.hexdigest()[:16]
@@ -131,9 +172,11 @@ class Loop:
         self.counters.max_iterations = self.counters.max_iterations
         self.approvals = dict(resumed.approvals)
         self.completed_tasks = set(resumed.completed_tasks)
+        self.implemented_tasks = set(resumed.implemented_tasks)
         self.attempt_seq = resumed.attempt_seq
         self.iteration = resumed.iteration
         self.resumed = resumed
+        self.closure = resumed.closure
 
         cap = resumed.budget_cap
         if self.max_delegations_override is not None:
@@ -179,24 +222,52 @@ class Loop:
 
     # -- delegation -------------------------------------------------------
     def _system_prompt(self, agent):
+        if agent.startswith("lifecycle:"):
+            skill = agent.split(":", 1)[1]
+            header = "# lifecycle:%s\n" % skill
+            path = os.path.join(self.repo, "skills", skill, "SKILL.md")
+            if os.path.isfile(path):
+                with open(path, encoding="utf-8") as fh:
+                    return header + fh.read()
+            return header + "(SKILL.md not found; run /%s for this feature)" % skill
         path = os.path.join(self.repo, AGENT_FILES[agent])
         if os.path.isfile(path):
             with open(path, encoding="utf-8") as fh:
                 return fh.read()
         return "# %s\n(agent file not found at %s)" % (agent, AGENT_FILES[agent])
 
+    @staticmethod
+    def _cell(value):
+        """One markdown table cell: single line, no pipes, bounded."""
+        text = " ".join(str(value or "-").split()).replace("|", "/")
+        return (text[:117] + "...") if len(text) > 120 else (text or "-")
+
     def _attempt_row(self, attempt, task, agent, objective, lifecycle, scope,
                      pre, post, outcome):
         self.doc.append_line("Attempts", "| " + " | ".join([
-            attempt, task or "-", agent, objective, lifecycle,
+            attempt, task or "-", agent, self._cell(objective), lifecycle,
             ";".join(scope or []) or "-", pre or "-", post or "-",
             outcome or "-", str(self.clock()),
         ]) + " |")
 
-    def _delegate(self, agent, objective, path_scope, task=""):
+    @staticmethod
+    def _is_read_only(agent):
+        return agent in READ_ONLY_AGENTS
+
+    def _scope_for(self, agent):
+        """The allowed-path scope recorded for this attempt, and enforced after it."""
+        return [] if self._is_read_only(agent) else [self.repo]
+
+    def _delegate(self, agent, prompt, path_scope, task="", objective=None):
+        # 031: prove `Delegations used + 1 <= effective max delegations` BEFORE
+        # allocating the attempt. An over-budget call is never made, and it never
+        # leaves a dangling DISPATCHED row behind either.
+        if not self.budget.can_dispatch():
+            raise BudgetExhausted(self.budget.used, self.budget.cap)
         self.attempt_seq += 1
         attempt = "A-%03d" % self.attempt_seq
         pre = self.fingerprint()
+        objective = objective or prompt
         self._attempt_row(attempt, task, agent, objective, "DISPATCHED", path_scope,
                           pre, "", "")
         self._persist("DELEGATE", task or "%s -> %s" % (attempt, agent))
@@ -206,12 +277,24 @@ class Loop:
 
         system = self._system_prompt(agent)
         response = call_with_retry(
-            lambda timeout: self.backend.run(system, objective, path_scope, timeout),
+            lambda timeout: self.backend.run(system, prompt, path_scope, timeout),
             self.retry_policy, self.budget, self.sleep,
             on_attempt=lambda n: self.log.emit("attempt", attempt=attempt, n=n, agent=agent),
             reason="%s/%s" % (attempt, agent))
 
         post = self.fingerprint()
+        if self._is_read_only(agent) and post != pre:
+            # 031 FR-008: "a change outside the recorded scope fails closed as an
+            # unattributed-path escalation". Its abort contract files unexplained
+            # out-of-scope writes with corrupt provenance - terminal, never guessed.
+            self._attempt_row(attempt, task, agent, objective, "FAILED", path_scope,
+                              pre, post, "OUT-OF-SCOPE WRITE")
+            self.log.emit("out-of-scope-write", attempt=attempt, agent=agent, task=task,
+                          pre_fingerprint=pre, post_fingerprint=post)
+            raise UnattributedWrite(
+                "%s (%s) changed the tree outside its recorded scope: it is a read-only agent, "
+                "yet the fingerprint moved from %s to %s during its delegation"
+                % (agent, attempt, pre, post))
         self.doc.append_line("Delegation log",
                              "- %s %s: dispatched, responded (pre %s -> post %s)"
                              % (attempt, agent, pre, post))
@@ -223,7 +306,7 @@ class Loop:
     def run(self):
         with open(self.tasks_path, encoding="utf-8") as fh:
             tasks_text = fh.read()
-        pending = tasks_mod.unchecked(tasks_text)
+        pending = tasks_mod.independently_runnable(tasks_text)
 
         try:
             self.doc, resumed = self._load_or_create_state(len(pending))
@@ -284,6 +367,10 @@ class Loop:
             except DelegationFailedClosed as exc:
                 self.log.emit("abort", kind="delegation-failed-closed", detail=str(exc))
                 return self._finish("ABORTED", exits.INTERNAL_ERROR, str(exc), resumable=True)
+            except UnattributedWrite as exc:
+                self.log.emit("abort", kind="unattributed-write", detail=str(exc))
+                return self._finish("ABORTED", exits.STATE_UNRESUMABLE, str(exc),
+                                    resumable=False)
             except BackendPrecondition as exc:
                 self.log.emit("abort", kind="backend", detail=str(exc))
                 return self._finish("ABORTED", exits.BACKEND_PRECONDITION, str(exc),
@@ -295,79 +382,173 @@ class Loop:
                                         resumable=True, escalations=escalations)
                 return outcome
 
-        unconverged = [t.id for t in runnable if t.id not in self.completed_tasks]
-        if unconverged:
-            # Every task was PROCESSED; that is not the same as converged. Reporting
-            # DONE here would be a false claim, and - worse for T013 - a later
-            # re-entry would read DONE and refuse to resume work that never landed.
-            reason = ("processed every task but %d did not converge: %s"
-                      % (len(unconverged), ", ".join(unconverged)))
-            self.log.emit("not-converged", tasks=unconverged)
-            return self._finish("PAUSED", exits.NOT_CONVERGED, reason, resumable=True)
+        # Every task was PROCESSED; that is not the same as the RUN being closed.
+        # Finalization is what may say DONE (031 FR-013).
+        try:
+            return self._finalize(runnable)
+        except BudgetExhausted as exc:
+            self.log.emit("abort", kind="budget", phase="finalization", detail=str(exc))
+            return self._finish("ABORTED", exits.BUDGET_EXHAUSTED, str(exc), resumable=True)
+        except DelegationFailedClosed as exc:
+            self.log.emit("abort", kind="delegation-failed-closed", phase="finalization",
+                          detail=str(exc))
+            return self._finish("ABORTED", exits.INTERNAL_ERROR, str(exc), resumable=True)
+        except UnattributedWrite as exc:
+            self.log.emit("abort", kind="unattributed-write", phase="finalization",
+                          detail=str(exc))
+            return self._finish("ABORTED", exits.STATE_UNRESUMABLE, str(exc), resumable=False)
+        except BackendPrecondition as exc:
+            self.log.emit("abort", kind="backend", phase="finalization", detail=str(exc))
+            return self._finish("ABORTED", exits.BACKEND_PRECONDITION, str(exc), resumable=True)
 
-        return self._finish("DONE", exits.OK, "all unchecked tasks converged", resumable=False)
+    # -- one task's convergence cycle ------------------------------------
+    def _open_findings_for(self, task_id):
+        return [r for r in self.counters.findings.values()
+                if r.task == task_id and r.status == "open"]
+
+    def _needs_implementation(self, task):
+        """Is a worker delegation the next thing this task needs?
+
+        Yes when it has never been implemented, and yes when a finding against it
+        is still awaiting its repair. No when the work landed and what is pending
+        is the review - which is what stops a resume from repairing twice.
+        """
+        # A synthetic malformed-block finding is not repairable by a worker: no
+        # code change fixes a reviewer's formatting. The next round simply
+        # re-reviews, and the reviewer's no-progress cap ends it if it persists.
+        pending_repairs = [r for r in self._open_findings_for(task.id)
+                           if not r.repair_done and not r.synthetic]
+        if pending_repairs:
+            return True
+        return task.id not in self.implemented_tasks
 
     def _process_task(self, task):
+        """implement -> review -> repair -> re-review, until converged, cap or budget.
+
+        Termination is not this loop's own invention: the per-reviewer no-progress
+        streak, the per-finding failed-repair total, and the monotonic delegation
+        budget each end it, and 031 makes the budget the global backstop for the
+        case where a reviewer keeps finding genuinely new defects.
+        """
+        while True:
+            if self._needs_implementation(task):
+                outcome = self._implement(task)
+                if outcome is not None:
+                    return outcome
+
+            required = self._required_reviewers(task)
+            current = self.fingerprint()
+            # An APPROVE is valid only for the fingerprint it was given on, so any
+            # change re-schedules EVERY stale required reviewer, not only the one
+            # that rejected (031 FR-011).
+            stale = [r for r in required
+                     if self.approvals.get("%s@%s" % (r, task.id)) != current]
+            if not stale:
+                self._complete(task)
+                return None
+
+            for reviewer in stale:
+                if self.counters.would_exceed(reviewer):
+                    reason = ("reviewer %r reached the no-progress cap (%d) on %s"
+                              % (reviewer, self.counters.max_iterations, task.id))
+                    self.log.emit("abort", kind="cap", scope="reviewer", reviewer=reviewer,
+                                  task=task.id, detail=reason)
+                    return self._finish("ABORTED", exits.CAP_ABORT, reason, resumable=True)
+
+                self._review(reviewer, task, current)
+
+                breach = self.counters.breached()
+                if breach:
+                    kind, name = breach
+                    if kind == "finding":
+                        row = self.counters.findings[name]
+                        reason = ("finding %s failed to converge: %d failed repairs at the cap of "
+                                  "%d. Required action still unmet: %s"
+                                  % (name, row.reject_total, self.counters.max_iterations,
+                                     row.required_action or "(none recorded)"))
+                    else:
+                        reason = ("reviewer %r failed to converge: %d consecutive rejects that "
+                                  "resolved nothing" % (name, self.counters.max_iterations))
+                    self.log.emit("abort", kind="cap", scope=kind, name=name, task=task.id,
+                                  detail=reason)
+                    return self._finish("ABORTED", exits.CAP_ABORT, reason, resumable=True)
+
+    def _implement(self, task):
+        """Delegate the initial implementation, or the repair a finding is waiting on."""
         self.iteration += 1
-        attempt, response, fingerprint, _pre = self._delegate(
-            "worker", "Implement %s - %s" % (task.id, task.title), [self.repo], task=task.id)
+        pending = [r for r in self._open_findings_for(task.id)
+                   if not r.repair_done and not r.synthetic]
+        if pending:
+            row = pending[0]
+            objective = "%s%s" % (resume_mod.REPAIR_OBJECTIVE_PREFIX, row.identity)
+            brief = ("Repair %s - %s\nFinding %s (%s): %s\nRequired action: %s"
+                     % (task.id, task.title, row.identity, row.severity,
+                        row.finding_id, row.required_action))
+        else:
+            row = None
+            objective = resume_mod.IMPLEMENTATION_OBJECTIVE
+            brief = "Implement %s - %s" % (task.id, task.title)
+
+        attempt, response, post, _pre = self._delegate(
+            "worker", brief, self._scope_for("worker"), task=task.id, objective=objective)
         completion = blocks.parse_worker(response.text)
-        self.log.emit("completion", task=task.id, status=completion.status,
-                      malformed=completion.malformed, errors=completion.errors)
-        self._attempt_row(attempt, task.id, "worker", "completion", "RESPONDED", [self.repo],
-                          "", fingerprint, completion.status)
+        self.log.emit("completion", task=task.id, kind=objective, status=completion.status,
+                      malformed=completion.malformed, errors=completion.errors,
+                      finding=row.identity if row else None)
+        self._attempt_row(attempt, task.id, "worker", objective, "RESPONDED", [self.repo],
+                          "", post, completion.status)
 
         if not completion.done:
-            classifications = classify_all(completion.decisions)
-            for c in classifications:
-                self.log.emit("escalation", task=task.id, gated=c.gated, trigger=c.trigger,
-                              question=c.question, reason=c.reason)
-            gated = [c for c in classifications if c.gated]
-            if gated:
-                self.doc.set_body("Escalations", "\n" + "\n".join(
-                    "- **waiting** (%s) on %s: %s" % (c.trigger, task.id, c.question)
-                    for c in gated) + "\n\n")
-                self._persist("ESCALATED", task.id)
-                if self.notify:
-                    self.notify({"event": "human-escalation", "task": task.id,
-                                 "questions": [c.question for c in gated],
-                                 "triggers": [c.trigger for c in gated]})
-                return Outcome(exits.HUMAN_ESCALATION, "PAUSED",
-                               "human-gated escalation on %s" % task.id,
-                               escalations=[c.question for c in gated])
-            # Auto-resolvable: record and continue. The deep-reasoner call and the
-            # DECISIONS.md write are T014's work, not this one's.
-            self.log.emit("escalation-auto", task=task.id,
-                          questions=[c.question for c in classifications])
-        else:
-            for identity in [i for i, r in self.counters.findings.items()
-                             if r.task == task.id and r.status == "open"]:
-                self.counters.record_repair_done(identity)
+            return self._handle_block(task, completion)
 
-        approved_by = []
-        for reviewer in self._required_reviewers(task):
-            if self.counters.would_exceed(reviewer):
-                reason = ("reviewer %r reached the no-progress cap (%d)"
-                          % (reviewer, self.counters.max_iterations))
-                self.log.emit("abort", kind="cap", detail=reason)
-                return self._finish("ABORTED", exits.CAP_ABORT, reason, resumable=True)
-            verdict = self._review(reviewer, task, fingerprint)
-            if verdict is not None and verdict.approved:
-                approved_by.append(reviewer)
-            breach = self.counters.breached()
-            if breach:
-                reason = "%s %r failed to converge" % breach
-                self.log.emit("abort", kind="cap", detail=reason)
-                return self._finish("ABORTED", exits.CAP_ABORT, reason, resumable=True)
-
-        required = self._required_reviewers(task)
-        if completion.done and all(r in approved_by for r in required):
-            self.completed_tasks.add(task.id)
-            self._attempt_row(attempt, task.id, "worker", "task complete", "VERIFIED",
-                              [self.repo], "", fingerprint, "DONE")
-            self.log.emit("task-complete", task=task.id, reviewers=required)
-            self._persist("TASK COMPLETE", task.id)
+        self.implemented_tasks.add(task.id)
+        if row is not None:
+            # Only a subsequent APPROVE resolves the finding (031 FR-007). What a
+            # worker DONE establishes is that a repair was ATTEMPTED, which is the
+            # precondition for the next REJECT to count as a failed repair.
+            self.counters.record_repair_done(row.identity)
+            self.log.emit("repair-done", task=task.id, finding=row.identity)
+        self._persist("IMPLEMENTED", task.id)
         return None
+
+    def _handle_block(self, task, completion):
+        classifications = classify_all(completion.decisions)
+        for c in classifications:
+            self.log.emit("escalation", task=task.id, gated=c.gated, trigger=c.trigger,
+                          question=c.question, reason=c.reason)
+        gated = [c for c in classifications if c.gated]
+        if gated:
+            self.doc.set_body("Escalations", "\n" + "\n".join(
+                "- **waiting** (%s) on %s: %s" % (c.trigger, task.id, c.question)
+                for c in gated) + "\n\n")
+            self._persist("ESCALATED", task.id)
+            if self.notify:
+                self.notify({"event": "human-escalation", "task": task.id,
+                             "questions": [c.question for c in gated],
+                             "triggers": [c.trigger for c in gated]})
+            return Outcome(exits.HUMAN_ESCALATION, "PAUSED",
+                           "human-gated escalation on %s" % task.id,
+                           escalations=[c.question for c in gated])
+        # Auto-resolvable: recorded, and the run stops rather than looping on a
+        # worker that cannot proceed. The deep-reasoner call and the DECISIONS.md
+        # write are T014's work, not this one's.
+        self.log.emit("escalation-auto", task=task.id,
+                      questions=[c.question for c in classifications])
+        reason = ("worker BLOCKED on %s with a technically auto-resolvable question, and "
+                  "automatic resolution is not implemented yet (T014)" % task.id)
+        return Outcome(exits.HUMAN_ESCALATION, "PAUSED", reason, resumable=True,
+                       escalations=[c.question for c in classifications])
+
+    def _complete(self, task):
+        self.completed_tasks.add(task.id)
+        self._set_task_checkbox(task.id, True)
+        self.attempt_seq += 1
+        self._attempt_row("A-%03d" % self.attempt_seq, task.id, "worker",
+                          resume_mod.TASK_COMPLETE_OBJECTIVE, "VERIFIED", [self.repo],
+                          "", self.fingerprint(), "DONE")
+        self.log.emit("task-complete", task=task.id,
+                      reviewers=self._required_reviewers(task))
+        self._persist("TASK COMPLETE", task.id)
 
     def _required_reviewers(self, task):
         required = ["domain"]
@@ -377,9 +558,13 @@ class Loop:
         return required
 
     def _review(self, reviewer, task, fingerprint):
+        # A review scheduled only because the fingerprint moved, on a reviewer with
+        # nothing open, is a clean re-approval: it consumes budget and gates nothing.
+        had_open = bool([r for r in self.counters.open_findings(reviewer)
+                         if r.task == task.id])
         attempt, response, post, _pre = self._delegate(
-            reviewer, "Review the diff for %s - %s" % (task.id, task.title), [self.repo],
-            task=task.id)
+            reviewer, "Review the diff for %s - %s" % (task.id, task.title),
+            self._scope_for(reviewer), task=task.id, objective="verdict")
         verdict = blocks.parse_reviewer(response.text, reviewer, self.iteration)
         self.log.emit("verdict", reviewer=reviewer, task=task.id, verdict=verdict.verdict,
                       synthetic=verdict.synthetic, malformed=verdict.malformed,
@@ -388,22 +573,76 @@ class Loop:
                           "", post, verdict.verdict)
 
         if verdict.approved:
-            summary = self.counters.record_approve(reviewer, post)
-            self.approvals[reviewer] = post
+            resolved_before = {r.identity for r in self.counters.open_findings(reviewer)}
+            summary = self.counters.record_approve(reviewer, post,
+                                                   clean_reapproval=not had_open)
+            self.approvals["%s@%s" % (reviewer, task.id)] = post
+            self._close_repair_tasks(resolved_before)
         else:
-            summary = self.counters.record_reject(reviewer, verdict.findings, self.iteration, post)
+            summary = self.counters.record_reject(reviewer, verdict.findings, self.iteration,
+                                                  post, synthetic=verdict.synthetic)
             for item in verdict.findings:
                 row = self.counters.findings.get("%s:%s" % (reviewer, item.get("id")))
                 if row is not None and not row.task:
                     row.task = task.id
-            # Any implementation change invalidates non-matching approvals (031 FR-011).
-            self.approvals = {r: fp for r, fp in self.approvals.items() if fp == post}
+            if not verdict.synthetic:
+                self._schedule_repairs(task, reviewer, verdict.findings)
+            # Any implementation change invalidates non-matching approvals, and it
+            # re-schedules EVERY stale required reviewer, not only the one that
+            # rejected (031 FR-011).
+            self.approvals = {k: fp for k, fp in self.approvals.items() if fp == post}
         self.log.emit("counters", reviewer=reviewer,
                       no_progress_streak=self.counters.reviewer(reviewer).no_progress_streak,
                       total_invocations=self.counters.reviewer(reviewer).total_invocations,
+                      clean_reapprovals=self.counters.reviewer(reviewer).clean_reapprovals,
                       resolved=summary.get("resolved", []))
         self._persist("REVIEW", "%s -> %s" % (reviewer, verdict.verdict))
         return verdict
+
+    # -- findings become tasks (031 FR-007) -------------------------------
+    def _schedule_repairs(self, task, reviewer, findings):
+        """One unchecked TASKS.md item per NEW finding identity. Never a second."""
+        with open(self.tasks_path, encoding="utf-8") as fh:
+            text = fh.read()
+        changed = False
+        for item in findings:
+            finding_id = str(item.get("id"))
+            identity = "%s:%s" % (reviewer, finding_id)
+            existing = tasks_mod.task_for_finding(text, finding_id)
+            row = self.counters.findings.get(identity)
+            if existing is not None:
+                # Re-reporting updates the registry row; it never allocates a
+                # second task for the same identity.
+                if row is not None and not row.task_ref:
+                    row.task_ref = existing.id
+                self.log.emit("repair-task-reused", finding=identity, task=existing.id)
+                continue
+            new_id = tasks_mod.next_task_id(text)
+            text = tasks_mod.append_finding_task(
+                text, new_id, "Repair %s for %s" % (finding_id, task.id), finding_id,
+                task.covers, str(item.get("required_action", "")))
+            if row is not None:
+                row.task_ref = new_id
+            changed = True
+            self.log.emit("repair-task-created", finding=identity, task=new_id,
+                          covers=task.covers)
+        if changed:
+            with open(self.tasks_path, "w", encoding="utf-8") as fh:
+                fh.write(text)
+
+    def _close_repair_tasks(self, identities):
+        """Check off the repair tasks whose findings this APPROVE resolved."""
+        refs = [self.counters.findings[i].task_ref for i in identities
+                if i in self.counters.findings and self.counters.findings[i].task_ref]
+        if not refs:
+            return
+        with open(self.tasks_path, encoding="utf-8") as fh:
+            text = fh.read()
+        for ref in refs:
+            text = tasks_mod.check_task(text, ref)
+        with open(self.tasks_path, "w", encoding="utf-8") as fh:
+            fh.write(text)
+        self.log.emit("repair-tasks-closed", tasks=sorted(refs))
 
     def _write_findings(self):
         rows = []
@@ -411,16 +650,325 @@ class Loop:
             rows.append({
                 "Reviewer:finding": identity,
                 "Task": row.task or "-",
+                "Repair task": row.task_ref or "-",
                 "Severity": row.severity or "-",
                 "Required action": (row.required_action or "-").replace("|", "/"),
                 "Status": row.status,
                 "REJECTs": row.reject_total,
                 "Repair done": "yes" if row.repair_done else "no",
+                "Synthetic": "yes" if row.synthetic else "no",
                 "First seen": row.first_seen,
                 "Last seen": row.last_seen,
                 "Resolving verdict/fingerprint": (row.resolving_verdict or "-").replace("|", "/"),
             })
         self.doc.set_body("Findings", state.render_table(state.FINDING_COLUMNS, rows))
+
+    def _set_task_checkbox(self, task_id, checked):
+        """Lifecycle bookkeeping: 031's DONE condition 1 reads TASKS.md itself."""
+        with open(self.tasks_path, encoding="utf-8") as fh:
+            text = fh.read()
+        updated = (tasks_mod.check_task(text, task_id) if checked
+                   else tasks_mod.uncheck_task(text, task_id))
+        if updated != text:
+            with open(self.tasks_path, "w", encoding="utf-8") as fh:
+                fh.write(updated)
+
+    # -- finalization (031 FR-013) ----------------------------------------
+    def _blocked(self, code, reason, remediation, result="PAUSED", resumable=True):
+        self.log.emit("finalization-blocked", code=code, reason=reason,
+                      remediation=remediation)
+        outcome = self._finish(result, code, reason, resumable=resumable)
+        outcome.remediation = remediation
+        return outcome
+
+    def _finalize(self, runnable):
+        """Prove the run is closed, or refuse to say it is.
+
+        Every check below answers one of 031's six DONE conditions, or FR-013's
+        freeze and closure-delta contract. None of them is skippable, and a check
+        that cannot be evaluated blocks rather than passes.
+        """
+        self.log.emit("finalize-start", completed=sorted(self.completed_tasks))
+
+        # The state-only conditions are re-checked on EVERY entry, freeze or no
+        # freeze. They cost nothing, and skipping them on re-entry would let a run
+        # close over an open finding or an unchecked task that appeared in between.
+        outcome = self._state_preconditions(runnable)
+        if outcome is not None:
+            return outcome
+
+        record = self.closure
+        if record is None or record.get("phase") in (None, "", "OPEN"):
+            outcome = self._delegating_preconditions()
+            if outcome is not None:
+                return outcome
+            outcome = self._freeze()
+            if outcome is not None:
+                return outcome
+            record = self.closure
+        else:
+            # Re-entry after a freeze: the frozen fingerprint must still describe
+            # the implementation, or the freeze is void and the run goes back.
+            current = self.fingerprint()
+            if record["frozen_fingerprint"] != current:
+                return self._blocked(
+                    exits.CLOSURE_NOT_PROVEN,
+                    "the implementation changed after the freeze: frozen %s, now %s"
+                    % (record["frozen_fingerprint"], current),
+                    "031 FR-013 returns this run to REVIEW. Re-enter to re-review the changed "
+                    "tree; the freeze is discarded, not repaired.")
+            self.log.emit("freeze-reused", fingerprint=record["frozen_fingerprint"],
+                          phase=record["phase"])
+
+        return self._close(record)
+
+    def _state_preconditions(self, runnable):
+        """The DONE conditions answerable from state and the tree, with no delegation."""
+        unconverged = [t.id for t in runnable if t.id not in self.completed_tasks]
+        if unconverged:
+            return self._blocked(
+                exits.NOT_CONVERGED,
+                "%d task(s) did not converge: %s" % (len(unconverged), ", ".join(unconverged)),
+                "re-enter to continue their implement/review cycle")
+
+        open_findings = sorted(r.identity for r in self.counters.findings.values()
+                               if r.status == "open")
+        if open_findings:
+            return self._blocked(
+                exits.NOT_CONVERGED,
+                "%d finding(s) still open: %s" % (len(open_findings), ", ".join(open_findings)),
+                "only an APPROVE from the owning reviewer on the current fingerprint resolves a "
+                "finding; re-enter to repair and re-review them")
+
+        escalations = [ln for ln in self.doc.body("Escalations").splitlines()
+                       if "waiting" in ln.lower() and ln.strip().startswith("-")]
+        if escalations:
+            return self._blocked(
+                exits.HUMAN_ESCALATION,
+                "%d escalation(s) still waiting for a maintainer answer" % len(escalations),
+                "answer them in DECISIONS.md and clear the waiting rows, then re-enter")
+
+        if self.budget.cap <= 0 or self.budget.used > self.budget.cap:
+            return self._blocked(
+                exits.STATE_UNRESUMABLE,
+                "the delegation budget is inconsistent: %d used against a cap of %d"
+                % (self.budget.used, self.budget.cap),
+                "the run cannot be declared closed on a number nobody can trust. Inspect "
+                "ORCHESTRATION.md.", result="ABORTED", resumable=False)
+
+        with open(self.tasks_path, encoding="utf-8") as fh:
+            tasks_text = fh.read()
+        unchecked = [t.id for t in tasks_mod.unchecked(tasks_text)]
+        if unchecked:
+            return self._blocked(
+                exits.NOT_CONVERGED,
+                "%d TASKS.md item(s) are still unchecked: %s"
+                % (len(unchecked), ", ".join(unchecked)),
+                "031's first DONE condition is that every TASKS.md item is checked. A repair "
+                "task is checked only when its finding resolves.")
+
+        return None
+
+    def _delegating_preconditions(self):
+        """The conditions that cost delegations: stale re-review, then conformance."""
+        outcome = self._refresh_stale_approvals()
+        if outcome is not None:
+            return outcome
+        return self._final_conformance()
+
+    def _refresh_stale_approvals(self):
+        """A later task's change stales an earlier task's approval (031 FR-011)."""
+        with open(self.tasks_path, encoding="utf-8") as fh:
+            tasks_text = fh.read()
+        by_id = {t.id: t for t in tasks_mod.parse(tasks_text)}
+
+        current = self.fingerprint()
+        stale = []
+        for task_id in sorted(self.completed_tasks):
+            task = by_id.get(task_id)
+            if task is None:
+                return self._blocked(
+                    exits.STATE_UNRESUMABLE,
+                    "task %s is recorded complete but no longer exists in TASKS.md" % task_id,
+                    "the runner will not close a run whose task list moved under it. Reconcile "
+                    "TASKS.md, or start a fresh run.", result="ABORTED", resumable=False)
+            for reviewer in self._required_reviewers(task):
+                if self.approvals.get("%s@%s" % (reviewer, task_id)) != current:
+                    stale.append((reviewer, task))
+
+        if not stale:
+            return None
+
+        self.log.emit("stale-approvals", count=len(stale),
+                      pairs=["%s@%s" % (r, t.id) for r, t in stale], fingerprint=current)
+
+        for reviewer, task in stale:
+            if self.counters.would_exceed(reviewer):
+                return self._blocked(
+                    exits.CAP_ABORT,
+                    "reviewer %r reached the no-progress cap while re-reviewing stale approvals"
+                    % reviewer,
+                    "raise --max-iterations explicitly on re-entry, or resolve the disagreement "
+                    "by hand", result="ABORTED")
+            verdict = self._review(reviewer, task, current)
+            if not verdict.approved:
+                # Back to REVIEW: the task is no longer converged, so it must not
+                # stay marked complete or a re-entry would skip it.
+                self.completed_tasks.discard(task.id)
+                self._set_task_checkbox(task.id, False)
+                self._persist("REVIEW", task.id)
+                return self._blocked(
+                    exits.NOT_CONVERGED,
+                    "re-reviewing the stale approval of %s returned REJECT from %r; the run "
+                    "returns to REVIEW" % (task.id, reviewer),
+                    "re-enter to repair the finding and re-review")
+
+        return self._refresh_stale_approvals()
+
+    def _final_conformance(self):
+        """031 step 6: run final-conformance-reviewer exactly once on the evidence chain."""
+        current = self.fingerprint()
+        if self.approvals.get("final-conformance@run") == current:
+            return None
+        with open(self.tasks_path, encoding="utf-8") as fh:
+            tasks_text = fh.read()
+        objective = "final conformance"
+        attempt, response, post, _pre = self._delegate(
+            "final-conformance",
+            "Verify SPEC -> PLAN -> TASKS -> DIFF -> TESTS -> REVIEW for %s. Tasks:\n%s"
+            % (self.feature_dir, tasks_text[:2000]),
+            self._scope_for("final-conformance"), task="-", objective=objective)
+        verdict = blocks.parse_reviewer(response.text, "final-conformance", self.iteration)
+        self.log.emit("verdict", reviewer="final-conformance", task="-",
+                      verdict=verdict.verdict, synthetic=verdict.synthetic,
+                      errors=verdict.errors,
+                      findings=[f.get("id") for f in verdict.findings])
+        self._attempt_row(attempt, "-", "final-conformance", objective, "VERIFIED",
+                          [self.repo], "", post, verdict.verdict)
+
+        if not verdict.approved:
+            self.counters.record_reject("final-conformance", verdict.findings, self.iteration,
+                                        post, synthetic=verdict.synthetic)
+            self._persist("REVIEW", "final conformance REJECT")
+            return self._blocked(
+                exits.NOT_CONVERGED,
+                "final-conformance-reviewer returned REJECT: %s"
+                % ", ".join(f.get("id", "?") for f in verdict.findings),
+                "re-enter to address its findings; the run does not close on a rejected "
+                "conformance review")
+        self.counters.record_approve("final-conformance", post)
+        self.approvals["final-conformance@run"] = post
+        self._persist("FINAL CONFORMANCE", "APPROVE")
+        return None
+
+    def _verification(self):
+        """031's second DONE condition. Honest about the case where it cannot be met."""
+        if not self.baseline_cmd:
+            return "NOT DECLARED - condition 2 of 031's termination contract is unobserved"
+        before = subprocess.run(["git", "-C", self.repo, "status", "--porcelain"],
+                                capture_output=True, text=True).stdout
+        proc = subprocess.run(self.baseline_cmd, cwd=self.repo, capture_output=True, text=True)
+        after = subprocess.run(["git", "-C", self.repo, "status", "--porcelain"],
+                               capture_output=True, text=True).stdout
+        self.log.emit("verification", command=list(self.baseline_cmd),
+                      returncode=proc.returncode, hermetic=before == after)
+        if proc.returncode != 0:
+            return "FAILED (exit %d)" % proc.returncode
+        if before != after:
+            return "MUTATED THE TREE"
+        return "PASS"
+
+    def _freeze(self):
+        """Record the fully approved implementation fingerprint and the tree behind it."""
+        verification = self._verification()
+        if verification.startswith("FAILED") or verification.startswith("MUTATED"):
+            return self._blocked(
+                exits.NOT_CONVERGED,
+                "the declared verification command did not pass: %s" % verification,
+                "get the verification green and hermetic, then re-enter", result="ABORTED")
+
+        fingerprint = self.fingerprint()
+        frozen = closure_mod.tree_map(self.repo)
+        self.closure = {"frozen_fingerprint": fingerprint, "phase": "FROZEN",
+                        "verification": verification, "frozen": frozen, "delta": []}
+        self._persist_closure()
+        self.log.emit("freeze", fingerprint=fingerprint, paths=len(frozen),
+                      verification=verification)
+        return None
+
+    def _persist_closure(self):
+        self.doc.set_body("Closure delta", closure_mod.render(
+            self.closure["frozen_fingerprint"], self.closure["frozen"],
+            self.closure["delta"], self.closure["phase"], self.closure["verification"]))
+        self._persist(self.closure["phase"], "closure")
+
+    def _close(self, record):
+        """Delegate the owning lifecycle skills, then audit what they changed."""
+        done_steps = [s for s in LIFECYCLE_STEPS
+                      if record["phase"] in ("CLOSED",)
+                      or LIFECYCLE_STEPS.index(s) < self._phase_index(record["phase"])]
+        for step in LIFECYCLE_STEPS:
+            if step in done_steps:
+                self.log.emit("lifecycle-skipped", step=step, reason="already recorded")
+                continue
+            outcome = self._lifecycle_step(step)
+            if outcome is not None:
+                return outcome
+            self.closure["phase"] = "LIFECYCLE:%s" % step
+            self._persist_closure()
+
+        delta = closure_mod.observe(self.repo, self.feature_dir, self.closure["frozen"])
+        self.closure["delta"] = delta
+        unexpected = closure_mod.unexpected(delta)
+        self.closure["phase"] = "CLOSED" if not unexpected else "INVALID"
+        self._persist_closure()
+        self.log.emit("closure-delta", rows=len(delta), unexpected=len(unexpected),
+                      paths=[r["Path"] for r in unexpected])
+
+        if unexpected:
+            return self._blocked(
+                exits.CLOSURE_NOT_PROVEN,
+                "the closure delta contains %d unexpected change(s): %s"
+                % (len(unexpected), ", ".join(r["Path"] for r in unexpected)),
+                "031 FR-013 invalidates final conformance and returns the run to REVIEW. "
+                "Inspect those paths: a production, test, PLAN, DECISIONS or non-lifecycle SPEC "
+                "change after the freeze is not closure work.")
+
+        return self._finish("DONE", exits.OK,
+                            "closed: frozen at %s, closure delta clean (%d audited change(s)), "
+                            "verification %s"
+                            % (self.closure["frozen_fingerprint"], len(delta),
+                               self.closure["verification"]),
+                            resumable=False)
+
+    @staticmethod
+    def _phase_index(phase):
+        if phase.startswith("LIFECYCLE:"):
+            step = phase.split(":", 1)[1]
+            if step in LIFECYCLE_STEPS:
+                return LIFECYCLE_STEPS.index(step) + 1
+        return 0
+
+    def _lifecycle_step(self, step):
+        agent = "lifecycle:%s" % step
+        attempt, response, post, _pre = self._delegate(
+            agent, "Run /%s for %s and end with the canonical verdict block."
+                   % (step, self.feature_dir),
+            self._scope_for(agent), task="-", objective=agent)
+        verdict = blocks.parse_reviewer(response.text, step, self.iteration)
+        self.log.emit("lifecycle", step=step, verdict=verdict.verdict,
+                      synthetic=verdict.synthetic, errors=verdict.errors)
+        self._attempt_row(attempt, "-", agent, agent, "VERIFIED", [self.repo], "", post,
+                          verdict.verdict)
+        if not verdict.approved:
+            return self._blocked(
+                exits.CLOSURE_NOT_PROVEN,
+                "the owning lifecycle skill /%s refused: %s"
+                % (step, "; ".join(f.get("summary", "?") for f in verdict.findings)
+                   or "no reason given"),
+                "031 forbids writing the status on a refusing skill's behalf. Address its reason "
+                "and re-enter; the freeze is preserved.")
+        return None
 
     def _finish(self, result, code, reason, resumable=True, escalations=None):
         self.doc.set_body("Run result",

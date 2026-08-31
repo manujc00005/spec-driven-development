@@ -22,3 +22,8 @@ Thumbs.db
 # Python bytecode (the runner/ package, spec 040)
 __pycache__/
 *.py[cod]
+
+# Per-run machine log written by runner/ into the feature folder (spec 040).
+# ORCHESTRATION.md is the durable, human-readable record and IS committed;
+# run.jsonl is the transcript of one invocation and is not.
+specs/features/*/run.jsonl

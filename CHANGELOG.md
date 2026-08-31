@@ -11,6 +11,7 @@ under `specs/features/` — the framework is developed with its own workflow.
 
 ## [Unreleased]
 
+Spec 040 · Agent SDK runner — the autonomous loop stops being a prompt and becomes code.
 Spec 039 · Windows first-run install fixes — the global instructions that never loaded.
 Spec 038 · Portable personal config — the framework restored; the person did not.
 Spec 037 · Workspace init — the map alone was never enough; state now generates itself.
@@ -66,6 +67,27 @@ Spec 025 · Workspace SDD — the first coverage of what happens *between* proje
 Spec 024 · Delivery-operations profile — the first coverage of what happens after merge.
 
 ### Added
+
+- **`runner/` — the phase-2 executor for the autonomous loop** (spec 040). Spec 031 shipped an
+  implement→review→fix loop that only exists as a prompt inside an interactive Claude Code
+  session: it cannot run from `cron` or CI, its caps and budget are arithmetic a model has to
+  re-read after every context compression, and no Claude Code skill can invoke `codex exec`. This
+  is the same protocol as **code** — a self-contained Python package (`sdd_runner`) that reads
+  `TASKS.md`,
+  dispatches one provider session per task or review, parses the verdict blocks with a strict
+  fail-closed parser, enforces the caps and the delegation budget before dispatching, resumes
+  idempotently from `ORCHESTRATION.md`, runs the repair/re-review cycle, and finalizes with a
+  freeze and a closure-delta audit (031 FR-013).
+
+  **Maintainer tooling only.** No installer, `profiles.json` or manifest change; no adopter
+  project depends on it, and the framework installs and behaves identically on a machine that has
+  neither the Agent SDK nor the Codex CLI. Its test suite runs on stdlib `unittest` against a
+  deterministic stub backend — 165 tests, no provider call, no cost.
+
+  **What is not claimed.** The Claude backend has never been exercised against a real provider
+  from this repository, and the Codex backend is implemented but **gated shut** pending
+  DEBT-001/DEBT-002 — Codex parity is not claimed. Four things nobody has yet seen work are named
+  in [`docs/SDD-ORCHESTRATION.md`](docs/SDD-ORCHESTRATION.md) rather than implied.
 
 - **`/sdd-workspace-init` — end-to-end workspace setup** (spec 037). Takes a folder of related
   projects from nothing to fully wired in seven phases: detect and confirm the project list,

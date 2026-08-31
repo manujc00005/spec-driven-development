@@ -13,6 +13,7 @@ BACKEND_PRECONDITION = 14
 CONCURRENT_RUN = 15
 STATE_UNRESUMABLE = 16
 NOT_CONVERGED = 17
+CLOSURE_NOT_PROVEN = 18
 INTERNAL_ERROR = 70
 
 NAMES = {
@@ -25,5 +26,6 @@ NAMES = {
     CONCURRENT_RUN: "concurrent-run",
     STATE_UNRESUMABLE: "state-unresumable",
     NOT_CONVERGED: "not-converged",
+    CLOSURE_NOT_PROVEN: "closure-not-proven",
     INTERNAL_ERROR: "internal-error",
 }

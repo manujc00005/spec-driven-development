@@ -17,7 +17,7 @@ from sdd_runner import exits, state
 from sdd_runner.backends.stub import StubBackend
 from sdd_runner.log import RunLog
 from sdd_runner.loop import Loop
-from tests.support import TASKS, fixture, make_repo
+from tests.support import TASKS, finalization_flat, fixture, make_repo
 
 FOUR_TASKS = """# Tasks: fixture
 
@@ -31,14 +31,15 @@ FOUR_TASKS = """# Tasks: fixture
 
 
 class LoopHarness(unittest.TestCase):
-    def build(self, script, tasks=TASKS, max_iterations=3, max_delegations=None, notify=None):
+    def build(self, script, tasks=TASKS, max_iterations=3, max_delegations=None, notify=None,
+              environ={}):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         repo, feature_dir = make_repo(self.tmp.name, tasks=tasks)
         stub = StubBackend(script=list(script))
         counter = itertools.count()
         log = RunLog(os.path.join(feature_dir, "run.jsonl"), clock=lambda: next(counter),
-                     environ={})
+                     environ=environ)
         loop = Loop(repo, feature_dir, stub, log, max_iterations=max_iterations,
                     max_delegations=max_delegations, clock=lambda: 0, notify=notify)
         return loop, stub, repo, feature_dir, log
@@ -46,13 +47,14 @@ class LoopHarness(unittest.TestCase):
 
 class Converge(LoopHarness):
     def test_two_tasks_converge_and_leave_no_commit(self):
-        script = [fixture("worker_done.md"), fixture("reviewer_approve.md")] * 2
+        script = ([fixture("worker_done.md"), fixture("reviewer_approve.md")] * 2
+                  + finalization_flat())
         loop, stub, repo, feature_dir, log = self.build(script)
         outcome = loop.run()
 
         self.assertEqual(outcome.code, exits.OK)
         self.assertEqual(outcome.result, "DONE")
-        self.assertEqual(stub.invocations, 4)
+        self.assertEqual(stub.invocations, 4 + len(finalization_flat()))
 
         doc = state.Orchestration.load(os.path.join(feature_dir, "ORCHESTRATION.md"))
         self.assertEqual(doc.run_result(), "DONE")
@@ -67,14 +69,15 @@ class Converge(LoopHarness):
         self.assertEqual(len(out), 1, "the runner must not commit")
 
     def test_every_decision_is_reconstructible_from_run_jsonl_alone(self):
-        script = [fixture("worker_done.md"), fixture("reviewer_approve.md")] * 2
+        script = ([fixture("worker_done.md"), fixture("reviewer_approve.md")] * 2
+                  + finalization_flat())
         loop, stub, repo, feature_dir, log = self.build(script)
         loop.run()
         with open(os.path.join(feature_dir, "run.jsonl"), encoding="utf-8") as fh:
             lines = fh.read().splitlines()
         events = [json.loads(l)["event"] for l in lines]
         for required in ("plan", "dispatch", "response", "completion", "verdict",
-                         "counters", "finish"):
+                         "counters", "finalize-start", "freeze", "closure-delta", "finish"):
             self.assertIn(required, events)
 
 
@@ -156,13 +159,159 @@ class HumanEscalation(LoopHarness):
         self.assertIn("waiting", doc.body("Escalations"))
         self.assertIn("overage", doc.body("Escalations"))   # verbatim question
 
-    def test_a_technical_question_does_not_pause_the_run(self):
-        script = [fixture("worker_blocked.md"), fixture("reviewer_approve.md"),
-                  fixture("worker_done.md"), fixture("reviewer_approve.md")]
-        loop, stub, repo, feature_dir, log = self.build(script)
+    def test_a_technical_question_is_classified_auto_but_still_stops_the_run(self):
+        """Auto-resolvable is a classification, not a capability yet.
+
+        Resolving it needs the deep-reasoner call and the DECISIONS.md write that
+        T014 owns. Until then the run stops: continuing would either review work
+        the worker never did, or re-delegate the same blocked task forever. It is
+        recorded as auto-resolvable, it is NOT written into the waiting list, and
+        no notification is sent - those are for human-gated questions.
+        """
+        sent = []
+        script = [fixture("worker_blocked.md")]
+        loop, stub, repo, feature_dir, log = self.build(script, notify=sent.append)
         outcome = loop.run()
-        self.assertNotEqual(outcome.code, exits.HUMAN_ESCALATION)
+        self.assertEqual(outcome.code, exits.HUMAN_ESCALATION)
+        self.assertEqual(outcome.result, "PAUSED")
+        self.assertTrue(outcome.resumable)
+        self.assertIn("auto-resolvable", outcome.reason)
         self.assertTrue(any(e["event"] == "escalation-auto" for e in log.events))
+        self.assertEqual(sent, [], "an auto-resolvable question notifies nobody")
+        doc = state.Orchestration.load(os.path.join(feature_dir, "ORCHESTRATION.md"))
+        self.assertNotIn("waiting", doc.body("Escalations"))
+
+
+class ReadOnlyAgentsMayNotWrite(LoopHarness):
+    """SEC-002 / 031 FR-008: an out-of-scope write fails closed.
+
+    Every attempt records an allowed-path scope, and nothing checked it: the
+    scope was the whole repo for every agent and no code compared it against
+    what actually changed. The reviewers' own contracts say "Read-only - it
+    never modifies code", so their recorded scope is empty and any change during
+    their delegation is an unattributed-path write.
+
+    031's abort contract puts unexplained out-of-scope writes with corrupt
+    provenance: ABORTED, resumable: no, never guess.
+    """
+
+    class WritingReviewer(StubBackend):
+        def __init__(self, script, repo):
+            super().__init__(script=script)
+            self.repo = repo
+
+        def run(self, system_prompt, task_prompt, path_scope, timeout):
+            response = super().run(system_prompt, task_prompt, path_scope, timeout)
+            if "domain-reviewer" in (system_prompt or ""):
+                with open(os.path.join(self.repo, "sneaky.py"), "w", encoding="utf-8") as fh:
+                    fh.write("# written by a read-only agent\n")
+            return response
+
+    def build_writing(self, script):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        repo, feature_dir = make_repo(self.tmp.name, tasks=TASKS)
+        stub = self.WritingReviewer(list(script), repo)
+        counter = itertools.count()
+        log = RunLog(os.path.join(feature_dir, "run.jsonl"), clock=lambda: next(counter),
+                     environ={})
+        loop = Loop(repo, feature_dir, stub, log, clock=lambda: 0)
+        return loop, stub, repo, feature_dir, log
+
+    def test_a_reviewer_that_writes_aborts_the_run_unresumably(self):
+        loop, stub, repo, feature_dir, log = self.build_writing(
+            [fixture("worker_done.md"), fixture("reviewer_approve.md")])
+        outcome = loop.run()
+
+        self.assertEqual(outcome.code, exits.STATE_UNRESUMABLE)
+        self.assertEqual(outcome.result, "ABORTED")
+        self.assertFalse(outcome.resumable, "031 makes unexplained out-of-scope writes terminal")
+        self.assertIn("domain", outcome.reason)
+        self.assertIn("outside its recorded scope", outcome.reason)
+
+        doc = state.Orchestration.load(os.path.join(feature_dir, "ORCHESTRATION.md"))
+        self.assertEqual(doc.run_result(), "ABORTED")
+        self.assertFalse(doc.resumable())
+
+    def test_the_scope_recorded_for_a_reviewer_is_empty(self):
+        loop, stub, repo, feature_dir, log = self.build(
+            [fixture("worker_done.md"), fixture("reviewer_approve.md")] + finalization_flat())
+        loop.run()
+        scopes = {e["agent"]: e["scope"] for e in log.events if e["event"] == "dispatch"}
+        self.assertEqual(scopes["domain"], [])
+        self.assertEqual(scopes["worker"], [repo])
+
+    def test_a_worker_writing_is_not_an_out_of_scope_write(self):
+        class WritingWorker(self.WritingReviewer):
+            def run(self, system_prompt, task_prompt, path_scope, timeout):
+                response = StubBackend.run(self, system_prompt, task_prompt, path_scope, timeout)
+                if "implementer" in (system_prompt or ""):
+                    with open(os.path.join(self.repo, "impl.py"), "w", encoding="utf-8") as fh:
+                        fh.write("# ordinary work\n")
+                return response
+
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        repo, feature_dir = make_repo(self.tmp.name, tasks=TASKS)
+        stub = WritingWorker([fixture("worker_done.md"), fixture("reviewer_approve.md")] * 2
+                             + finalization_flat(), repo)
+        counter = itertools.count()
+        log = RunLog(os.path.join(feature_dir, "run.jsonl"), clock=lambda: next(counter),
+                     environ={})
+        outcome = Loop(repo, feature_dir, stub, log, clock=lambda: 0).run()
+        self.assertNotEqual(outcome.code, exits.STATE_UNRESUMABLE)
+
+
+class SecretsNeverReachTheArtifacts(LoopHarness):
+    """AC-012 in full: the sentinel must be absent from BOTH files.
+
+    The regression this pins: on the human-gated escalation path the worker's
+    question is copied verbatim into the Escalations section of
+    ORCHESTRATION.md. Redaction living only in the run.jsonl writer let a
+    credential an agent echoed land in the state file in clear (D025).
+    """
+
+    SENTINEL = "sk-ant-sentinel-never-log-0001"
+
+    def _blocked_with_secret(self):
+        return ("Stopped.\n\n```yaml\nstatus: BLOCKED\ndecisions:\n"
+                "  - What pricing tier applies, and do I bill it with key %s?\n```\n"
+                % self.SENTINEL)
+
+    def setUp(self):
+        self._saved = os.environ.get("ANTHROPIC_API_KEY")
+        os.environ["ANTHROPIC_API_KEY"] = self.SENTINEL
+        self.addCleanup(self._restore)
+
+    def _restore(self):
+        if self._saved is None:
+            os.environ.pop("ANTHROPIC_API_KEY", None)
+        else:
+            os.environ["ANTHROPIC_API_KEY"] = self._saved
+
+    def test_a_secret_an_agent_echoes_reaches_neither_artifact(self):
+        # environ=None means the real environment, as the CLI uses it.
+        loop, stub, repo, feature_dir, log = self.build([self._blocked_with_secret()],
+                                                        environ=None)
+        outcome = loop.run()
+        self.assertEqual(outcome.code, exits.HUMAN_ESCALATION)
+
+        for name in ("ORCHESTRATION.md", "run.jsonl"):
+            with self.subTest(artifact=name):
+                with open(os.path.join(feature_dir, name), encoding="utf-8") as fh:
+                    body = fh.read()
+                self.assertNotIn(self.SENTINEL, body)
+                self.assertIn("[REDACTED]", body)
+
+    def test_the_escalation_is_still_legible_after_redaction(self):
+        """Redaction removes the secret, not the question."""
+        loop, stub, repo, feature_dir, log = self.build([self._blocked_with_secret()],
+                                                        environ=None)
+        loop.run()
+        doc = state.Orchestration.load(os.path.join(feature_dir, "ORCHESTRATION.md"))
+        escalations = doc.body("Escalations")
+        self.assertIn("waiting", escalations)
+        self.assertIn("What pricing tier applies", escalations)
 
 
 class ConcurrentRun(LoopHarness):

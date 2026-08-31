@@ -80,7 +80,15 @@ class CodexBackend(Backend):
                 "model that may not have been used." % PIN_FLAG)
 
     def argv(self, task_prompt):
-        """The exact command line. Exposed so tests can assert the flags without running it."""
+        """The exact command line. Exposed so tests can assert the flags without running it.
+
+        KNOWN EXPOSURE (SEC-004, spec 040 D028): the prompt travels as a command-line
+        argument, so it is readable by any process on the host via `ps` or `/proc`.
+        The prompt carries the agent contract, repository content and reviewer-authored
+        required actions. Passing it on stdin instead is the fix, and whether this CLI
+        accepts stdin is precisely what DEBT-001 says nobody has checked - so the fix
+        lands with that verification, not before it.
+        """
         return [self.executable, "exec", *ISOLATION_FLAGS, PIN_FLAG, str(self.model), task_prompt]
 
     def run(self, system_prompt, task_prompt, path_scope, timeout):

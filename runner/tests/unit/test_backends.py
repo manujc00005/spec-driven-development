@@ -59,6 +59,49 @@ class ClaudeBackendPreconditions(unittest.TestCase):
             self.skipTest("the Agent SDK is installed on this machine")
 
 
+class ClaudeBackendErrorClassification(unittest.TestCase):
+    """PY-2: a bug in this file must not be laundered into a transport blip.
+
+    `run()` used to wrap every exception as `TransportError`, so a `TypeError`
+    would be retried three times under the backoff policy and then reported as a
+    provider failure — the real defect invisible behind the retry. That fix was
+    claimed last turn and never tested; this is the evidence.
+    """
+
+    def _backend(self, raiser):
+        from sdd_runner.backends.claude import ClaudeBackend
+        backend = ClaudeBackend(model="m")
+        backend._sdk = object()          # preflight already passed, by construction
+        backend._query = lambda *a, **k: raiser()
+        return backend
+
+    def test_a_programming_error_propagates_unchanged(self):
+        for error in (TypeError, AttributeError, NameError, KeyError, IndexError):
+            with self.subTest(error=error.__name__):
+                backend = self._backend(lambda e=error: (_ for _ in ()).throw(e("boom")))
+                with self.assertRaises(error):
+                    backend.run("sys", "task", [], 1)
+
+    def test_an_unexpected_runtime_error_is_still_treated_as_transport(self):
+        from sdd_runner.retry import TransportError
+
+        backend = self._backend(lambda: (_ for _ in ()).throw(ConnectionResetError("dropped")))
+        with self.assertRaises(TransportError):
+            backend.run("sys", "task", [], 1)
+
+    def test_a_precondition_is_never_reclassified(self):
+        backend = self._backend(
+            lambda: (_ for _ in ()).throw(BackendPrecondition("no credential")))
+        with self.assertRaises(BackendPrecondition):
+            backend.run("sys", "task", [], 1)
+
+    def test_run_without_preflight_refuses(self):
+        from sdd_runner.backends.claude import ClaudeBackend
+
+        with self.assertRaises(BackendPrecondition):
+            ClaudeBackend(model="m").run("sys", "task", [], 1)
+
+
 class StubBackendContract(unittest.TestCase):
     def test_counts_invocations(self):
         stub = StubBackend(script=["one", "two"])
@@ -72,6 +115,45 @@ class StubBackendContract(unittest.TestCase):
         stub.run("sys", "a", [], 1)
         with self.assertRaises(BackendPrecondition):
             stub.run("sys", "b", [], 1)
+
+
+class DryRunNeedsNoBackend(unittest.TestCase):
+    """FR-001: --dry-run "performs the entry gate, parses TASKS.md, prints the plan
+    and the computed budget, and dispatches nothing".
+
+    It resolved the backend first, so on a machine with no Agent SDK — the very
+    machine AC-010 says must work — the flag exited 14 without ever reaching the
+    plan it exists to print.
+    """
+
+    def test_dry_run_reaches_the_plan_without_a_usable_backend(self):
+        import tempfile
+        from sdd_runner.__main__ import main
+        from tests.support import make_repo
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, _feature_dir = make_repo(tmp)
+            code = main(["--repo", repo, "--feature", "specs/features/900-fixture",
+                         "--backend", "claude", "--dry-run"])
+        self.assertEqual(code, exits.OK)
+
+    def test_a_real_run_still_refuses_an_unusable_backend(self):
+        import tempfile
+        from sdd_runner.__main__ import main
+        from tests.support import make_repo
+
+        try:
+            import claude_agent_sdk  # noqa: F401
+        except ImportError:
+            pass
+        else:
+            self.skipTest("the Agent SDK is installed on this machine")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, _feature_dir = make_repo(tmp)
+            code = main(["--repo", repo, "--feature", "specs/features/900-fixture",
+                         "--backend", "claude"])
+        self.assertEqual(code, exits.BACKEND_PRECONDITION)
 
 
 class UnknownBackend(unittest.TestCase):

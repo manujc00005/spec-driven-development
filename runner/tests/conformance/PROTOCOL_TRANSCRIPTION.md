@@ -36,6 +36,18 @@ here must exist, and every test named here must be collected by the suite.
 | Task item is the detection unit; `Covers:`/`Verify:` clauses | `tasks.parse` | `test_tasks.Parsing` |
 | Finding task titled `(from <finding-id>)` | `tasks.append_finding_task` | `test_tasks.Parsing.test_finding_task_carries_traceability_to_its_finding` |
 | Never commit, push, merge | `loop.Loop` (no git write paths) | `test_loop.Converge.test_two_tasks_converge_and_leave_no_commit` |
+| REJECT findings become `TASKS.md` items `(from <finding-id>)` | `tasks.append_finding_task` | `test_repair.RejectRegistersWork` |
+| Re-reporting updates the row, never allocates a second task | `tasks.task_for_finding` | `test_repair.ResumeAcrossTheCycle.test_no_duplicate_repair_on_resume` |
+| Only an APPROVE resolves a finding; a worker DONE does not | `counters.CounterState.record_approve` | `test_repair.RejectThenRepairThenApprove` |
+| After any change, EVERY stale required reviewer is re-scheduled | `loop.Loop._process_task` | `test_repair.FlipFlop` |
+| A clean re-approval consumes budget and gates nothing | `counters.ReviewerCounters.clean_reapprovals` | `test_counters.TotalInvocations` |
+| DONE requires all six conditions simultaneously | `loop.Loop._state_preconditions` | `test_finalization.BlockingConditions` |
+| Freeze the fully approved fingerprint before any lifecycle skill | `loop.Loop._freeze` | `test_finalization.StaleApprovals.test_no_freeze_is_recorded_when_finalization_blocks` |
+| Narrow closure allowlist; unexpected changes return to REVIEW | `closure.classify` | `test_finalization.ClosureDeltaRecord` |
+| Allowed closure deltas are audited but do not stale approvals | `closure.observe` | `test_finalization.ClosureDeltaRecord.test_closure_delta_persisted` |
+| Lifecycle skills are invoked, never their status written | `loop.Loop._lifecycle_step` | `test_finalization.LifecycleGate` |
+| A refusing owning skill leaves the run PAUSED with its reason | `loop.Loop._lifecycle_step` | `test_finalization.LifecycleGate` |
+| Each attempt records an allowed-path scope; an out-of-scope write fails closed | `loop.Loop._scope_for` | `test_loop.ReadOnlyAgentsMayNotWrite` |
 
 ## Resolved divergence — severity vocabulary (D011, 2026-08-31)
 

@@ -11,7 +11,46 @@ provider produces spontaneously. The stub proves what the RUNNER does with a
 given response. It does not prove what a provider will send.
 """
 
+import json
+import os
+
 from . import Backend, BackendPrecondition, Response
+
+
+def load_script(path):
+    """Read a stub script from disk. Fails closed on anything but the two shapes.
+
+    Accepted: a JSON list of response strings, consumed in order, or a JSON object
+    mapping an agent name to its own list. Nothing else — a malformed script must
+    stop the run before it dispatches, not halfway through it.
+    """
+    if not os.path.isfile(path):
+        raise BackendPrecondition("stub script not found: %s" % path)
+    try:
+        with open(path, encoding="utf-8") as fh:
+            data = json.load(fh)
+    except (ValueError, OSError) as exc:
+        raise BackendPrecondition("stub script %s is not readable JSON: %s" % (path, exc))
+
+    def _strings(values, where):
+        if not isinstance(values, list) or not values:
+            raise BackendPrecondition(
+                "stub script %s: %s must be a non-empty list of responses" % (path, where))
+        for item in values:
+            if not isinstance(item, str):
+                raise BackendPrecondition(
+                    "stub script %s: %s contains a %s, expected a response string"
+                    % (path, where, type(item).__name__))
+        return list(values)
+
+    if isinstance(data, list):
+        return _strings(data, "the script")
+    if isinstance(data, dict):
+        if not data:
+            raise BackendPrecondition("stub script %s is an empty object" % path)
+        return {str(k): _strings(v, "key %r" % k) for k, v in data.items()}
+    raise BackendPrecondition(
+        "stub script %s must be a JSON list or object, got %s" % (path, type(data).__name__))
 
 
 class StubBackend(Backend):

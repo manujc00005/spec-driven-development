@@ -18,6 +18,8 @@ import os
 import re
 import tempfile
 
+from .log import redact, secret_values
+
 _HEADING = re.compile(r"^##[ \t]+(?P<title>.+?)[ \t]*$", re.MULTILINE)
 
 RUN_RESULTS = ("ACTIVE", "PAUSED", "DONE", "ABORTED")
@@ -37,17 +39,23 @@ class Section:
 class Orchestration:
     """A parsed ORCHESTRATION.md that can be re-rendered without drift."""
 
-    def __init__(self, preamble="", sections=None, path=None):
+    def __init__(self, preamble="", sections=None, path=None, environ=None):
         self.preamble = preamble
         self.sections = sections or []
         self.path = path
+        # Secrets are stripped at the WRITER, the same placement and the same
+        # reason as in log.py: no call site can forget it. This file carries
+        # agent-authored text verbatim - an escalation question, a finding's
+        # required action - and a credential an agent echoes must not survive
+        # into it (AC-012, D025).
+        self.environ = environ
 
     # -- parsing ----------------------------------------------------------
     @classmethod
-    def loads(cls, text, path=None):
+    def loads(cls, text, path=None, environ=None):
         matches = list(_HEADING.finditer(text))
         if not matches:
-            return cls(preamble=text, sections=[], path=path)
+            return cls(preamble=text, sections=[], path=path, environ=environ)
         preamble = text[: matches[0].start()]
         sections = []
         for i, m in enumerate(matches):
@@ -57,16 +65,21 @@ class Orchestration:
             if body.startswith("\n"):
                 body = body[1:]
             sections.append(Section(m.group("title"), body))
-        return cls(preamble=preamble, sections=sections, path=path)
+        return cls(preamble=preamble, sections=sections, path=path, environ=environ)
 
     @classmethod
-    def load(cls, path):
+    def load(cls, path, environ=None):
         with open(path, "r", encoding="utf-8") as fh:
-            return cls.loads(fh.read(), path=path)
+            return cls.loads(fh.read(), path=path, environ=environ)
 
     # -- rendering --------------------------------------------------------
     def dumps(self):
+        """The document as held in memory. Round-trip fidelity lives here."""
         return self.preamble + "".join(s.render() for s in self.sections)
+
+    def redacted(self):
+        """What actually reaches disk: `dumps()` with known secret values stripped."""
+        return redact(self.dumps(), secret_values(self.environ))
 
     def save(self, path=None):
         """Atomic write — 031 requires the state file to be written atomically."""
@@ -77,7 +90,7 @@ class Orchestration:
         fd, tmp = tempfile.mkstemp(dir=directory, prefix=".orchestration-", suffix=".tmp")
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as fh:
-                fh.write(self.dumps())
+                fh.write(self.redacted())
                 fh.flush()
                 os.fsync(fh.fileno())
             os.replace(tmp, target)
@@ -140,8 +153,8 @@ class Orchestration:
 # BLOCK on it rather than guess (spec 040 T013, "no inventes estado").
 ATTEMPT_COLUMNS = ["Attempt", "Task", "Agent", "Objective", "Lifecycle",
                    "Allowed paths", "Pre", "Post", "Outcome", "Timestamp"]
-FINDING_COLUMNS = ["Reviewer:finding", "Task", "Severity", "Required action", "Status",
-                   "REJECTs", "Repair done", "First seen", "Last seen",
+FINDING_COLUMNS = ["Reviewer:finding", "Task", "Repair task", "Severity", "Required action",
+                   "Status", "REJECTs", "Repair done", "Synthetic", "First seen", "Last seen",
                    "Resolving verdict/fingerprint"]
 
 LIFECYCLE = ("PLANNED", "DISPATCHED", "RESPONDED", "VERIFIED", "RECOVERED", "FAILED")

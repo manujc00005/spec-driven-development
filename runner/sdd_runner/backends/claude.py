@@ -14,6 +14,9 @@ import os
 from . import Backend, BackendPrecondition, Response
 from ..retry import TransportError
 
+# Failures that mean "this code is wrong", never "the provider blipped".
+PROGRAMMING_ERRORS = (TypeError, AttributeError, NameError, ImportError, KeyError, IndexError)
+
 INSTALL_HINT = (
     "the Claude Agent SDK is not installed. Install the runner's optional "
     "dependency:  python3 -m pip install 'sdd-runner[claude]'  (from runner/), "
@@ -48,6 +51,11 @@ class ClaudeBackend(Backend):
         try:
             text = self._query(system_prompt, task_prompt, timeout)
         except BackendPrecondition:
+            raise
+        except PROGRAMMING_ERRORS:
+            # A TypeError here is a bug in this file, not a flaky network. Wrapping
+            # it as TransportError would retry it three times and then report a
+            # transport failure, hiding the defect behind the retry policy (PY-2).
             raise
         except Exception as exc:                      # transport-shaped failure
             raise TransportError("Agent SDK call failed: %s" % exc)

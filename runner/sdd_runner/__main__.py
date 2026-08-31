@@ -32,11 +32,17 @@ def build_parser():
     p.add_argument("--max-iterations", type=int, default=3)
     p.add_argument("--max-delegations", type=int, default=None)
     p.add_argument("--baseline", default=None,
-                   help="baseline suite command; must be green and must not mutate the tree")
+                   help="PLAN-mandated verification command. Checked at the entry gate and "
+                        "again at finalization; without it, 031's second DONE condition is "
+                        "recorded as unobserved rather than assumed")
     p.add_argument("--notify", default=None,
                    help="command executed (without a shell) on escalation, abort and completion")
     p.add_argument("--allow-unverified-backend", action="store_true",
                    help="permit a backend whose provider flags have never been verified")
+    p.add_argument("--stub-script", default=None,
+                   help="JSON file of scripted responses for --backend stub: a list, or an "
+                        "object keyed by agent name. The only way to exercise a full run "
+                        "end to end without a provider.")
     p.add_argument("--dry-run", action="store_true",
                    help="run the entry gate, print the plan and the budget, dispatch nothing")
     return p
@@ -70,25 +76,21 @@ def main(argv=None):
             print(r.render(), file=sys.stderr)
         return exits.GATE_REFUSED
 
-    try:
-        backend = resolve(args.backend, allow_unverified=args.allow_unverified_backend,
-                          **({"model": args.model, "cwd": repo}
-                             if args.backend != "stub" else {"strict": False}))
-    except BackendPrecondition as exc:
-        print("[BACKEND] %s" % exc, file=sys.stderr)
-        return exits.BACKEND_PRECONDITION
-
     from . import tasks as tasks_mod
     from .budget import default_cap
 
     with open(os.path.join(feature_dir, "TASKS.md"), encoding="utf-8") as fh:
         tasks_text = fh.read()
-    pending = tasks_mod.unchecked(tasks_text)
+    pending = tasks_mod.independently_runnable(tasks_text)
     cap = args.max_delegations or default_cap(len(pending))
 
+    # A dry run dispatches nothing, so it must not require a dispatchable backend
+    # (FR-001). Resolving one first made the flag unusable on exactly the machine
+    # AC-010 says must work: no Agent SDK, no Codex CLI.
     if args.dry_run:
         print("feature:         %s" % feature_dir)
-        print("backend:         %s" % backend.name)
+        print("backend:         %s (not resolved: a dry run dispatches nothing)"
+              % args.backend)
         print("unchecked tasks: %d" % len(pending))
         print("max-iterations:  %d" % args.max_iterations)
         print("max-delegations: %d" % cap)
@@ -97,11 +99,30 @@ def main(argv=None):
         print("dry run: nothing dispatched.")
         return exits.OK
 
+    if args.stub_script and args.backend != "stub":
+        print("[BACKEND] --stub-script applies to --backend stub, not %r" % args.backend,
+              file=sys.stderr)
+        return exits.BACKEND_PRECONDITION
+
+    try:
+        if args.backend == "stub":
+            from .backends.stub import load_script
+            kwargs = ({"script": load_script(args.stub_script)} if args.stub_script
+                      else {"strict": False})
+        else:
+            kwargs = {"model": args.model, "cwd": repo}
+        backend = resolve(args.backend, allow_unverified=args.allow_unverified_backend,
+                          **kwargs)
+    except BackendPrecondition as exc:
+        print("[BACKEND] %s" % exc, file=sys.stderr)
+        return exits.BACKEND_PRECONDITION
+
     log = RunLog(os.path.join(feature_dir, "run.jsonl"), clock=time.time)
     notify = _notifier(args.notify)
     loop = Loop(repo, feature_dir, backend, log,
                 max_iterations=args.max_iterations, max_delegations=args.max_delegations,
-                notify=notify)
+                notify=notify,
+                baseline_cmd=args.baseline.split() if args.baseline else None)
     try:
         outcome = loop.run()
     except Exception as exc:                            # never a silent crash

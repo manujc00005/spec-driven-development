@@ -273,6 +273,141 @@ structural verification alone is never reported as a live PASS.
 - **Installer says an agent "differs"** — that copy has local customizations; keep them,
   or `-Force`/`--force` to overwrite (backup taken automatically).
 
+## Phase 2 — the runner (`runner/`, spec 040)
+
+Everything above runs inside an interactive Claude Code session: the loop is a
+prompt, and a person has to be there for it to exist. **Phase 2 is the same
+protocol executed as code** — a Python package under `runner/` that reads
+`TASKS.md`, dispatches one provider session per task or review, parses the
+verdict blocks programmatically, enforces the caps and the budget arithmetically,
+and interrupts a human only on an escalation or a non-success exit.
+
+Spec 031 named this feature in its own Non-goals and designed the verdict-block
+schema for both consumers. Where the runner and `sdd-orchestrate` disagree about
+semantics, **the runner is wrong** — specs 031 and 032 are normative.
+
+### What it is not
+
+The runner is **maintainer tooling of this repository**. It is not installed by
+`install.sh` or `install.ps1`, is not listed in `profiles.json` or the install
+manifest, and no adopter project depends on it. A machine with neither the Agent
+SDK nor the Codex CLI keeps using this framework exactly as before; deleting
+`runner/` removes the feature completely.
+
+### Invocation
+
+```bash
+PYTHONPATH=runner python3 -m sdd_runner --feature specs/features/<nnn>-<name> --dry-run
+```
+
+No TTY is required, stdin is never read, and nothing is ever prompted — which is
+the whole point: `cron`, CI and overnight runs work.
+
+| Flag | Meaning |
+|---|---|
+| `--feature` | the feature folder to run |
+| `--backend` | `stub`, `claude`, or `codex` (default `claude`) |
+| `--max-iterations` | non-convergence cap (default 3) |
+| `--max-delegations` | hard budget (default `max(25, 6 × unchecked tasks)`) |
+| `--baseline` | PLAN-mandated verification command; see *Finalization* below |
+| `--notify` | command run without a shell, event delivered as JSON on stdin |
+| `--allow-unverified-backend` | opt-in required by the gated Codex backend |
+| `--stub-script` | JSON responses for `--backend stub` — the only way to exercise a full run without a provider |
+| `--dry-run` | entry gate, plan and budget; dispatches nothing, and needs no usable backend |
+
+### Exit codes
+
+A scheduler branches on the code alone.
+
+| Code | Meaning |
+|---|---|
+| `0` | converged and closed |
+| `10` | entry gate refused (status, open questions, missing `TASKS.md`, default branch, dirty tree, red baseline) |
+| `11` | human-gated escalation — a person must answer |
+| `12` | cap abort — a reviewer or a finding failed to converge |
+| `13` | delegation budget exhausted |
+| `14` | backend precondition unmet (missing SDK, missing CLI, missing credential, gated backend) |
+| `15` | a concurrent run already owns the feature folder |
+| `16` | the persisted state cannot be resumed (corrupt, foreign, or self-contradicting) |
+| `17` | every task processed, but the run did not converge |
+| `18` | closure could not be proven (unexpected closure delta, or a lifecycle skill refused) |
+| `70` | internal error |
+
+### Backends
+
+- **`stub`** — always present, scripted, deterministic. The entire test suite runs
+  on it with no provider call and no cost.
+- **`claude`** — the Claude Agent SDK, imported lazily. Optional dependency:
+  `python3 -m pip install claude-agent-sdk`. Credentials come from the
+  environment only. **It has never been exercised against a real provider from
+  this repository** — no SDK is installed on the maintainer's machine, so the
+  end-to-end scenarios are recorded as *not observed* rather than as passing.
+- **`codex`** — *Codex backend implementation is present but gated.* Codex
+  execution requires local CLI verification. **Codex parity is not claimed.** It
+  refuses to run without `--allow-unverified-backend` because the isolation flag
+  set it depends on is enforced but never exercised against a real CLI — see
+  [`KNOWN_DEBT.md`](KNOWN_DEBT.md), **DEBT-001** and **DEBT-002**.
+
+### Re-entry
+
+Re-running against an existing `ORCHESTRATION.md` resumes it: completed tasks are
+not re-delegated, findings are not duplicated, and counters and the budget carry
+over without resetting. The runner refuses rather than guesses — code `16` covers
+a document written by another executor, a corrupt table, a budget that disagrees
+with itself, and a `State` section that contradicts the `Attempts` table.
+
+`ACTIVE` alone does not prove a runner is alive: after a SIGTERM it says the same
+thing. The document records the writer's pid and host, so an `ACTIVE` run whose
+pid is dead **on this host** is an interrupted run and resumes; one whose pid is
+alive is refused as concurrent (`15`); and one recorded on a different host blocks
+(`16`), because guessing that a remote pid is dead is how two runners end up in
+the same worktree.
+
+### Finalization, freeze and closure delta
+
+A converged task list is not a closed run. Before saying `DONE` the runner
+re-checks 031's conditions — no unconverged task, no open finding, no waiting
+escalation, a coherent budget, every `TASKS.md` item checked — then re-reviews any
+approval a later task's change staled, runs `final-conformance-reviewer` once, and
+only then **freezes**: it records the approved implementation fingerprint together
+with a per-path content map of the tree.
+
+After the freeze it delegates the owning lifecycle skills (`/spec-review`,
+`/spec-close`, `/pr-description`) and requires each one's APPROVE. **It never
+writes a spec `Status` itself** — the loop may invoke the owning skills, and that
+is not a direct transition. Finally it compares the tree against the frozen map:
+generated artifacts, a `SPEC.md` change confined to its `## Status` section and
+`TASKS.md` checkbox bookkeeping are allowed; anything else is unexpected and
+returns the run to REVIEW with the paths named.
+
+`--baseline` is 031's second DONE condition. Declared, it must pass and must not
+mutate the tree. **Undeclared, that condition is recorded as unobserved** — in the
+closure record and in the run's reason line — rather than assumed.
+
+### What has and has not been observed
+
+The runner is proven against a deterministic stub backend: 186 tests covering the
+fail-closed parser, the counter arithmetic, the budget, re-entry, the repair
+cycle, finalization, and — through `--stub-script` — the command-line entry point
+converging end to end in a real subprocess with stdin closed. What that does
+**not** prove, and what nobody has yet seen work:
+
+- an `agents/*.md` prompt reaching a real provider;
+- an owning lifecycle skill actually executing;
+- `PR_DESCRIPTION.md` appearing on disk;
+- a real `codex exec` invocation.
+
+Those are spec 040's T018 and T022, blocked on an environment this machine does
+not have. The runner may not be promoted to `Done` until they are observed.
+
+### Artifacts
+
+Each run writes `ORCHESTRATION.md` (031's schema, human-readable, shared with the
+phase-1 executor) and `run.jsonl` (one JSON object per event) into the feature
+folder. Every decision the runner makes is reconstructible from `run.jsonl` alone.
+Both writers strip known credential values, so a secret an agent echoes does not
+survive into either file.
+
 ## Disabling / rollback
 
 This integration is additive; removing it restores the previous behavior exactly:

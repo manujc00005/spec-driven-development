@@ -36,7 +36,8 @@ class FindingRow:
     identity: str                   # "<reviewer>:<finding-id>"
     reviewer: str
     finding_id: str
-    task: str = ""
+    task: str = ""                  # the task the finding was raised against
+    task_ref: str = ""              # the repair task allocated for it (031 FR-007)
     severity: str = ""
     required_action: str = ""
     status: str = "open"            # open | resolved
@@ -44,6 +45,7 @@ class FindingRow:
     last_seen: int = 0
     reject_total: int = 0           # gates; counts failed repairs only
     repair_done: bool = False       # a worker DONE has landed for this finding
+    synthetic: bool = False         # a fail-closed malformed-block finding, not a real defect
     resolving_verdict: str = ""
     resolving_fingerprint: str = ""
 
@@ -76,7 +78,7 @@ class CounterState:
 
     # -- the two gating rules --------------------------------------------
     def record_reject(self, reviewer: str, findings: list, iteration: int,
-                      fingerprint: str = "") -> dict:
+                      fingerprint: str = "", synthetic: bool = False) -> dict:
         """Apply a REJECT verdict. Returns a summary of what it changed."""
         counters = self.reviewer(reviewer)
         counters.total_invocations += 1
@@ -96,6 +98,7 @@ class CounterState:
                     severity=str(item.get("severity", "")),
                     required_action=str(item.get("required_action", "")),
                     first_seen=iteration,
+                    synthetic=synthetic,
                 )
                 self.findings[identity] = row
             else:
