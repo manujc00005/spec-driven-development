@@ -18,3 +18,7 @@ Thumbs.db
 
 .idea/
 *.iml
+
+# Python bytecode (the runner/ package, spec 040)
+__pycache__/
+*.py[cod]
