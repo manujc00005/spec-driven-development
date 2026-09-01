@@ -11,6 +11,8 @@ under `specs/features/` — the framework is developed with its own workflow.
 
 ## [Unreleased]
 
+Spec 040 · Agent SDK runner (**experimental**) — the autonomous loop stops being a prompt and
+becomes code, up to the point where closing the lifecycle would need a provider nobody has run.
 Spec 039 · Windows first-run install fixes — the global instructions that never loaded.
 Spec 038 · Portable personal config — the framework restored; the person did not.
 Spec 037 · Workspace init — the map alone was never enough; state now generates itself.
@@ -66,6 +68,39 @@ Spec 025 · Workspace SDD — the first coverage of what happens *between* proje
 Spec 024 · Delivery-operations profile — the first coverage of what happens after merge.
 
 ### Added
+
+- **`runner/` — the phase-2 executor for the autonomous loop** (spec 040). Spec 031 shipped an
+  implement→review→fix loop that only exists as a prompt inside an interactive Claude Code
+  session: it cannot run from `cron` or CI, its caps and budget are arithmetic a model has to
+  re-read after every context compression, and no Claude Code skill can invoke `codex exec`. This
+  is the same protocol as **code** — a self-contained Python package (`sdd_runner`) that reads
+  `TASKS.md`,
+  dispatches one provider session per task or review, parses the verdict blocks with a strict
+  fail-closed parser, enforces the caps and the delegation budget before dispatching, resumes
+  idempotently from `ORCHESTRATION.md`, runs the repair/re-review cycle, and finalizes by
+  freezing the approved implementation (031 FR-013).
+
+  **Where it stops.** At the freeze. The runner proves the core is converged — every task
+  checked, no open finding, no waiting escalation, every approval fresh, final conformance
+  approved, and a declared baseline green and non-mutating — then records `CORE-COMPLETE` and
+  exits `0`. It does not dispatch `/spec-review`, `/spec-close` or `/pr-description`, compute a
+  closure delta over what they would have changed, or write `PR_DESCRIPTION.md`. Closing a
+  feature lifecycle needs a provider that can execute a skill, and this spec certifies none: a
+  stub answering `APPROVE` on `/spec-close`'s behalf would have proved only that the stub was
+  asked. A follow-up provider spec picks up at that seam.
+
+  **Maintainer tooling only.** No installer, `profiles.json` or manifest change; no adopter
+  project depends on it, and the framework installs and behaves identically on a machine that has
+  neither the Agent SDK nor the Codex CLI. Its test suite runs on stdlib `unittest` against a
+  deterministic stub backend — 239 tests, no provider call, no cost.
+
+  **What is not claimed.** `stub` is the only supported backend. The `claude` and `codex`
+  adapters are **outside** the supported surface: Claude stays optional and lazily imported and
+  has never been exercised against a real provider from this repository; Codex is implemented but
+  **gated shut** pending DEBT-001/DEBT-002. No parity between them is claimed. The spec is
+  classified **EXPERIMENTAL** with a **PARTIAL** conformance verdict, and what has and has not
+  been observed is named in [`docs/SDD-ORCHESTRATION.md`](docs/SDD-ORCHESTRATION.md) rather than
+  implied.
 
 - **`/sdd-workspace-init` — end-to-end workspace setup** (spec 037). Takes a folder of related
   projects from nothing to fully wired in seven phases: detect and confirm the project list,

@@ -134,6 +134,23 @@ next ID. Identity is `<reviewer>:<finding-id>` and maps to exactly one row in th
 registry and exactly one repair task. Re-reporting updates `last seen`, action, and status; it never
 allocates another task. `APPROVE` requires `findings: []`; an approval carrying findings is malformed.
 
+**`severity` is a closed enum: `Critical | High | Medium | Low`.** Nothing else is valid *inside*
+the verdict block. Review-report vocabulary — `blocker`, `major`, `minor`, `nit`, `P0`, and the
+like — is fine in the prose above the block, in a rendered report, in a summary, and in the
+Findings-registry rows a human reads; it is **not** fine inside the block a machine parses. A block
+carrying one of those values is malformed and takes the malformed-block path below: one format
+re-request, then a fail-closed synthetic `REJECT`.
+
+There are no aliases and no implicit normalization. A parser must not map `blocker` to `Critical`
+or `minor` to `Low`, because a silent translation makes the gate's own vocabulary unfalsifiable —
+nobody can then tell whether a reviewer used the schema or was quietly corrected into it. Reviewers
+that think in report language must translate explicitly, in their own output, before emitting the
+block.
+
+This rule exists because it was broken. `specs/features/033-task-verification-criterion/ORCHESTRATION.md`
+records `blocker`, `major` and `minor` against `final-conformance:CONF-*` rows — the one reviewer
+whose agent contract never named the vocabulary (fixed 2026-08-31; see spec 040 D011).
+
 ### Worker completion block
 
 `implementer` and `fast-worker` must end every autonomous report with exactly one of:

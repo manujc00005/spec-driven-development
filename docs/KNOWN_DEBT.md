@@ -21,6 +21,7 @@ claims the repo currently makes that nobody has checked.
 | DEBT-006 | Four `plannedHooks` remain planned and unowned | spec 017 | Open |
 | DEBT-007 | `install.ps1` has never been run on real Windows outside CI | spec 016 | Open |
 | DEBT-008 | The scope-keeper hook has never been observed firing in a live session | spec 036 | Open |
+| DEBT-009 | The runner has never executed against a real provider, or from `cron` | spec 040 | Open |
 
 ---
 
@@ -55,6 +56,13 @@ message, so the hedge disappears on its own — and the test
 `claude refusal does not carry the unverified caveat` proves the field is actually load-bearing
 rather than decorative.
 
+**Also load-bearing for spec 040.** The runner's `codex` backend is implemented but refuses to
+run without `--allow-unverified-backend`, and its refusal message names this entry by ID. Spec 040
+D004 accepted that gate rather than shipping a prose-only Codex path — which is how DEBT-002 came
+to exist — so this debt now blocks two features, not one. The runner's test
+`test_the_flags_are_still_unverified` fails if `FLAGS_VERIFIED` is flipped without a recorded real
+run.
+
 **Related:** [[DEBT-002]] — same root cause, different surface. Both close the day someone
 installs the CLI.
 
@@ -73,6 +81,10 @@ following `adapters/codex/README.md` gets an adapter that appears installed and 
 
 **What closes it.** Verify against an installed Codex CLI before advertising the adapter as
 verified.
+
+**Also load-bearing for spec 040**, alongside [[DEBT-001]]: the runner's Codex backend cites both
+IDs in the message it refuses with, and spec 040's SPEC forbids claiming multi-backend parity
+anywhere until a real `codex exec` run records the accepted flag spellings.
 
 **Recorded here** because it is the same missing prerequisite as DEBT-001 and was, until now,
 visible only inside spec 019's open questions — where nothing joined it to the identical gap in
@@ -195,3 +207,57 @@ appears; make a second edit, confirm silence. Tick T010 in spec 036 with what wa
 
 **Risk while open:** the wiring could be wrong in a way the tests cannot see — they invoke the hook
 directly rather than through the harness. The hook itself is proven; the delivery path is not.
+
+---
+
+## DEBT-009 — The runner has never executed against a real provider, or from cron
+
+**Origin:** spec 040 (`agent-sdk-runner`), AC-001 and AC-002 downgraded by D030 on 2026-08-31.
+Tasks T018 and T022 are recorded `NOT OBSERVED`.
+
+**The unverified claim.** `runner/` is presented as a phase-2 executor that runs the SDD autonomous
+loop unattended — from CI, from `cron`, overnight. **Every line of that has been demonstrated
+against a deterministic stub backend and nothing else.** Four things nobody has seen work:
+
+1. an `agents/*.md` prompt reaching a real provider through the Claude Agent SDK;
+2. an owning lifecycle skill (`/spec-review`, `/spec-close`, `/pr-description`) actually executing
+   when the runner delegates it;
+3. `PR_DESCRIPTION.md` appearing on disk;
+4. a real `codex exec` invocation — which is [[DEBT-001]] and [[DEBT-002]] seen from this feature.
+
+The cause is environmental, not deferred effort: `import claude_agent_sdk` raises
+`ModuleNotFoundError` and `which codex` finds nothing on the maintainer's machine, both verified
+2026-08-31.
+
+**Narrowed 2026-08-31 (spec 040 D031).** The CLI is now observed converging end to end — a real
+subprocess, stdin closed, two tasks, exit 0, artifacts present, no runner-created commit — against
+a **scripted** stub backend. What that removes from this debt is the question "does the command-line
+entry point work at all". What it leaves untouched is every one of the four items above.
+
+**Narrowed 2026-08-31 (spec 040 D031).** The CLI is now observed converging end to end — a real
+subprocess, stdin closed, two tasks, exit 0, artifacts present, no runner-created commit — against a
+**scripted** stub backend. That removes the question "does the command-line entry point work at
+all". It leaves every one of the four items above untouched.
+
+**Cost if wrong.** The failure mode is a first real run that does not work, not a silent
+corruption: the entry gate refuses before touching anything, and every ambiguous path in the runner
+fails closed. What is genuinely unknown is the *shape* of the integration — whether an
+`agents/*.md` file is a usable system prompt for an SDK session, whether a delegated session can
+run a Claude Code skill at all, and whether the lifecycle steps return the canonical verdict block
+the runner requires. If the answer to the second is no, the finalization design needs rethinking,
+not patching. Spec 040's PLAN carries this as R10 and its Assumptions already state that a
+prompt-shape mismatch is a finding, **not** a licence to fork the agent files.
+
+**What this debt is not.** It is not "the runner is untested". 176 tests cover the fail-closed
+parser, the counter arithmetic, the hard budget, idempotent re-entry, the repair cycle and the
+freeze/closure audit, and each control was verified by reverting it and watching the suite go red.
+The gap is the seam between that machinery and a real provider.
+
+**What closes it.** Install `claude-agent-sdk`, run spec 040's T018 (the two E2E scenarios, one
+from a non-interactive shell and one from `cron`) and T022 (one overnight run on a real `Ready`
+spec, with its `ORCHESTRATION.md` and `run.jsonl` read start to finish by hand). Then restore the
+two downgraded clauses in spec 040's `SPEC.md` and close this entry. Until then the spec may reach
+`In Review` and `Implemented`; **it may not reach `Done`**.
+
+**Related:** [[DEBT-001]] and [[DEBT-002]] — the Codex half of the same gap, and both are now
+load-bearing for spec 040 as well.

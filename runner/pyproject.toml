@@ -1,0 +1,16 @@
+[project]
+name = "sdd-runner"
+version = "0.1.0"
+description = "Phase-2 executor for the SDD autonomous loop defined by spec 031."
+requires-python = ">=3.11"
+dependencies = []
+
+# The Agent SDK is OPTIONAL and imported lazily (spec 040 FR-014, D001).
+# The framework, its installers and its suites must work on a machine that has
+# none of these installed. Nothing here is required to run the test suite: the
+# tests use the stdlib `unittest` runner (D009).
+[project.optional-dependencies]
+claude = ["claude-agent-sdk>=0.1", "anyio>=4"]  # anyio is used directly by the backend
+
+[tool.sdd-runner]
+protocol-source = "specs/features/031-autonomous-orchestration-loop/SPEC.md"

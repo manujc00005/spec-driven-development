@@ -152,6 +152,22 @@ the human answers. Nothing persists loop state; nothing defines convergence.
   each finding has `id`, `severity` (Critical/High/Medium/Low), `evidence` (path:line),
   `summary`, and `required_action`. Prose findings remain above the block for the human;
   control flow keys **only** on the block (precedent: `36c3b04`).
+
+  > **Clarified 2026-08-31 (spec 040, D011) — a gap closed, no behavioural change intended.**
+  > `severity` is a **closed enum**: `Critical | High | Medium | Low`, and nothing else is valid
+  > inside the block. Report vocabulary (`blocker`, `major`, `minor`, …) is legitimate in the prose
+  > above the block, in rendered reports, and in the human-readable Findings-registry rows — never
+  > inside the machine-parsed block. There are **no aliases and no implicit normalization**: a
+  > parser must not map `blocker` to `Critical`, because a silent translation makes the gate's own
+  > vocabulary unfalsifiable — nobody could then tell whether a reviewer used the schema or was
+  > quietly corrected into it. A block carrying a non-canonical severity is malformed and follows
+  > the existing malformed-block path: one format re-request, then a fail-closed synthetic `REJECT`.
+  >
+  > Why this needed saying: `agents/security-reviewer.md` named the vocabulary, but
+  > `agents/domain-reviewer.md` and `agents/final-conformance-reviewer.md` only pointed at "the
+  > canonical schema". `specs/features/033-task-verification-criterion/ORCHESTRATION.md` then
+  > recorded `blocker`/`major`/`minor` against `final-conformance:CONF-*` rows — the one reviewer
+  > whose contract omitted it. Both contracts now state the enum.
 - FR-004: `implementer` and `fast-worker` end every report with a **completion block**
   (`status: DONE | BLOCKED`, and for BLOCKED the undocumented decision(s) verbatim), so
   the orchestrator branches on structure, not prose.
