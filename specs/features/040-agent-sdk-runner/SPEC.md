@@ -460,9 +460,21 @@ foreign documents are readable but not resumable by the runner.
   support. No real `codex exec` delegation is part of 040.
 - AC-014: `git diff main --stat` for this feature touches no installer and no manifest:
   `install.sh`, `install.ps1`, `install-all.sh`, `install-all.ps1`, `profiles.json`,
-  `settings.template.json`, and the install manifest are byte-identical to `main`. Documentation
-  and `CHANGELOG.md` are the only files outside `runner/`, `specs/features/040-agent-sdk-runner/`,
-  and the test suites that this feature may change.
+  `settings.template.json`, and the install manifest are byte-identical to `main`. Outside
+  `runner/`, `specs/features/040-agent-sdk-runner/` and the test suites, this feature may change
+  only documentation, `CHANGELOG.md`, and the **six files named below**.
+  > **Amended 2026-09-01 (D047, [[F-4]]).** The original second sentence allowed documentation and
+  > `CHANGELOG.md` only, and the delivered work exceeds it: D011's closed-severity-enum
+  > clarification had to land in four **protocol contracts**, and the `runner/` package needs two
+  > `.gitignore` rules. The criterion was written narrower than the work it authorised. It is
+  > widened by **enumeration, not by category** — a category ("contracts", "config") would license
+  > the next change nobody vetted. The exception is exactly these six paths and nothing else:
+  > `agents/domain-reviewer.md`, `agents/final-conformance-reviewer.md`,
+  > `skills/sdd-orchestrate/SKILL.md`, `specs/features/031-autonomous-orchestration-loop/SPEC.md`,
+  > `.gitignore`, and `CONTRIBUTING.md`. All four protocol edits are additive and load-bearing:
+  > `tests/conformance/test_transcription.ObservedDivergence.test_the_protocol_documents_the_closed_enum`
+  > fails without them. **What is unchanged is the property that matters: no installer, no manifest,
+  > and no adopter-visible behaviour moves.**
 - AC-015: With an otherwise converged stub script, **no baseline outcome other than green and
   non-mutating permits exit `0`**, and each failure is refused at the earliest gate that can see
   it: omitting `--baseline` returns `18` from the closure gate; a non-zero or tree-mutating

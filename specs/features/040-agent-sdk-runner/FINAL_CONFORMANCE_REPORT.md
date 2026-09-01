@@ -1,6 +1,6 @@
 # Final Conformance Report: agent-sdk-runner (spec 040)
 
-**Date:** 2026-09-01 · **Verdict: PASS on 040's corrected scope (T033).**
+**Date:** 2026-09-01 · **Verdict: PASS on 040's corrected scope (T033, re-verified by a second review on `codex/fix-040-conformance`).**
 
 > **T033 verdict, 2026-09-01: PASS on the corrected scope.** All 19 acceptance criteria are met
 > against observed evidence; T028…T032 are closed; AUDIT-1, 5, 6, 7 and 9 are closed in 040;
@@ -24,6 +24,52 @@
 > `git diff main` scope enumerated by hand. That found F-4 below, which no prior report contains.
 > It does not remove the structural risk R12/F-3 names. A reviewer who wants the stronger form
 > should re-run this section with the `final-conformance-reviewer` agent.
+
+## Second review, 2026-09-01 — re-derived from the diff, not from this report
+
+Run on branch `codex/fix-040-conformance` against `git diff f48e62d^1..f48e62d`, with the previous
+verdict treated as unread. It **confirms PASS** and it changed one thing.
+
+**AC-014 was failing literally, and the first review deferred it.** Six files outside the permitted
+roots were neither documentation nor `CHANGELOG.md`. Deferring that left a PASS standing on a
+criterion that did not hold — the exact failure this spec has spent five decisions correcting. It is
+now amended by **enumeration** of those six paths (D047), before the PASS rather than after.
+Widening by category was rejected: a seventh file must cost another decision.
+
+**Evidence gathered outside the test suite**, because a suite is the artifact under review and
+cannot be its own witness:
+
+| Probe | Result |
+|---|---|
+| Real CLI, converged, `</dev/null`, sentinel in `ANTHROPIC_API_KEY` | exit `0`; `run.jsonl` dispatches `worker, domain, worker, domain, final-conformance` — **no `lifecycle:*`**; no `lifecycle` or `closure-delta` event; no `PR_DESCRIPTION.md`; 1 commit (the fixture baseline); **0 sentinel hits** in either artifact |
+| `--backend codex`, no opt-in | exit `14`, refuses before spawning, names DEBT-001 **and** DEBT-002 |
+| `--backend claude`, SDK absent | exit `14`, names the missing dependency and the install command |
+| `--feature` = `/etc`, `../../../../etc`, `specs/features` | exit `10` each, refusal names containment and prints the **resolved** path; no artifact at either location |
+| No `--baseline` / red baseline | `18` from the closure gate / `10` from the entry gate — the earliest-gate behaviour AC-015 describes |
+| Five entry-gate preconditions, violated one at a time | exit `10` each, each naming its own condition, each leaving `git status` byte-identical |
+| `backends.resolve` | only `stub` constructs without a precondition failure |
+| `closure.observe` / `unexpected` / `classify` | no caller anywhere in `sdd_runner/` |
+| Duplicate `Txxx` / `Dxxx` IDs | none |
+
+**Mutation testing — five controls reverted, each with a clean baseline first.** A test that cannot
+fail is not evidence, so each was checked by breaking the thing it claims to protect:
+
+| Mutation | Effect |
+|---|---|
+| `Budget.can_dispatch` → `return True` | 4 failures |
+| `create_exclusive`: `os.link` → `os.replace` | 10 failures |
+| `Orchestration.redacted` → `self.dumps()` | 2 failures |
+| `_resolve_feature`: `commonpath` → `startswith` | 4 failures |
+| fingerprint: drop the `HEAD` digest line | 5 failures + 1 error |
+
+*Method note, recorded because it nearly produced a false result:* the first mutation run reported
+`FAILED (errors=1)` three times. That was the harness passing a test list as a single argument, not
+the mutations biting. The numbers above are from the corrected run, each preceded by a green
+baseline on the same selection.
+
+**The limit is unchanged.** This was a second pass by the same session, on a separate branch and
+against the artifacts rather than the prose. That is stronger than the first pass and still not a
+different reviewer. F-3 stands.
 
 ## Current D034–D038 disposition
 
@@ -123,7 +169,8 @@ current count is in the header.
   them, and so was this one. The findings are real and the fixes are tested, but "the author
   reviewed the author" remains the weakest evidence in this report. It is the reason the
   maintainer's own nine-finding audit found what four green gates had not.
-- **F-4 (AC-014 scope, found by T033) — Low, non-blocking.** AC-014's enforceable half holds and was
+- **F-4 (AC-014 scope) — RESOLVED 2026-09-01 by D047**, after the second review ruled that
+  deferring it was wrong. Original finding follows. AC-014's enforceable half holds and was
   re-verified: `git diff main --name-only` over `install.sh`, `install.ps1`, `install-all.sh`,
   `install-all.ps1`, `profiles.json` and `settings.template.json` prints nothing. Its second
   sentence does not hold literally. Six files outside `runner/`, `specs/features/040-*/` and the
@@ -136,8 +183,8 @@ current count is in the header.
   `test_transcription.ObservedDivergence.test_the_protocol_documents_the_closed_enum` fails without
   them. So this is a criterion written narrower than the work legitimately required, not a scope
   breach — the same failure mode F-2 describes, one level up. **Recorded, not silently
-  reinterpreted, and AC-014's text is left as written:** amending it is a contract change and
-  belongs to whoever opens the follow-up spec.
+  reinterpreted.** *Resolution:* AC-014 is amended by enumeration of the six paths `f48e62d`
+  touches (D047). It now passes literally.
 
 ## Current recommendation
 
