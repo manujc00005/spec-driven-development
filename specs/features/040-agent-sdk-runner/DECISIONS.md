@@ -1731,3 +1731,67 @@ why.
   core could not prove completion: no declared baseline, or a freeze voided by a later change.
 - `docs/SDD-ORCHESTRATION.md`, `CHANGELOG.md`, `CONTRIBUTING.md` and `runner/README.md` state the
   stub-only supported surface and the hand-off. AUDIT-9 closes in 040; T033 is the only open task.
+
+### D047 - Spec updated: AC-014 is widened by enumeration, not reinterpreted
+
+**Date:** 2026-09-01
+
+**Status:** Accepted
+
+**Context:**
+
+A second independent review of `f48e62d` re-derived AC-014 from the diff instead of from the
+report. Its first sentence holds: `install.sh`, `install.ps1`, `install-all.sh`,
+`install-all.ps1`, `profiles.json` and `settings.template.json` are byte-identical to `main`,
+verified with `git diff --name-only f48e62d^1..f48e62d --` over exactly those paths.
+
+Its second sentence does not. Six files outside `runner/`, the feature folder and the test suites
+changed that are neither documentation nor `CHANGELOG.md`:
+
+- `agents/domain-reviewer.md`, `agents/final-conformance-reviewer.md`,
+  `skills/sdd-orchestrate/SKILL.md`, `specs/features/031-autonomous-orchestration-loop/SPEC.md` —
+  D011's closed-severity-enum clarification, additive, and load-bearing:
+  `test_transcription.ObservedDivergence.test_the_protocol_documents_the_closed_enum` fails
+  without them;
+- `.gitignore` — Python bytecode and the per-run `run.jsonl` the package writes;
+- `CONTRIBUTING.md` — arguably documentation, enumerated anyway rather than argued about.
+
+The first review recorded this as finding F-4 and deferred it. That was wrong. A PASS standing on
+a criterion that does not literally hold is precisely the failure this spec has spent five
+decisions correcting.
+
+**Decision:**
+
+AC-014's second sentence now reads: outside `runner/`, `specs/features/040-agent-sdk-runner/` and
+the test suites, this feature may change only documentation, `CHANGELOG.md`, and the six paths
+named above.
+
+**Widened by enumeration, not by category.** "Protocol contracts" or "repository configuration"
+would have been shorter and would have licensed the next such change without anyone looking at it.
+A closed list of six paths cannot: the seventh file needs another decision, which is the whole
+point. The first sentence — no installer, no manifest — is unchanged and remains the property that
+protects adopters.
+
+No production code changes. No task reopens: T001 carries AC-014 and its `Verify:` tests the
+installer/manifest half, which never moved.
+
+**Reasoning:**
+
+Two honest options existed and one dishonest one. Reverting the four protocol edits would break
+`test_transcription` and un-fix D011 — a real regression to satisfy a sentence. Reinterpreting
+AC-014 silently as "documentation broadly construed" is the failure mode `sdd-guardrails` exists to
+prevent. Amending it explicitly, before the PASS rather than after, is the only route that leaves
+the record true.
+
+This is [[F-2]] one altitude up: a `Verify:` narrower than its `Covers:` closed two tasks with work
+still inside them; an acceptance criterion narrower than the work it authorised produced this. Both
+belong to the acceptance-criteria guidance in `specs/_templates/`, which spec 033 owns. Not changed
+here.
+
+**Consequences:**
+
+- AC-014 passes literally. It was the only criterion that did not.
+- T001 gains an amendment note; its `Verify:` is unaffected and it does not reopen.
+- T033's F-4 is resolved rather than deferred; `FINAL_CONFORMANCE_REPORT.md` records the change.
+- Anyone touching a seventh file outside the enumerated set must open a decision. That friction is
+  intended.

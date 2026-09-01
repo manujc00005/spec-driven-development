@@ -13,6 +13,12 @@
   `git diff --name-only main -- install.sh install.ps1 install-all.sh install-all.ps1
   profiles.json settings.template.json` prints nothing.
 
+  **[AC-014 AMENDED 2026-09-01 — D047; this task's `Verify:` is unaffected]** The criterion's
+  second sentence was narrower than the delivered work: D011's closed-enum clarification landed in
+  four protocol contracts and the package needs two `.gitignore` rules. AC-014 now enumerates those
+  six paths as its whole exception. The `Verify:` above tests the installer/manifest half, which
+  never moved and still passes — so this task is not reopened.
+
 - [x] T002 - Build the fixture corpus: agent responses (valid APPROVE, valid REJECT with findings,
   valid DONE, valid BLOCKED, missing block, malformed YAML, unknown verdict value, two competing
   blocks, truncated mid-block, and an adversarial response whose *prose* contains a fake verdict
@@ -495,6 +501,11 @@
   `specs/features/031-*/SPEC.md`), all of them D011's additive closed-enum clarification and all
   load-bearing for `test_transcription`. Recorded rather than reinterpreted; the AC text is left as
   written, because amending it is a contract change for the follow-up spec to make.
+
+  **[F-4 RESOLVED 2026-09-01 — D047, second independent review]** Deferring it was the wrong call:
+  it left a PASS standing on a criterion that did not literally hold, which is the exact shape of
+  the thing this spec has been correcting all along. AC-014 is now amended by enumeration of the
+  six paths `f48e62d` actually touched. Widening it by category was rejected.
 
   **The limit of this verdict:** "independent" here means *against evidence rather than against the
   previous reports*, not *by a different agent*. This session performed it. F-3 stands.
