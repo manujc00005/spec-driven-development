@@ -286,6 +286,22 @@ Spec 031 named this feature in its own Non-goals and designed the verdict-block
 schema for both consumers. Where the runner and `sdd-orchestrate` disagree about
 semantics, **the runner is wrong** — specs 031 and 032 are normative.
 
+### Classification: experimental, stub-only
+
+Spec 040 is **EXPERIMENTAL** and its final conformance verdict is **PARTIAL**. What
+that means concretely, because the word on its own means nothing:
+
+- **One supported backend: `stub`.** Every guarantee below — caps, budget,
+  fail-closed parsing, re-entry, the repair cycle, the freeze — is proven against
+  it and only against it.
+- **`claude` and `codex` are outside the supported surface.** They remain in the
+  tree as optional/lazy and gated-shut adapters respectively. Neither has been
+  executed against a real provider from this repository, and no parity between
+  them is claimed. A follow-up provider spec owns them.
+- **The run stops at the `_finalize` hand-off.** The runner proves the core is
+  converged and freezes; it does not close the feature lifecycle. See
+  [Finalization and the hand-off](#finalization-and-the-hand-off).
+
 ### What it is not
 
 The runner is **maintainer tooling of this repository**. It is not installed by
@@ -330,22 +346,23 @@ A scheduler branches on the code alone.
 | `15` | a concurrent run already owns the feature folder |
 | `16` | the persisted state cannot be resumed (corrupt, foreign, or self-contradicting) |
 | `17` | every task processed, but the run did not converge |
-| `18` | closure could not be proven (unexpected closure delta, or a lifecycle skill refused) |
+| `18` | core completion could not be proven (no `--baseline` declared, or the freeze was voided by a change to the tree after it) |
 | `70` | internal error |
 
 ### Backends
 
 - **`stub`** — always present, scripted, deterministic. The entire test suite runs
   on it with no provider call and no cost.
-- **`claude`** — the Claude Agent SDK, imported lazily. Optional dependency:
-  `python3 -m pip install claude-agent-sdk`. Credentials come from the
-  environment only. **It has never been exercised against a real provider from
-  this repository** — no SDK is installed on the maintainer's machine, so the
-  end-to-end scenarios are recorded as *not observed* rather than as passing.
-- **`codex`** — *Codex backend implementation is present but gated.* Codex
-  execution requires local CLI verification. **Codex parity is not claimed.** It
-  refuses to run without `--allow-unverified-backend` because the isolation flag
-  set it depends on is enforced but never exercised against a real CLI — see
+- **`claude`** — *outside spec 040's supported surface.* The Claude Agent SDK,
+  imported lazily; optional dependency `python3 -m pip install claude-agent-sdk`,
+  credentials from the environment only. **It has never been exercised against a
+  real provider from this repository** — no SDK is installed on the maintainer's
+  machine, so the end-to-end scenarios are recorded as *not observed* rather than
+  as passing.
+- **`codex`** — *outside spec 040's supported surface.* Implemented but **gated
+  shut**: it refuses to run without `--allow-unverified-backend`, because the
+  isolation flag set it depends on is enforced in code and never exercised against
+  a real CLI. **Codex parity is not claimed.** See
   [`KNOWN_DEBT.md`](KNOWN_DEBT.md), **DEBT-001** and **DEBT-002**.
 
 ### Re-entry
@@ -363,7 +380,7 @@ alive is refused as concurrent (`15`); and one recorded on a different host bloc
 (`16`), because guessing that a remote pid is dead is how two runners end up in
 the same worktree.
 
-### Finalization, freeze and closure delta
+### Finalization and the hand-off
 
 A converged task list is not a closed run. Before saying `DONE` the runner
 re-checks 031's conditions — no unconverged task, no open finding, no waiting
@@ -372,33 +389,42 @@ approval a later task's change staled, runs `final-conformance-reviewer` once, a
 only then **freezes**: it records the approved implementation fingerprint together
 with a per-path content map of the tree.
 
-After the freeze it delegates the owning lifecycle skills (`/spec-review`,
-`/spec-close`, `/pr-description`) and requires each one's APPROVE. **It never
-writes a spec `Status` itself** — the loop may invoke the owning skills, and that
-is not a direct transition. Finally it compares the tree against the frozen map:
-generated artifacts, a `SPEC.md` change confined to its `## Status` section and
-`TASKS.md` checkbox bookkeeping are allowed; anything else is unexpected and
-returns the run to REVIEW with the paths named.
+**The freeze is where spec 040 stops.** The run records `CORE-COMPLETE`, the
+frozen fingerprint, the verification outcome and the frozen tree map, and exits
+`0`. It does **not** dispatch the owning lifecycle skills (`/spec-review`,
+`/spec-close`, `/pr-description`), does not compute a closure delta over what
+those skills would have changed, and does not produce `PR_DESCRIPTION.md`. It has
+never written a spec `Status` and still does not.
 
-`--baseline` is 031's second DONE condition. Declared, it must pass and must not
-mutate the tree. **Undeclared, that condition is recorded as unobserved** — in the
-closure record and in the run's reason line — rather than assumed.
+That boundary is deliberate. Closing a feature lifecycle means a provider that can
+actually execute a skill, and 040 certifies no such provider — a stub answering
+`APPROVE` on `/spec-close`'s behalf proved only that the stub was asked. The
+frozen tree map is persisted as the hand-off datum for the follow-up `Finalizer`
+spec, which owns lifecycle delegation, the closure delta and PR-description
+evidence, and begins exactly at this seam.
+
+`--baseline` is 031's second DONE condition, and it is **required to close**.
+Declared, it must exit 0 and leave the tree unchanged. Undeclared, the run blocks
+with exit `18` rather than closing over a condition nobody checked: a runner that
+cannot verify may still do the work, but it may not call it finished. Everything
+else — the entry gate, the task loop, `--dry-run` — works without it.
 
 ### What has and has not been observed
 
-The runner is proven against a deterministic stub backend: 186 tests covering the
+The runner is proven against a deterministic stub backend: 239 tests covering the
 fail-closed parser, the counter arithmetic, the budget, re-entry, the repair
 cycle, finalization, and — through `--stub-script` — the command-line entry point
 converging end to end in a real subprocess with stdin closed. What that does
 **not** prove, and what nobody has yet seen work:
 
 - an `agents/*.md` prompt reaching a real provider;
-- an owning lifecycle skill actually executing;
-- `PR_DESCRIPTION.md` appearing on disk;
 - a real `codex exec` invocation.
 
-Those are spec 040's T018 and T022, blocked on an environment this machine does
-not have. The runner may not be promoted to `Done` until they are observed.
+Neither is a spec 040 task any more. Both moved to the follow-up provider spec
+along with lifecycle delegation, the closure delta and `PR_DESCRIPTION.md` — which
+are not *unobserved* here so much as *absent by contract*. 040 remains
+EXPERIMENTAL/PARTIAL, and that is what its scope now honestly is rather than a
+promise of provider work it never did.
 
 ### Artifacts
 

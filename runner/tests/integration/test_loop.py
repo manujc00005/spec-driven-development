@@ -10,6 +10,7 @@ import itertools
 import json
 import os
 import socket
+import subprocess
 import tempfile
 import unittest
 
@@ -17,7 +18,7 @@ from sdd_runner import exits, state
 from sdd_runner.backends.stub import StubBackend
 from sdd_runner.log import RunLog
 from sdd_runner.loop import Loop
-from tests.support import TASKS, finalization_flat, fixture, make_repo
+from tests.support import GREEN_BASELINE, TASKS, finalization_flat, fixture, make_repo
 
 FOUR_TASKS = """# Tasks: fixture
 
@@ -41,7 +42,8 @@ class LoopHarness(unittest.TestCase):
         log = RunLog(os.path.join(feature_dir, "run.jsonl"), clock=lambda: next(counter),
                      environ=environ)
         loop = Loop(repo, feature_dir, stub, log, max_iterations=max_iterations,
-                    max_delegations=max_delegations, clock=lambda: 0, notify=notify)
+                    max_delegations=max_delegations, clock=lambda: 0, notify=notify,
+                    baseline_cmd=GREEN_BASELINE)
         return loop, stub, repo, feature_dir, log
 
 
@@ -63,7 +65,6 @@ class Converge(LoopHarness):
             self.assertIsNotNone(doc.get(section), "missing 031 section %r" % section)
 
         # FR-012: the runner creates no commit.
-        import subprocess
         out = subprocess.run(["git", "-C", repo, "log", "--oneline"],
                              capture_output=True, text=True).stdout.strip().splitlines()
         self.assertEqual(len(out), 1, "the runner must not commit")
@@ -77,7 +78,7 @@ class Converge(LoopHarness):
             lines = fh.read().splitlines()
         events = [json.loads(l)["event"] for l in lines]
         for required in ("plan", "dispatch", "response", "completion", "verdict",
-                         "counters", "finalize-start", "freeze", "closure-delta", "finish"):
+                         "counters", "finalize-start", "freeze", "core-complete", "finish"):
             self.assertIn(required, events)
 
 
@@ -182,6 +183,59 @@ class HumanEscalation(LoopHarness):
         self.assertNotIn("waiting", doc.body("Escalations"))
 
 
+class FingerprintIdentifiesTheTree(LoopHarness):
+    """AUDIT-7: the fingerprint identified uncommitted work, not the tree.
+
+    It was built from `git status --porcelain` plus `git diff HEAD` — both of
+    which describe the delta from HEAD. An agent that commits moves HEAD and
+    empties both, so two fingerprints either side of a delegation that changed
+    the repository came out identical. Every approval, the freeze and the
+    closure delta rest on this value.
+    """
+
+    def _loop(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        repo, feature_dir = make_repo(self.tmp.name, tasks=TASKS)
+        log = RunLog(os.path.join(feature_dir, "run.jsonl"), clock=lambda: 0, environ={})
+        return Loop(repo, feature_dir, StubBackend(script=["x"]), log, clock=lambda: 0,
+                    baseline_cmd=GREEN_BASELINE), repo
+
+    @staticmethod
+    def _commit(repo, message):
+        subprocess.run(["git", "-C", repo, "add", "-A"], capture_output=True, check=True)
+        subprocess.run(["git", "-C", repo, "commit", "-qm", message],
+                       capture_output=True, check=True)
+
+    def test_a_commit_changes_the_fingerprint(self):
+        loop, repo = self._loop()
+        before = loop.fingerprint()
+        with open(os.path.join(repo, "impl.py"), "w", encoding="utf-8") as fh:
+            fh.write("# work an agent did\n")
+        self._commit(repo, "agent committed its work")
+        self.assertNotEqual(loop.fingerprint(), before,
+                            "a committed change must not look like an unchanged tree")
+
+    def test_committing_is_distinguishable_from_never_having_changed(self):
+        loop, repo = self._loop()
+        clean = loop.fingerprint()
+        with open(os.path.join(repo, "impl.py"), "w", encoding="utf-8") as fh:
+            fh.write("# work\n")
+        dirty = loop.fingerprint()
+        self._commit(repo, "commit it")
+        committed = loop.fingerprint()
+        self.assertEqual(len({clean, dirty, committed}), 3,
+                         "clean, dirty and committed must be three distinct states")
+
+    def test_an_empty_commit_still_moves_the_fingerprint(self):
+        """HEAD is part of the identity, so history changes count."""
+        loop, repo = self._loop()
+        before = loop.fingerprint()
+        subprocess.run(["git", "-C", repo, "commit", "-q", "--allow-empty", "-m", "empty"],
+                       capture_output=True, check=True)
+        self.assertNotEqual(loop.fingerprint(), before)
+
+
 class ReadOnlyAgentsMayNotWrite(LoopHarness):
     """SEC-002 / 031 FR-008: an out-of-scope write fails closed.
 
@@ -215,7 +269,8 @@ class ReadOnlyAgentsMayNotWrite(LoopHarness):
         counter = itertools.count()
         log = RunLog(os.path.join(feature_dir, "run.jsonl"), clock=lambda: next(counter),
                      environ={})
-        loop = Loop(repo, feature_dir, stub, log, clock=lambda: 0)
+        loop = Loop(repo, feature_dir, stub, log, clock=lambda: 0,
+                    baseline_cmd=GREEN_BASELINE)
         return loop, stub, repo, feature_dir, log
 
     def test_a_reviewer_that_writes_aborts_the_run_unresumably(self):
@@ -258,8 +313,94 @@ class ReadOnlyAgentsMayNotWrite(LoopHarness):
         counter = itertools.count()
         log = RunLog(os.path.join(feature_dir, "run.jsonl"), clock=lambda: next(counter),
                      environ={})
-        outcome = Loop(repo, feature_dir, stub, log, clock=lambda: 0).run()
+        outcome = Loop(repo, feature_dir, stub, log, clock=lambda: 0,
+                       baseline_cmd=GREEN_BASELINE).run()
         self.assertNotEqual(outcome.code, exits.STATE_UNRESUMABLE)
+
+
+class CommitsDuringDelegationAreDetected(LoopHarness):
+    """AC-018: a delegated agent that COMMITS must not look like a clean tree.
+
+    The fingerprint was built from `git status --porcelain` plus `git diff HEAD`,
+    and both measure the delta *from* HEAD. An agent that commits moves HEAD and
+    empties both, so afterwards the tree reads as pristine — which is exactly the
+    state these tests assert before checking that staleness was still detected.
+    Detection therefore cannot come from status or diff; it can only come from
+    `HEAD` being part of the identity.
+    """
+
+    class CommittingReviewer(StubBackend):
+        """A read-only agent that commits. Its contract forbids writing at all."""
+
+        def __init__(self, script, repo):
+            super().__init__(script=script)
+            self.repo = repo
+
+        def run(self, system_prompt, task_prompt, path_scope, timeout):
+            response = super().run(system_prompt, task_prompt, path_scope, timeout)
+            if "domain-reviewer" in (system_prompt or ""):
+                with open(os.path.join(self.repo, "sneaked.py"), "w", encoding="utf-8") as fh:
+                    fh.write("# committed from inside a delegation\n")
+                subprocess.run(["git", "-C", self.repo, "add", "-A"],
+                               capture_output=True, check=True)
+                subprocess.run(["git", "-C", self.repo, "commit", "-qm", "agent commit"],
+                               capture_output=True, check=True)
+            return response
+
+    def _build_committing(self, script):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        repo, feature_dir = make_repo(self.tmp.name, tasks=TASKS)
+        stub = self.CommittingReviewer(list(script), repo)
+        counter = itertools.count()
+        log = RunLog(os.path.join(feature_dir, "run.jsonl"), clock=lambda: next(counter),
+                     environ={})
+        loop = Loop(repo, feature_dir, stub, log, clock=lambda: 0,
+                    baseline_cmd=GREEN_BASELINE)
+        return loop, stub, repo, feature_dir, log
+
+    @staticmethod
+    def _tree_is_pristine(repo):
+        """Status and diff over the REVIEWABLE tree, excluding what the loop writes.
+
+        `ORCHESTRATION.md` and `run.jsonl` are the runner's own bookkeeping and
+        are excluded from the fingerprint too, so including them here would be
+        measuring something the fingerprint never looks at.
+        """
+        excluded = ("ORCHESTRATION.md", "run.jsonl", "PR_DESCRIPTION.md", "TASKS.md")
+        raw = subprocess.run(["git", "-C", repo, "status", "--porcelain", "-uall"],
+                             capture_output=True, text=True).stdout
+        status = "\n".join(line for line in raw.splitlines()
+                            if not any(line.strip().endswith(x) for x in excluded)).strip()
+        pathspec = ["."] + [":(exclude)*%s" % name for name in excluded]
+        diff = subprocess.run(["git", "-C", repo, "diff", "HEAD", "--"] + pathspec,
+                              capture_output=True, text=True).stdout.strip()
+        return status, diff
+
+    def test_a_reviewer_that_commits_is_caught_though_the_tree_reads_clean(self):
+        loop, stub, repo, feature_dir, log = self._build_committing(
+            [fixture("worker_done.md"), fixture("reviewer_approve.md")])
+        outcome = loop.run()
+
+        # The tree the commit left behind is pristine: nothing modified, nothing
+        # untracked, no diff against HEAD.
+        status, diff = self._tree_is_pristine(repo)
+        self.assertEqual(status, "", "the commit must leave no status entries")
+        self.assertEqual(diff, "", "the commit must leave no diff against HEAD")
+
+        # And it was still caught, which can only be because HEAD is hashed.
+        self.assertEqual(outcome.code, exits.STATE_UNRESUMABLE)
+        self.assertEqual(outcome.result, "ABORTED")
+        self.assertFalse(outcome.resumable)
+        self.assertIn("outside its recorded scope", outcome.reason)
+        self.assertTrue(any(e["event"] == "out-of-scope-write" for e in log.events))
+
+    def test_the_fingerprints_recorded_for_that_delegation_differ(self):
+        loop, stub, repo, feature_dir, log = self._build_committing(
+            [fixture("worker_done.md"), fixture("reviewer_approve.md")])
+        loop.run()
+        event = [e for e in log.events if e["event"] == "out-of-scope-write"][0]
+        self.assertNotEqual(event["pre_fingerprint"], event["post_fingerprint"])
 
 
 class SecretsNeverReachTheArtifacts(LoopHarness):

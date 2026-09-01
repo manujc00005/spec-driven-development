@@ -10,7 +10,7 @@ dependencies = []
 # none of these installed. Nothing here is required to run the test suite: the
 # tests use the stdlib `unittest` runner (D009).
 [project.optional-dependencies]
-claude = ["claude-agent-sdk>=0.1"]
+claude = ["claude-agent-sdk>=0.1", "anyio>=4"]  # anyio is used directly by the backend
 
 [tool.sdd-runner]
 protocol-source = "specs/features/031-autonomous-orchestration-loop/SPEC.md"

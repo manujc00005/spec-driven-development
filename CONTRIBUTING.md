@@ -123,9 +123,13 @@ features in one commit.
 
 No dependencies beyond `bash`, `python3` (installer/harness), and optionally
 `pwsh` for Windows-variant testing. The one exception is `runner/` (spec 040),
-maintainer tooling that is not installed anywhere. The package is `sdd_runner`; its `claude` backend needs
-`claude-agent-sdk`, declared as an **optional** dependency in `runner/pyproject.toml`
-and imported lazily. Its own suite is stdlib only —
+**experimental** maintainer tooling that is not installed anywhere. The package is `sdd_runner`.
+Its only supported backend is `stub`; the `claude` and `codex` backends are outside that surface
+and no parity between them is claimed — `claude` needs `claude-agent-sdk`, declared as an
+**optional** dependency in `runner/pyproject.toml` and imported lazily, and `codex` refuses to run
+without `--allow-unverified-backend` (DEBT-001/DEBT-002). A converged run stops at the freeze: it
+never dispatches `/spec-review`, `/spec-close` or `/pr-description`, so closing a spec stays a
+human step. Its own suite is stdlib only —
 `PYTHONPATH=runner python3 -m unittest discover -s runner/tests -t runner` — so the
 framework, its installers and every existing suite work unchanged on a machine that
 has none of it. `npx -y shellcheck -S error <files>` if you

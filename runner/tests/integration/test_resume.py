@@ -17,7 +17,7 @@ from sdd_runner import exits, resume, state
 from sdd_runner.backends.stub import StubBackend
 from sdd_runner.log import RunLog
 from sdd_runner.loop import Loop
-from tests.support import TASKS, finalization_flat, fixture, make_repo
+from tests.support import GREEN_BASELINE, TASKS, finalization_flat, fixture, make_repo
 
 HOST = socket.gethostname()
 DEAD_PID = 999_999          # not a live process; asserted below
@@ -43,7 +43,8 @@ class ResumeHarness(unittest.TestCase):
         loop = Loop(self.repo, self.feature_dir, stub, log,
                     max_iterations=max_iterations, max_delegations=max_delegations,
                     clock=lambda: 0, notify=notify, hostname=HOST,
-                    pid=pid if pid is not None else os.getpid())
+                    pid=pid if pid is not None else os.getpid(),
+                    baseline_cmd=GREEN_BASELINE)
         return loop.run(), stub, loop, log
 
     def doc(self):
@@ -309,6 +310,55 @@ class ConcurrencyAndInterruption(ResumeHarness):
         self.assertEqual(outcome.code, exits.STATE_UNRESUMABLE)
         self.assertIn("unreadable pid", outcome.reason)
         self.assertEqual(stub.invocations, 0)
+
+
+class TheCreateWindowIsAtomic(ResumeHarness):
+    """AUDIT-6: `os.path.exists` then write is a race, and the pid check misses it.
+
+    Two runners entering that window both saw "no state file" and both created
+    one. The pid/host check only catches a run that had already written its
+    state, so it cannot close this. The claim is now `O_CREAT|O_EXCL`, which
+    either wins the path or fails.
+
+    The window is reproduced by making the existence check lie — the file is
+    there, the check says it is not — which is exactly what the second runner
+    observes when the first has not written yet.
+    """
+
+    def test_a_runner_that_loses_the_race_refuses_rather_than_overwriting(self):
+        from sdd_runner import loop as loop_mod
+
+        stub = StubBackend(script=[fixture("worker_done.md")])
+        log = RunLog(os.path.join(self.feature_dir, "run.jsonl"),
+                     clock=lambda: next(self.counter), environ={})
+        loop = Loop(self.repo, self.feature_dir, stub, log, clock=lambda: 0,
+                    hostname=HOST, pid=os.getpid())
+
+        # The rival got there first and has claimed the path but written nothing.
+        with open(self.state_path, "w", encoding="utf-8") as fh:
+            fh.write("")
+
+        real_exists = os.path.exists
+        os.path.exists = lambda p: False if p == self.state_path else real_exists(p)
+        try:
+            with self.assertRaises(loop_mod.ConcurrentRun):
+                loop._load_or_create_state(2)
+        finally:
+            os.path.exists = real_exists
+
+        with open(self.state_path, encoding="utf-8") as fh:
+            self.assertEqual(fh.read(), "", "the loser must not overwrite the winner's claim")
+        self.assertEqual(stub.invocations, 0)
+
+    def test_the_winner_creates_normally(self):
+        stub = StubBackend(script=[fixture("worker_done.md")])
+        log = RunLog(os.path.join(self.feature_dir, "run.jsonl"),
+                     clock=lambda: next(self.counter), environ={})
+        loop = Loop(self.repo, self.feature_dir, stub, log, clock=lambda: 0,
+                    hostname=HOST, pid=os.getpid())
+        doc, resumed = loop._load_or_create_state(2)
+        self.assertIsNone(resumed)
+        self.assertEqual(doc.run_result(), "ACTIVE")
 
 
 class ResumeDoesNotDuplicate(ResumeHarness):

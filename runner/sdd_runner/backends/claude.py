@@ -27,14 +27,24 @@ INSTALL_HINT = (
 class ClaudeBackend(Backend):
     name = "claude"
 
-    def __init__(self, model=None, permission_mode="acceptEdits", cwd=None):
+    # Declared rather than inherited (AUDIT-8): a delegated session gets the tools
+    # the SDD roles actually need and nothing else. `acceptEdits` without a tool
+    # list is an unattended session with whatever the host happens to expose.
+    DEFAULT_TOOLS = ("Read", "Grep", "Glob", "Edit", "Write", "Bash")
+    READ_ONLY_TOOLS = ("Read", "Grep", "Glob")
+
+    def __init__(self, model=None, permission_mode="acceptEdits", cwd=None,
+                 allowed_tools=None):
         self.model = model
         self.permission_mode = permission_mode
+        self.allowed_tools = list(allowed_tools if allowed_tools is not None
+                                  else self.DEFAULT_TOOLS)
         self.cwd = cwd
         self._sdk = None
 
     def preflight(self):
         try:
+            import anyio  # noqa: F401  - used directly by _query, not only by the SDK
             import claude_agent_sdk  # noqa: F401
         except ImportError as exc:
             raise BackendPrecondition("%s (import failed: %s)" % (INSTALL_HINT, exc))
@@ -62,30 +72,41 @@ class ClaudeBackend(Backend):
         return Response(text=text, backend=self.name,
                         meta={"model": self.model, "permission_mode": self.permission_mode})
 
+    def _options(self, system_prompt):
+        """The session's configuration, isolated so it is testable without anyio."""
+        return self._sdk.ClaudeAgentOptions(
+            system_prompt=system_prompt,
+            permission_mode=self.permission_mode,
+            cwd=self.cwd,
+            model=self.model,
+            allowed_tools=self.allowed_tools,
+        )
+
     def _query(self, system_prompt, task_prompt, timeout):
         """Isolated so tests can substitute it without the SDK installed."""
         import anyio
 
         sdk = self._sdk
-        options = sdk.ClaudeAgentOptions(
-            system_prompt=system_prompt,
-            permission_mode=self.permission_mode,
-            cwd=self.cwd,
-            model=self.model,
-        )
+        options = self._options(system_prompt)
 
         async def _run():
-            chunks = []
-            async for message in sdk.query(prompt=task_prompt, options=options):
-                content = getattr(message, "content", None)
-                if content is None:
-                    continue
-                for block in content:
-                    text = getattr(block, "text", None)
-                    if text:
-                        chunks.append(text)
-            return "\n".join(chunks)
+            # The deadline must be INSIDE the event loop (AUDIT-8). The previous
+            # form wrapped `anyio.run` in `move_on_after`, which is an async cancel
+            # scope: outside a loop it cancels nothing, so the timeout never fired
+            # and a hung session hung the whole runner.
+            with anyio.fail_after(timeout):
+                chunks = []
+                async for message in sdk.query(prompt=task_prompt, options=options):
+                    content = getattr(message, "content", None)
+                    if content is None:
+                        continue
+                    for block in content:
+                        text = getattr(block, "text", None)
+                        if text:
+                            chunks.append(text)
+                return "\n".join(chunks)
 
-        with anyio.move_on_after(timeout):
+        try:
             return anyio.run(_run)
-        raise TransportError("Agent SDK call timed out after %ss" % timeout)
+        except TimeoutError:
+            raise TransportError("Agent SDK call timed out after %ss" % timeout)

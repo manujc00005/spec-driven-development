@@ -22,7 +22,7 @@ import os
 import re
 import unittest
 
-from sdd_runner import blocks, budget, counters, escalation, gate, state, tasks
+from sdd_runner import blocks, budget, closure, counters, escalation, gate, loop, state, tasks
 from tests.support import REPO_ROOT
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -33,8 +33,13 @@ REAL_ARTIFACTS = [
     "specs/features/033-task-verification-criterion/ORCHESTRATION.md",
 ]
 
-MODULES = {"blocks": blocks, "budget": budget, "counters": counters,
-           "escalation": escalation, "gate": gate, "state": state, "tasks": tasks}
+# Every module the table may name. A module absent from this map makes its rows
+# UNCHECKED, not invalid - which is how `loop.Loop._lifecycle_step` survived in
+# the table for a day after the method was deleted (D046). Add the module here
+# when you add its first row.
+MODULES = {"blocks": blocks, "budget": budget, "closure": closure, "counters": counters,
+           "escalation": escalation, "gate": gate, "loop": loop, "state": state,
+           "tasks": tasks}
 
 
 def _table_rows():
@@ -60,9 +65,10 @@ class TableIsHonest(unittest.TestCase):
     def test_every_named_module_attribute_exists(self):
         missing = []
         for _clause, module_ref, _test in _table_rows():
-            ref = module_ref.strip("`")
-            if "(" in ref:
-                ref = ref.split("(")[0]
+            # A cell may carry a parenthetical gloss - "`loop.Loop` (no git write
+            # paths)". Drop it first, THEN strip the backticks, or the reference
+            # keeps a trailing backtick and silently matches nothing.
+            ref = module_ref.split("(")[0].strip().strip("`").strip()
             parts = ref.split(".")
             mod = MODULES.get(parts[0])
             if mod is None:

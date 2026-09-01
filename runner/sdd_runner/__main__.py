@@ -48,6 +48,52 @@ def build_parser():
     return p
 
 
+FEATURES_ROOT = os.path.join("specs", "features")
+
+
+def _resolve_feature(repo, requested):
+    """Resolve `--feature` and prove it lands inside `specs/features/`.
+
+    Returns (feature_dir, refusal_message). The check runs BEFORE any write —
+    the runner puts `ORCHESTRATION.md` and `run.jsonl` in this directory, claims
+    it with an exclusive create, and fingerprints the repository around it.
+
+    Every path is resolved through symlinks first (AUDIT-5, AC-016). A prefix
+    comparison on the requested path sees only the name: `specs/features/x` can
+    be a symlink to anywhere, and `commonpath` on the unresolved path would call
+    it contained. `os.path.commonpath` on the RESOLVED paths is what actually
+    answers the question, and it is path-aware — `/repo/specs/features-old` is
+    not inside `/repo/specs/features`, which a string prefix would get wrong.
+    """
+    features_root = os.path.realpath(os.path.join(repo, FEATURES_ROOT))
+    if not os.path.isdir(features_root):
+        return None, ("[GATE] refused: %s does not exist in this repository\n"
+                      "  remediation: run from a repository with an SDD spec trail, "
+                      "or pass --repo" % FEATURES_ROOT)
+
+    candidate = requested if os.path.isabs(requested) else os.path.join(repo, requested)
+    resolved = os.path.realpath(candidate)
+
+    def refuse(detail):
+        return ("[GATE] refused: --feature must resolve to a directory inside %s\n"
+                "  requested: %s\n"
+                "  resolves to: %s\n"
+                "  detail: %s\n"
+                "  remediation: pass a feature folder under %s, or set --repo to the "
+                "repository that contains it" % (FEATURES_ROOT, requested, resolved,
+                                                 detail, FEATURES_ROOT))
+
+    if resolved == features_root:
+        return None, refuse("that is the features root itself, not a feature")
+    try:
+        contained = os.path.commonpath([features_root, resolved]) == features_root
+    except ValueError:                      # different drives on Windows
+        contained = False
+    if not contained:
+        return None, refuse("it lands outside the spec trail")
+    return resolved, None
+
+
 def _notifier(command):
     if not command:
         return None
@@ -66,8 +112,11 @@ def _notifier(command):
 
 def main(argv=None):
     args = build_parser().parse_args(argv)
-    repo = os.path.abspath(args.repo)
-    feature_dir = args.feature if os.path.isabs(args.feature) else os.path.join(repo, args.feature)
+    repo = os.path.realpath(args.repo)
+    feature_dir, refusal = _resolve_feature(repo, args.feature)
+    if refusal:
+        print(refusal, file=sys.stderr)
+        return exits.GATE_REFUSED
 
     refusals = gate.check(repo, feature_dir,
                           baseline_cmd=args.baseline.split() if args.baseline else None)
@@ -132,6 +181,10 @@ def main(argv=None):
 
     print("run result: %s (%s)" % (outcome.result, exits.NAMES.get(outcome.code, outcome.code)))
     print("reason:     %s" % outcome.reason)
+    # Every blocking outcome carries a remediation, and the operator never saw
+    # it: the CLI printed what was wrong and not what to do about it.
+    if outcome.remediation:
+        print("remediation: %s" % outcome.remediation)
     if notify and outcome.code != exits.HUMAN_ESCALATION:
         notify({"event": "run-finished", "result": outcome.result,
                 "code": outcome.code, "reason": outcome.reason})

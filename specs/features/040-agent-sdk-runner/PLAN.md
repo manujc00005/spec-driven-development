@@ -2,236 +2,214 @@
 
 ## Summary
 
-Build `runner/`, a self-contained Python package that executes the autonomous SDD loop defined by
-spec 031 as **code** rather than as prompt instructions: it reads `TASKS.md`, dispatches one
-provider session per task or review carrying the corresponding `agents/*.md` system prompt, parses
-verdict and completion blocks with a fail-closed parser, enforces the caps and the delegation
-budget arithmetically, persists 031's `ORCHESTRATION.md` schema plus a new `run.jsonl`, retries
-transport failures under a bounded policy, and notifies the human only on a human-gated escalation
-or a non-success exit.
+Stabilize spec 040 as an **experimental deterministic core**, not as a provider runtime. The core
+parses scripted agent blocks, applies the spec-031 counters and budget, persists the shared
+`ORCHESTRATION.md` section schema, resumes its own state, records `run.jsonl`, and exposes a real
+non-interactive CLI backed by the first-class stub.
 
-v1 is **maintainer tooling of this repository**. It ships no installer change, no manifest change,
-and no downstream dependency. Its correctness is provable end to end against a stub backend, with
-one real-provider E2E on top.
+D034 accepts architecture option A before any further runner change:
+
+- exit `0` requires a declared green, non-mutating baseline;
+- `--feature` is contained under the repository's `specs/features/` directory;
+- concurrent ownership is acquired atomically;
+- the repository fingerprint includes the current `HEAD` object ID;
+- the core stops at the `_finalize` seam without lifecycle or closure delegation;
+- shared state is readable by both executors, but re-entry is performed only by the writer;
+- provider routing, format retry, writer-scope enforcement, Claude permissions/timeouts, lifecycle
+  delegation and closure automation move to a follow-up spec.
+
+The existing Claude adapter remains optional and lazily imported. The existing Codex adapter
+remains gated shut. Neither is part of 040's supported or conformance-tested surface.
+
+D035 reconciles the first later implementation pass. D036 adds the AUDIT-1 completion gate and
+D037 resolves AUDIT-2 by narrowing FR-005; D038 reconciles those edits with the canonical task
+IDs. D046 makes the `_finalize` cut in code.
+
+**Position as of 2026-09-01:** AUDIT-1, 5, 6, 7 and 9 are closed with their acceptance evidence
+(T028…T032), AUDIT-2 is resolved in the contract, and AUDIT-3, 4 and 8 belong to the follow-up
+provider spec. The out-of-scope Claude adapter remains unobserved and is labelled as such
+everywhere. The suite is **239 tests**, green, with T033 the only open task.
 
 ## Related spec
 
-[SPEC.md](SPEC.md) — status `Ready`.
+[SPEC.md](SPEC.md) — status `In Review`, classification `EXPERIMENTAL`, conformance `PARTIAL`.
+
+## Architecture boundary
+
+| 040 owns | Follow-up owns |
+|---|---|
+| Pure parser, counters, budget and classifier | Real provider sessions and transport retry |
+| Shared state schema and same-writer resume | Versioned cross-executor hand-off, if ever required |
+| Stub backend and local subprocess CLI | Claude/Codex execution and provider parity |
+| Feature containment, atomic ownership, `HEAD`-aware fingerprint | Writing-agent `path_scope`, tool permissions and provenance |
+| Baseline-gated core convergence | `Finalizer`, lifecycle skills, closure delta and PR description |
+| Fail closed on the first malformed scripted response | Canonical provider format re-request |
+
+The code seam is `Loop._finalize`: after T032 the 040 side verifies its baseline, records the core
+result and stops. A later `Finalizer` begins on the other side of that seam.
 
 ## Impacted areas
 
-**Created:**
+**Remaining implementation/evidence work after D038:**
 
-- `runner/` — the Python package: CLI, loop driver, parser, state I/O, counters, escalation
-  classifier, backends (`stub`, `claude`, `codex`), retry policy, JSONL logging.
-- `runner/tests/` — unit, integration and conformance suites plus the fixture corpus.
-- `specs/features/040-agent-sdk-runner/fixtures/` — a small fixture feature folder used as the
-  loop's target in integration tests.
-- `specs/features/<nnn>-<name>/run.jsonl` — new per-feature artifact, written at run time.
+- `runner/sdd_runner/__main__.py` — finish real-path containment under `specs/features/`; the
+  current `abspath`/repo-level check is partial.
+- `runner/sdd_runner/loop.py` and the smallest supporting module needed — finish the `_finalize`
+  cut. Atomic ownership, `HEAD` hashing and the baseline gate are present; their T028/T030/T031
+  end-to-end evidence is not.
+- `runner/tests/` — regressions for AC-015…AC-019 and the strengthened AC-011.
 
-**Modified (documentation only):**
+**Specification and documentation:**
 
-- `docs/SDD-ORCHESTRATION.md` — a phase-2 section: invocation, exit codes, backends, notification,
-  resume, and the phase-1/phase-2 boundary.
-- `CHANGELOG.md` — the feature entry.
-- `CONTRIBUTING.md` — one line on the runner's optional dependency, kept honest against the
-  existing "no dependencies beyond `bash`, `python3`, optionally `pwsh`" statement at line 124.
-- `docs/KNOWN_DEBT.md` — only if the Codex verification of AC-013 actually happens.
+- `specs/features/040-agent-sdk-runner/{SPEC,PLAN,TASKS,DECISIONS}.md` — D034 propagation.
+- `specs/features/040-agent-sdk-runner/FINAL_CONFORMANCE_REPORT.md` — remains PARTIAL until the new
+  criteria pass independently.
+- `docs/SDD-ORCHESTRATION.md`, `CHANGELOG.md`, and `CONTRIBUTING.md` — later task T032 updates their
+  supported-surface claims to stub-only experimental core.
 
-**Explicitly not touched** (AC-014 asserts this): `install.sh`, `install.ps1`, `install-all.sh`,
-`install-all.ps1`, `profiles.json`, `settings.template.json`, the install manifest,
-`scripts/check-consistency.sh`, and every existing skill and agent.
+**Explicitly not touched by this reconciliation update:** runner code, tests, installers,
+manifests, profiles, skills, agents and debt records. D035/D036 record implementation already in
+the worktree; D038 only repairs its SDD traceability.
 
 ## Context budget
 
 ### Reading list
 
-The protocol already exists in writing; the job is to transcribe it faithfully, so the reading list
-is dominated by the two specs that define it and by the skill that implements it today.
+- `specs/features/040-agent-sdk-runner/SPEC.md`, `TASKS.md`, `DECISIONS.md` — current contract and
+  historical implementation record.
+- `specs/features/031-autonomous-orchestration-loop/SPEC.md` and
+  `specs/features/032-autonomous-loop-residual-calibration/SPEC.md` — source protocol, read only for
+  the core clauses retained by 040.
+- `runner/sdd_runner/__main__.py`, `loop.py`, `resume.py`, `closure.py` — only the functions named by
+  AUDIT-1/5/6/7/9 when the remaining implementation and evidence work resumes.
+- `runner/tests/integration/test_cli_e2e.py`, `test_resume.py`, `test_finalization.py` — existing
+  evidence to revise rather than duplicate.
 
-- `specs/features/040-agent-sdk-runner/SPEC.md` — this feature.
-- `specs/features/031-autonomous-orchestration-loop/SPEC.md` — **the normative source** for the
-  entry gate (FR-002), verdict/completion blocks (FR-003/FR-004), the escalation rule (FR-005),
-  the finding registry (FR-007), attempt lifecycle (FR-008), caps and budget (FR-009), re-entry
-  (FR-011), and the closure freeze (FR-013). Read in full, once.
-- `specs/features/031-autonomous-orchestration-loop/DECISIONS.md` — for the *why* behind the
-  counter semantics, before re-deriving them wrongly.
-- `specs/features/032-autonomous-loop-residual-calibration/SPEC.md` + `CALIBRATION.md` — the
-  observed-evidence corrections to 031. Where 031 and 032 disagree, 032 wins.
-- `skills/sdd-orchestrate/SKILL.md` — the current executor. The conformance test (FR-015) is
-  written against its behavior, so its loop section must be read closely.
-- `agents/security-reviewer.md`, `agents/domain-reviewer.md`,
-  `agents/final-conformance-reviewer.md`, `agents/implementer.md`, `agents/fast-worker.md`,
-  `agents/deep-reasoner.md`, `agents/solution-architect.md` — read for their **verdict/completion
-  block contract and frontmatter shape only**, not end to end; the runner sends these files as
-  system prompts without paraphrasing them.
-- `scripts/skill-eval.sh` — the `PROVIDER_TABLE` and the Codex isolation flag set, plus the
-  `--allow-unisolated` refusal message, which is the precedent FR-017 copies.
-- `docs/KNOWN_DEBT.md` — DEBT-001 and DEBT-002 entries only.
-- `scripts/check-consistency.sh` — skimmed once, to confirm a new top-level `runner/` folder is
-  outside its rules (T001).
-
-**Out of budget:** every other spec folder, every skill other than `sdd-orchestrate`, the whole of
-`install.sh`/`install.ps1` (the plan's claim is that they do not change — confirmed by `git diff`,
-not by reading them), `adapters/`, and `evals/`.
+**Out of budget for remaining 040 implementation:** provider SDK documentation, real provider
+calls, further `backends/claude.py` behavior, Codex flag verification, lifecycle-skill behavior,
+arbitrary-project portability and checkpoint commits. D035's Claude source hardening does not
+expand the supported scope.
 
 ### Model routing
 
-| Phase / tasks | Routing | Justification |
+| Tasks | Routing | Reason |
 |---|---|---|
-| T003 parser fail-closed semantics | **deep-reasoning** | This is the security boundary. Agent output is untrusted input, and "fail closed" has to hold for the adversarial fixtures, not just the malformed ones. Getting it wrong turns a rejected review into a silent approval. |
-| T005 counters and budget | **deep-reasoning** | 031 FR-009 is the most intricate rule in the protocol: two counters with different reset semantics plus a monotonic budget. It must be derived from the spec text and a hand-computed table, not from intuition. |
-| T013 loop driver, resume, concurrency | **deep-reasoning** | Idempotent re-entry (031 FR-011) and the attempt lifecycle (031 FR-008) interact; a wrong resume re-delegates completed work or duplicates findings under a live budget. |
-| T014 finalization freeze | **deep-reasoning** | The closure-delta allowlist (031 FR-013) decides whether a run's approvals survive its own closure writes. Off-by-one here silently invalidates conformance. |
-| T017 conformance test | **deep-reasoning** | It has to be a real comparison, not a test that passes because both sides are the runner. |
-| T020 security review | **deep-reasoning** | Unattended execution, credentials, untrusted responses, `--notify` command execution. |
-| T001, T002, T007, T009, T011, T012, T018, T019, T023 | cheap/mechanical | Package skeleton, fixtures, stub backend, subprocess wrapper, JSONL writer, argparse plumbing, running suites, docs. Decided semantics, mechanical execution. |
-| T004, T006, T008, T010 | cheap/mechanical, deep-reasoning on review | Markdown I/O against a fixed schema, a documented classification table, an SDK call, a retry decorator — mechanical to write, but each is reviewed against its 031 FR before acceptance. |
+| T028 baseline gate | CLI evidence completion + adversarial test review | The gate exists; all four completion outcomes must now be proved through the subprocess interface. |
+| T029 feature containment | security-focused review | Lexical, absolute and symlink escapes must all be refused before writes. |
+| T030 atomic ownership | concurrency-focused review | The test must open the pre-state race, not merely start after `ACTIVE` exists. |
+| T031 `HEAD` fingerprint | focused implementation | Small change, high impact; the regression must create a real commit with a clean worktree. |
+| T032 `_finalize` boundary | architecture-focused review | Removes provider/lifecycle claims without damaging core convergence or historical artifacts. |
+| T033 final conformance | independent reviewer | D033 showed that author-run review is insufficient evidence. |
 
 ## Proposed approach
 
-**One protocol, transcribed once.** Every module that encodes a rule from 031 names the FR it
-implements in a module-level docstring, so a future change to 031 has a findable set of call sites
-(SPEC NFR: Maintainability). The runner never invents semantics; where 031 is silent, the task
-stops and escalates rather than choosing.
+### 1. Preserve the proven core
 
-**Build order is inside-out, and it is deliberate.** The pure, testable core comes first — parser,
-state I/O, counters, classifier — because all of it is provable with zero provider calls. Only then
-the backends, then the driver that composes them. The stub backend (T007) lands before any real
-backend, so the entire integration suite is written and green before a single token is spent.
+Do not rewrite the parser, counter arithmetic, budget, state serializer, repair registry, redaction
+or stub protocol. Their current tests remain regression evidence. New work is limited to controls
+the audit proved were recorded but not enforced.
 
-Layers:
+### 2. Convert evidence into gates
 
-1. **Core (pure).** `blocks.py` (fail-closed parser), `state.py` (`ORCHESTRATION.md` read/write in
-   031's schema), `counters.py` (FR-009 arithmetic), `escalation.py` (FR-005 classification),
-   `budget.py`. No I/O beyond the feature folder, no provider knowledge, fully unit-testable.
-2. **Backends.** A single `Backend` protocol — run a session given system prompt, task prompt, path
-   scope, timeout; return raw text plus transport metadata. Three implementations: `stub`
-   (scripted, always present), `claude` (Agent SDK), `codex` (`codex exec` subprocess, gated shut
-   by default per FR-017).
-3. **Infrastructure.** `retry.py` (bounded attempts, backoff, per-attempt timeout, every retry
-   charged to the budget), `log.py` (`run.jsonl`, with redaction applied at the writer so no call
-   site can forget it).
-4. **Driver.** `loop.py` composes the above: entry gate → plan → per-task dispatch → parse →
-   reviewers → findings-to-tasks → re-review → converge or abort. State is persisted *before* the
-   driver proceeds past any transition, which is what makes the SIGTERM test meaningful.
-5. **CLI.** `__main__.py`: argument parsing, exit-code mapping, notification sink.
+- **Baseline:** represent `NOT DECLARED`, failed and mutating baselines as completion-evidence
+  failures. None may reach `DONE`/exit `0`.
+- **Containment:** resolve both repository and feature directories, then compare using a
+  path-aware containment operation. Refuse before any artifact or lock is created.
+- **Ownership:** acquire a per-feature lock with one atomic exclusive-create operation. The loser
+  exits `15` before state mutation or backend dispatch. Recovery must not turn stale-lock cleanup
+  into another race.
+- **Fingerprint:** hash the `HEAD` object ID alongside the existing status/diff material. A commit
+  is therefore a state transition even if it leaves the worktree clean.
 
-**Fail-closed is the house rule, not a feature of one module.** An unparseable reviewer response is
-a REJECT. An unparseable worker response is BLOCKED. An unclassifiable escalation is human-gated.
-An unverified backend is refused. A second concurrent run is refused. In every ambiguous case the
-runner does the boring, visible, recoverable thing.
+### 3. Keep state interoperable without guessing
 
-**Agent responses are untrusted input.** Only the fenced verdict block is ever acted on; prose is
-recorded and never interpreted. `--notify` receives its event as JSON on stdin and is executed
-without a shell, so no agent-produced text can reach a shell string.
+`ORCHESTRATION.md` retains the shared section schema and foreign documents remain parseable for
+diagnostics. Re-entry checks the writer and resumes only `sdd_runner` state. A foreign document is
+not corrupt: it is a safe exit `16` with a hand-off message. No column normalization or guessed
+counter reconstruction is added.
 
-**Codex, honestly.** The backend is written — a real implementation, so the abstraction carries two
-loads rather than one plus a comment — and it refuses to run without `--allow-unverified-backend`,
-naming DEBT-001/DEBT-002. No document claims multi-backend parity until a real `codex exec` run
-records the accepted flags. If the CLI appears during implementation, T009 closes the debts; if it
-does not, that is reported as unobserved, not assumed.
+### 4. Cut at `_finalize`
+
+The deterministic loop ends after convergence plus the baseline gate. It records run result
+`DONE` as **core completion**, never as lifecycle `Status: Done`, and emits no `lifecycle:*`
+dispatch, closure delta or `PR_DESCRIPTION.md`. Provider/lifecycle
+code already present in the branch is treated as experimental, out-of-scope source until a
+follow-up spec owns and tests it; 040 neither runs nor removes it merely to improve its diff.
+
+### 5. Fail closed at every boundary
+
+Missing completion evidence, an external feature path, lost ownership, changed `HEAD`, foreign
+writer state, or an attempted lifecycle step all produce named non-success outcomes. No ambiguous
+case is converted to an observation that still permits exit `0`.
 
 ## Alternatives considered
 
-- **Extend `sdd-orchestrate` with better prompt discipline instead of writing a runner.** Rejected:
-  it cannot address the actual problem. No prompt makes a model's arithmetic deterministic, no
-  prompt survives context compression by construction, and no Claude Code skill can invoke
-  `codex exec`. Phase 1 already went as far as this mechanism goes.
-- **Reimplement the loop semantics "better" while transcribing them.** Rejected explicitly, and
-  guarded by FR-015's conformance test. Two executors with two semantics is worse than one
-  executor, because every disagreement becomes an unfalsifiable argument about which is right.
-- **Ship the runner to adopter projects in v1.** Rejected by the maintainer (D001). It would push a
-  pip dependency onto every adopter to validate a loop that has never run unattended even once.
-- **TypeScript Agent SDK.** Rejected: Python is already a declared dependency of this repo and the
-  maintainer's daily stack; adding a Node toolchain to a Bash/PowerShell/Python repo costs more
-  than the SDK difference is worth.
-- **Skip the stub backend and test against a real provider.** Rejected: non-deterministic tests for
-  a component whose entire value proposition is determinism, at a per-run cost, with no way to
-  script a flip-flopping reviewer.
-- **Store loop state as JSON instead of reusing `ORCHESTRATION.md`.** Rejected: it would fork the
-  state format between the two executors and break the requirement that either can resume the
-  other's run (FR-005). `run.jsonl` covers the machine-readable need without splitting the source
-  of truth.
-- **Give the runner checkpoint commits in v1**, as 031 anticipated. Rejected by the maintainer
-  (D005): an unsupervised executor should not write git history in its first release.
+- **Implement cross-executor resume.** Rejected. Reconstructing another executor's counters and
+  attempt lifecycle without a versioned hand-off is guessing; D014's refusal is the safe behavior.
+- **Keep provider and lifecycle closure in 040.** Rejected. AUDIT-3/4/8 are observable only through
+  a real provider path, while the deterministic core has independent value and evidence.
+- **Delete the Claude and Codex modules now.** Rejected for this correction. Claude remains
+  optional/lazy and Codex gated as requested; the follow-up decides whether to rehabilitate or
+  replace them.
+- **Treat a missing baseline as a warning.** Rejected. A warning that still permits `DONE` repeats
+  AUDIT-1 exactly.
+- **Use only a PID recorded in `ORCHESTRATION.md` as the lock.** Rejected. It cannot close the
+  exists-then-create race that AUDIT-6 identifies.
 
 ## Dependencies
 
-- **`claude-agent-sdk` (Python)** — new, and the first non-stdlib Python dependency this repo has
-  ever had. Declared in `runner/`'s own manifest, imported lazily so its absence cannot break
-  anything but the `claude` backend.
-- **Codex CLI** — **not installed on this machine** (verified 2026-08-31). Gates AC-013's optional
-  clause and the closure of DEBT-001/DEBT-002.
-- **Provider credentials** — from the environment only, for the E2E tasks.
-- **Python 3.14** on this machine; the floor the manifest declares is decided in T001.
-- **A scheduler** (`cron` or `launchd`) for AC-002. No CI account or runner is required.
-- Existing suites (`check-consistency.test.sh`, `install.test.sh`, `install.test.ps1`) as the
-  untouched-baseline evidence for AC-010.
+- Python stdlib and Git, already required by this repository.
+- No SDK, provider credential, Codex CLI, scheduler or billable service is required by spec 040.
+- `claude-agent-sdk` remains an optional lazy dependency of out-of-scope experimental source.
+- The same optional `claude` extra now declares `anyio>=4`, which the adapter imports directly;
+  absence of either dependency fails in provider preflight (D035).
+- Existing shell/PowerShell suites remain containment regression evidence.
 
 ## Risks
 
 | # | Risk | Severity | Mitigation |
 |---|---|---|---|
-| R1 | **The transcription drifts from 031.** Two executors, two behaviors, and the framework's autonomy story splits in half. | High | **PARTIALLY mitigated only (D008).** The two-executor conformance test proved unviable — no injection point into `sdd-orchestrate`'s Agent-tool delegations. The replacement is a protocol transcription guard: a clause→module→test table plus a test that keeps it honest and checks the runner against real recorded phase-1 artifacts. Nothing compares the two executors on the same input, so drift can still occur. The guard already found one real divergence (D011). |
-| R2 | **A parser bug turns a REJECT into an APPROVE.** The failure is silent and it defeats the entire review gate. | High | Fail-closed by construction (T003, deep-reasoning), an adversarial fixture corpus (T002) including a response whose *prose* contains a fake verdict block, and AC-004. |
-| R3 | **The budget leaks and an overnight run empties the account.** | High | Budget is checked *before* dispatch, retries are charged, and AC-006 proves the N+1st call is never made — observed by counting stub invocations, not by reading code. |
-| R4 | **The SDK dependency escapes containment** into installers or adopter machines. | Medium | FR-014 plus AC-014's `git diff` assertion, plus AC-010 running the existing suites on a machine without the SDK. Lazy imports. |
-| R5 | **A resumed run duplicates work or resets a counter**, making caps meaningless across restarts. | High | State written before proceeding past any transition; AC-007's SIGTERM-and-restart test; counters monotonic by construction (T005). |
-| R6 | **Codex remains prose forever**, recreating DEBT-002 inside the runner. | Medium | The backend is implemented, not described, and the gate refuses loudly rather than the docs claiming quietly. The refusal message names the debt. |
-| R7 | **`--notify` becomes a command-injection surface** carrying agent-authored text. | Mitigated | Executed without a shell, argument vector fixed, event delivered as JSON on stdin. Confirmed by T020's review. |
-| R11 | **An agent writes outside the work it was given**, and nothing notices until the run ends. | **Partially mitigated (D028)** | Read-only agents now fail closed on any tree change during their delegation (031 FR-008). Writing agents still carry the whole repo as their scope, so a worker straying into unrelated code is caught only by the closure delta at the end. |
-| R8 | **Concurrent `cron` runs corrupt `ORCHESTRATION.md`.** | Medium | A lock with the ACTIVE run recorded in state; second runner refuses before any provider call (AC-011). |
-| R9 | **Secrets land in the runner's artifacts** and they become unshareable. | **Materialized, then closed** | Redaction now runs at both writers — `run.jsonl` and `ORCHESTRATION.md` — pinned by a full-run regression. It leaked for four tasks because T011's `Verify:` was narrower than AC-012, and the suite could not have caught it: no test ran a secret through a real escalation. Residual: redaction keys on env-var *names* matching a hint list, so a credential passed some other way is not recognised. |
-| R10 | **[[DEBT-009]]** — **the real E2E fails for reasons the stub cannot model** (SDK session semantics, prompt shape of `agents/*.md`, lifecycle skills that never ran, `PR_DESCRIPTION.md` that never appeared). | **Medium — UNTESTED, and now the largest unknown** | T018 is `not observed` (D026), and AC-001/AC-002 were downgraded to match (D030): no SDK and no Codex CLI on this machine. Nothing here is mitigated, only bounded and named. The Assumptions section flags that a prompt-shape mismatch is a finding, not a licence to fork the agent files. |
+| R1 | Protocol transcription drifts from 031. | Medium | FR-015's honest transcription guard; no claim of behavioral equivalence. |
+| R3 | The delegation budget leaks. | High | Pre-dispatch arithmetic and stub invocation counts remain regression-tested. |
+| R5 | Same-writer resume duplicates work or resets counters. | High | Persist-before-transition and existing resume corpus; foreign writers fail closed. |
+| R8 | Two starts both believe they own the feature. | **Closed (T030, D044/D045)** | The initial document is published whole or not at all — fsynced to a temporary name, then `os.link`, atomic create-if-absent that never replaces — so a contender sees nothing or a complete document, never a truncated one. Proven by a two-phase barrier at the claim itself: one owner, one exit `15`, one worker dispatch, no exit `16`. The earlier pre-CLI barrier could not reach the window and produced a false positive (D044). |
+| R12 | A green suite is mistaken for architecture coverage. | Materialized (D033) | Independent conformance after T028…T032; new tests attack each omitted gate directly. |
+| R13 | Old provider/finalization code is mistaken for supported 040 behavior. | **Closed (T032, D046)** | The lifecycle dispatch is gone, not merely undocumented: `LIFECYCLE_STEPS`, `_lifecycle_step` and `_phase_index` are deleted, a converged run records `CORE-COMPLETE`, and restoring either a lifecycle dispatch or the closure delta breaks the boundary tests. Docs in `docs/SDD-ORCHESTRATION.md`, `CHANGELOG.md`, `CONTRIBUTING.md` and `runner/README.md` state the stub-only surface. The PARTIAL verdict still stands until T033. |
+| R14 | A committed mutation preserves approval in a live loop. | Medium until T031 | `HEAD` is in the digest; still require a backend commit that proves fail-closed approval invalidation. |
+| R15 | Symlink or non-feature path escapes the intended feature root. | Medium until T029 | Repo-level lexical containment is present; resolve then contain under `specs/features/` and assert no artifact outside. |
 
 ## Test strategy
 
-The suite runs on stdlib `unittest`, not pytest (D009): requiring an install to prove
-containment would contradict the containment.
-
-- **Unit** (`runner/tests/unit/`): the parser against the fixture corpus (valid, missing,
-  malformed, unknown verdict, double-block, truncated, adversarial prose-embedded block); counter
-  arithmetic against a hand-computed table derived from 031 FR-009, including every case that must
-  *not* increment; budget accounting with retries; escalation classification per category; exit-code
-  mapping; secret redaction; `ORCHESTRATION.md` round-trip.
-- **Integration** (`runner/tests/integration/`): the full loop against the stub backend over the
-  fixture feature — converge, reject-then-fix, flip-flop on one finding ID, per-reviewer cap abort,
-  per-finding cap abort, budget refusal, SIGTERM-and-resume, concurrent-run refusal, human-gated
-  escalation with `--notify`.
-- **Conformance** (FR-015, T017 as replaced by D008): a protocol transcription guard —
-  `runner/tests/conformance/PROTOCOL_TRANSCRIPTION.md` maps each 031 clause to the module encoding
-  it and the test pinning it, and `test_transcription.py` fails when that table names a module
-  attribute or test file that does not exist, and checks the runner's model against the real
-  recorded `ORCHESTRATION.md` artifacts of specs 032 and 033. Weaker than a two-executor
-  comparison, and stated as such.
-- **E2E** (T018): AC-001 non-interactive with `</dev/null` and no TTY; AC-002 the same run launched
-  from `cron`. Real provider, small fixture feature, one run each.
-- **Regression** (T019): `check-consistency.sh` exit 0; `check-consistency.test.sh` 42/42;
-  `install.test.sh` 33/33; `install.test.ps1` 28/28 under pwsh — all on a machine without the SDK,
-  plus the AC-014 `git diff` assertion.
-- **Manual** (T022): one overnight unattended run on a real spec of this repo, with
-  `ORCHESTRATION.md` and `run.jsonl` read start to finish by the maintainer.
+- **Retained unit/integration regression:** parser corpus, counters, budget, state round-trip,
+  redaction, repair cycle, same-writer resume and stub CLI.
+- **AC-015 baseline:** four CLI cases — missing, failing, mutating and passing — with exit code and
+  persisted reason asserted.
+- **AC-016 containment:** contained path, absolute external path, `..` escape and symlink escape;
+  refusals leave no artifact.
+- **AC-017 concurrency:** two synchronized processes race before state exists; exactly one owns and
+  only one can dispatch.
+- **AC-018 fingerprint:** a test backend creates a commit that leaves status and diff clean; the
+  changed `HEAD` invalidates approval.
+- **AC-019 boundary:** a converged stub run performs no lifecycle dispatch and creates no closure or
+  PR-description evidence.
+- **Regression:** `check-consistency.sh` and existing installer suites remain green with no SDK or
+  Codex CLI.
+- **No 040 E2E/manual provider test:** former T018/T022 inputs move to the follow-up.
 
 ## Rollback strategy
 
-Trivially reversible, by design. The runner is one new top-level folder with no callers: deleting
-`runner/` removes the feature entirely, and nothing in the framework imports it or depends on it.
-No installer, manifest, skill, agent, or hook changes, so there is no adopter-visible surface to
-revert and no migration to undo. The documentation edits (`docs/SDD-ORCHESTRATION.md`,
-`CHANGELOG.md`, `CONTRIBUTING.md`) revert as an ordinary diff. Runtime artifacts (`run.jsonl`) are
-per-feature files that can be deleted without affecting `ORCHESTRATION.md`.
-
-Operationally, a misbehaving run is stopped by killing the process: the state file is written
-before each transition, so the tree is left in an inspectable state and the run is either resumable
-or explicitly not, per 031 FR-011.
+The runner remains isolated under `runner/` with no installer or adopter dependency. Each safety
+fix is independently revertible, but the scope correction itself is normative: reverting it would
+restore unsupported provider and closure claims and requires a new decision. Runtime lock files
+must have a documented stale-owner recovery path; rollback must never delete a lock owned by a live
+process.
 
 ## PLAN verification checklist
 
-- [x] The plan covers all acceptance criteria. (AC-001…AC-014 each map to at least one task.)
-- [x] The plan avoids behavior outside the spec.
-- [x] The Context budget section is filled (reading list + model routing), not left as placeholder.
-- [x] Risks are documented.
-- [x] Test strategy is documented.
-- [x] Rollback strategy is documented.
-- [x] SPEC.md status has been updated to `Ready`.
+- [x] Architecture option A is explicit and every audit finding has one owner.
+- [x] SPEC acceptance changes are mapped to T028…T033.
+- [x] The deterministic core and stub remain in 040; Claude stays lazy and Codex gated.
+- [x] Real providers, writer scope, format retry, lifecycle and closure are excluded from 040.
+- [x] Risks, tests, dependencies and rollback match the new boundary.
+- [x] T028…T032 are implemented and verified (239 tests, green; each with its own negative check).
+- [x] T033 revises the conformance verdict to PASS on the corrected scope; classification stays EXPERIMENTAL.

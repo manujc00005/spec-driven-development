@@ -102,6 +102,64 @@ class ClaudeBackendErrorClassification(unittest.TestCase):
             ClaudeBackend(model="m").run("sys", "task", [], 1)
 
 
+class ClaudeSessionBoundary(unittest.TestCase):
+    """AUDIT-8: the session's tools are declared, and its deadline is real."""
+
+    def test_the_tool_list_is_declared_not_inherited(self):
+        from sdd_runner.backends.claude import ClaudeBackend
+
+        backend = ClaudeBackend(model="m")
+        self.assertEqual(backend.allowed_tools, list(ClaudeBackend.DEFAULT_TOOLS))
+        self.assertNotIn("WebFetch", backend.allowed_tools)
+        self.assertNotIn("Agent", backend.allowed_tools)
+
+    def test_a_read_only_role_can_be_given_a_read_only_session(self):
+        from sdd_runner.backends.claude import ClaudeBackend
+
+        backend = ClaudeBackend(model="m", allowed_tools=ClaudeBackend.READ_ONLY_TOOLS)
+        for writing in ("Edit", "Write", "Bash"):
+            self.assertNotIn(writing, backend.allowed_tools)
+
+    def test_the_options_carry_the_tool_list(self):
+        """The list must reach ClaudeAgentOptions, not just sit on the object."""
+        import types
+
+        from sdd_runner.backends.claude import ClaudeBackend
+
+        captured = {}
+        backend = ClaudeBackend(model="m")
+        backend._sdk = types.SimpleNamespace(ClaudeAgentOptions=lambda **kw: captured.update(kw))
+        backend._options("system prompt")
+
+        self.assertEqual(captured["allowed_tools"], list(ClaudeBackend.DEFAULT_TOOLS))
+        self.assertEqual(captured["permission_mode"], "acceptEdits")
+        self.assertEqual(captured["model"], "m")
+
+    def test_a_read_only_session_reaches_the_options_too(self):
+        import types
+
+        from sdd_runner.backends.claude import ClaudeBackend
+
+        captured = {}
+        backend = ClaudeBackend(model="m", allowed_tools=ClaudeBackend.READ_ONLY_TOOLS)
+        backend._sdk = types.SimpleNamespace(ClaudeAgentOptions=lambda **kw: captured.update(kw))
+        backend._options("system prompt")
+        self.assertNotIn("Write", captured["allowed_tools"])
+
+    def test_the_deadline_is_inside_the_event_loop(self):
+        """A cancel scope outside a loop cancels nothing; this one must fire."""
+        import inspect
+
+        from sdd_runner.backends import claude
+
+        source = inspect.getsource(claude.ClaudeBackend._query)
+        self.assertIn("fail_after", source)
+        self.assertNotIn("anyio.move_on_after", source,
+                         "move_on_after around a synchronous anyio.run never fires")
+        # The deadline must be established inside the coroutine, not around it.
+        self.assertLess(source.index("async def _run"), source.index("fail_after"))
+
+
 class StubBackendContract(unittest.TestCase):
     def test_counts_invocations(self):
         stub = StubBackend(script=["one", "two"])

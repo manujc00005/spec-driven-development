@@ -8,6 +8,13 @@ from, and to the test that pins it.
 `test_transcription.py` asserts that this table stays honest: every module listed
 here must exist, and every test named here must be collected by the suite.
 
+**Scope note (D034/D046).** Three clauses of 031's termination contract — lifecycle-skill
+invocation, the closure delta over what those skills change, and `PR_DESCRIPTION.md` — are **not
+transcribed by spec 040 and must not appear in this table.** The runner stops at `CORE-COMPLETE`;
+those clauses belong to the follow-up `Finalizer` spec. `closure.classify`, `closure.observe` and
+`closure.unexpected` exist and are tested, but nothing in the runner calls them, so they transcribe
+no clause this executor honours.
+
 | 031 clause (SKILL.md) | Runner module | Test |
 |---|---|---|
 | Verdict block: `verdict: APPROVE\|REJECT`, `findings` required | `blocks.parse_reviewer` | `test_blocks.ReviewerParsing.test_valid_approve` / `test_valid_reject` |
@@ -42,11 +49,10 @@ here must exist, and every test named here must be collected by the suite.
 | After any change, EVERY stale required reviewer is re-scheduled | `loop.Loop._process_task` | `test_repair.FlipFlop` |
 | A clean re-approval consumes budget and gates nothing | `counters.ReviewerCounters.clean_reapprovals` | `test_counters.TotalInvocations` |
 | DONE requires all six conditions simultaneously | `loop.Loop._state_preconditions` | `test_finalization.BlockingConditions` |
-| Freeze the fully approved fingerprint before any lifecycle skill | `loop.Loop._freeze` | `test_finalization.StaleApprovals.test_no_freeze_is_recorded_when_finalization_blocks` |
-| Narrow closure allowlist; unexpected changes return to REVIEW | `closure.classify` | `test_finalization.ClosureDeltaRecord` |
-| Allowed closure deltas are audited but do not stale approvals | `closure.observe` | `test_finalization.ClosureDeltaRecord.test_closure_delta_persisted` |
-| Lifecycle skills are invoked, never their status written | `loop.Loop._lifecycle_step` | `test_finalization.LifecycleGate` |
-| A refusing owning skill leaves the run PAUSED with its reason | `loop.Loop._lifecycle_step` | `test_finalization.LifecycleGate` |
+| Freeze the fully approved fingerprint before finalization proceeds | `loop.Loop._freeze` | `test_finalization.StaleApprovals.test_no_freeze_is_recorded_when_finalization_blocks` |
+| A converged run stops at `CORE-COMPLETE`; no owning lifecycle skill is invoked | `loop.Loop._close` | `test_finalization.CoreBoundary` |
+| The run writes no spec `Status`, so no closure delta is computed over one | `loop.CORE_COMPLETE` | `test_finalization.CoreBoundary.test_a_converged_run_computes_no_closure_delta` |
+| The frozen tree map is persisted for the hand-off consumer | `closure.tree_map` | `test_finalization.ClosureRecord.test_the_frozen_record_is_persisted_with_an_empty_delta` |
 | Each attempt records an allowed-path scope; an out-of-scope write fails closed | `loop.Loop._scope_for` | `test_loop.ReadOnlyAgentsMayNotWrite` |
 
 ## Resolved divergence — severity vocabulary (D011, 2026-08-31)

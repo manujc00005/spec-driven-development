@@ -22,6 +22,15 @@ final conformance and returns the run to REVIEW.
 
 The asymmetry is deliberate: this module decides that something IS allowed only
 when it can say which rule allows it. Anything it cannot classify is unexpected.
+
+**What spec 040 actually drives (D034, T032).** Only the freeze half:
+`tree_map`, `render` and `parse`. The loop records the frozen fingerprint, the
+verification outcome and the frozen tree map, and stops — the closure delta is
+computed over what the owning lifecycle skills change after the freeze, and this
+runner does not dispatch them. `observe`, `unexpected` and `classify` are kept
+here, tested here, and called by nobody in production: they are the seam the
+follow-up `Finalizer` spec begins at (AUDIT-9), and the frozen map above is what
+it will compare against. Deleting them would only mean writing them again.
 """
 
 import hashlib
@@ -47,6 +56,13 @@ DELETED = "<deleted>"
 # not raise out of the audit: it registers as a change and gets classified like
 # any other (PY-1).
 UNREADABLE = "<unreadable>"
+
+# 031's second DONE condition: a green, non-mutating verification suite. These
+# are the four outcomes, and only PASS satisfies it (AUDIT-1, spec 040 D036).
+VERIFY_PASS = "PASS"
+VERIFY_NOT_DECLARED = "NOT DECLARED - condition 2 of 031's termination contract is unobserved"
+VERIFY_FAILED = "FAILED"
+VERIFY_MUTATED = "MUTATED THE TREE"
 
 
 class CorruptClosureRecord(ValueError):

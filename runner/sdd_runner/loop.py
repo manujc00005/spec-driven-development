@@ -29,12 +29,13 @@ REVIEWERS = ("domain", "security", "final-conformance")
 # Agents whose own contracts say "Read-only - it never modifies code". Their
 # recorded allowed-path scope is therefore EMPTY, and any change to the tree
 # during their delegation is an out-of-scope write (031 FR-008, SEC-002). The
-# worker and the lifecycle skills legitimately write, so they keep the repo scope.
+# worker legitimately writes, so it keeps the repo scope.
 READ_ONLY_AGENTS = REVIEWERS
-# The owning lifecycle skills, in the order 031's termination contract runs them.
-# The runner delegates them; it never sets a spec Status itself. "The loop may
-# invoke the owning lifecycle skills; that is not a direct transition."
-LIFECYCLE_STEPS = ("spec-review", "spec-close", "pr-description")
+
+# The terminal phase of the closure record on 040's side of the `_finalize` seam.
+# It is NOT "CLOSED": the feature lifecycle is not closed by this runner, and a
+# phase word that implied otherwise would be the claim D034 removed.
+CORE_COMPLETE = "CORE-COMPLETE"
 
 AGENT_FILES = {
     "worker": "agents/implementer.md",
@@ -118,10 +119,18 @@ class Loop:
         # `-uall` is load-bearing: without it a wholly-untracked directory collapses
         # to a single `?? src/` line and every file created inside it is invisible
         # to the fingerprint.
+        digest = hashlib.sha256()
+        # HEAD is part of the identity (AUDIT-7). Without it the fingerprint
+        # describes *uncommitted work*, not the tree: `git status` and
+        # `git diff HEAD` both measure the delta from HEAD, so an agent that
+        # commits empties both and two fingerprints either side of a delegation
+        # that changed the repository come out identical.
+        head = subprocess.run(["git", "-C", self.repo, "rev-parse", "HEAD"],
+                              capture_output=True, text=True)
+        digest.update(head.stdout.strip().encode("utf-8"))
         proc = subprocess.run(
             ["git", "-C", self.repo, "status", "--porcelain=v1", "-uall"],
             capture_output=True, text=True)
-        digest = hashlib.sha256()
         # TASKS.md is loop bookkeeping, not implementation: the runner itself
         # writes repair rows into it (031 FR-007) and checks them off when their
         # finding resolves. Counting those writes as an implementation change
@@ -153,12 +162,24 @@ class Loop:
         Raises ConcurrentRun or UnresumableState. Never guesses.
         """
         if not os.path.exists(self.state_path):
+            # Publish the COMPLETE document atomically (AUDIT-6). The earlier form
+            # claimed the path with an empty `O_EXCL` file and filled it in
+            # afterwards, which excluded correctly but left a window where a
+            # contender loaded a truncated document and exited 16 - blaming the
+            # state instead of the other runner. `create_exclusive` closes both:
+            # nothing is visible until it is whole, and only one contender can
+            # make it visible at all.
             cap = self.max_delegations_override or default_cap(unchecked_count)
             doc = state.new_document(self.feature_dir, "runner", self.clock(),
                                      {"max_iterations": self.counters.max_iterations,
                                       "max_delegations": cap,
                                       "pid": self.pid, "host": self.hostname})
-            doc.save(self.state_path)
+            try:
+                doc.create_exclusive(self.state_path)
+            except FileExistsError:
+                raise ConcurrentRun(
+                    "another runner published %s while this one was starting; refusing to "
+                    "start a second runner" % self.state_path)
             return doc, None
 
         doc = state.Orchestration.load(self.state_path)
@@ -222,14 +243,6 @@ class Loop:
 
     # -- delegation -------------------------------------------------------
     def _system_prompt(self, agent):
-        if agent.startswith("lifecycle:"):
-            skill = agent.split(":", 1)[1]
-            header = "# lifecycle:%s\n" % skill
-            path = os.path.join(self.repo, "skills", skill, "SKILL.md")
-            if os.path.isfile(path):
-                with open(path, encoding="utf-8") as fh:
-                    return header + fh.read()
-            return header + "(SKILL.md not found; run /%s for this feature)" % skill
         path = os.path.join(self.repo, AGENT_FILES[agent])
         if os.path.isfile(path):
             with open(path, encoding="utf-8") as fh:
@@ -864,7 +877,7 @@ class Loop:
     def _verification(self):
         """031's second DONE condition. Honest about the case where it cannot be met."""
         if not self.baseline_cmd:
-            return "NOT DECLARED - condition 2 of 031's termination contract is unobserved"
+            return closure_mod.VERIFY_NOT_DECLARED
         before = subprocess.run(["git", "-C", self.repo, "status", "--porcelain"],
                                 capture_output=True, text=True).stdout
         proc = subprocess.run(self.baseline_cmd, cwd=self.repo, capture_output=True, text=True)
@@ -873,15 +886,26 @@ class Loop:
         self.log.emit("verification", command=list(self.baseline_cmd),
                       returncode=proc.returncode, hermetic=before == after)
         if proc.returncode != 0:
-            return "FAILED (exit %d)" % proc.returncode
+            return "%s (exit %d)" % (closure_mod.VERIFY_FAILED, proc.returncode)
         if before != after:
-            return "MUTATED THE TREE"
-        return "PASS"
+            return closure_mod.VERIFY_MUTATED
+        return closure_mod.VERIFY_PASS
 
     def _freeze(self):
         """Record the fully approved implementation fingerprint and the tree behind it."""
         verification = self._verification()
-        if verification.startswith("FAILED") or verification.startswith("MUTATED"):
+        if verification == closure_mod.VERIFY_NOT_DECLARED:
+            # 031 makes a green, non-mutating verification a CONDITION of DONE.
+            # Recording it as unobserved and closing anyway turned that condition
+            # into a log line: the runner could report DONE having verified
+            # nothing (AUDIT-1, D036). Only PASS closes.
+            return self._blocked(
+                exits.CLOSURE_NOT_PROVEN,
+                "no verification command was declared, so condition 2 of 031's termination "
+                "contract cannot be met and this run cannot close",
+                "re-enter with --baseline '<command>' naming the suite that proves this feature; "
+                "it must exit 0 and leave the tree unchanged", result="PAUSED")
+        if verification != closure_mod.VERIFY_PASS:
             return self._blocked(
                 exits.NOT_CONVERGED,
                 "the declared verification command did not pass: %s" % verification,
@@ -903,72 +927,37 @@ class Loop:
         self._persist(self.closure["phase"], "closure")
 
     def _close(self, record):
-        """Delegate the owning lifecycle skills, then audit what they changed."""
-        done_steps = [s for s in LIFECYCLE_STEPS
-                      if record["phase"] in ("CLOSED",)
-                      or LIFECYCLE_STEPS.index(s) < self._phase_index(record["phase"])]
-        for step in LIFECYCLE_STEPS:
-            if step in done_steps:
-                self.log.emit("lifecycle-skipped", step=step, reason="already recorded")
-                continue
-            outcome = self._lifecycle_step(step)
-            if outcome is not None:
-                return outcome
-            self.closure["phase"] = "LIFECYCLE:%s" % step
-            self._persist_closure()
+        """Record terminal core evidence and stop at the D034 boundary.
 
-        delta = closure_mod.observe(self.repo, self.feature_dir, self.closure["frozen"])
-        self.closure["delta"] = delta
-        unexpected = closure_mod.unexpected(delta)
-        self.closure["phase"] = "CLOSED" if not unexpected else "INVALID"
+        This is where spec 040's supported surface ends (FR-008, FR-017, FR-018,
+        AC-019). The core proves the six state conditions, the freshness of every
+        approval, final conformance and a green non-mutating baseline, and it
+        records the frozen fingerprint and tree map. It stops there.
+
+        What deliberately does NOT happen here: delegating the owning lifecycle
+        skills (`/spec-review`, `/spec-close`, `/pr-description`), computing a
+        closure delta over what those skills changed, and requiring
+        `PR_DESCRIPTION.md`. Those need a provider that can actually run a skill,
+        and 040 certifies no such provider — the stub answering `APPROVE` on their
+        behalf proved only that the stub was asked. They belong to the follow-up
+        `Finalizer` spec, which begins at this seam (AUDIT-9).
+
+        The frozen tree map persisted below is the hand-off datum: what the
+        Finalizer will compare its closure delta against.
+        """
+        self.closure["phase"] = CORE_COMPLETE
+        self.closure["delta"] = []
         self._persist_closure()
-        self.log.emit("closure-delta", rows=len(delta), unexpected=len(unexpected),
-                      paths=[r["Path"] for r in unexpected])
-
-        if unexpected:
-            return self._blocked(
-                exits.CLOSURE_NOT_PROVEN,
-                "the closure delta contains %d unexpected change(s): %s"
-                % (len(unexpected), ", ".join(r["Path"] for r in unexpected)),
-                "031 FR-013 invalidates final conformance and returns the run to REVIEW. "
-                "Inspect those paths: a production, test, PLAN, DECISIONS or non-lifecycle SPEC "
-                "change after the freeze is not closure work.")
-
-        return self._finish("DONE", exits.OK,
-                            "closed: frozen at %s, closure delta clean (%d audited change(s)), "
-                            "verification %s"
-                            % (self.closure["frozen_fingerprint"], len(delta),
-                               self.closure["verification"]),
-                            resumable=False)
-
-    @staticmethod
-    def _phase_index(phase):
-        if phase.startswith("LIFECYCLE:"):
-            step = phase.split(":", 1)[1]
-            if step in LIFECYCLE_STEPS:
-                return LIFECYCLE_STEPS.index(step) + 1
-        return 0
-
-    def _lifecycle_step(self, step):
-        agent = "lifecycle:%s" % step
-        attempt, response, post, _pre = self._delegate(
-            agent, "Run /%s for %s and end with the canonical verdict block."
-                   % (step, self.feature_dir),
-            self._scope_for(agent), task="-", objective=agent)
-        verdict = blocks.parse_reviewer(response.text, step, self.iteration)
-        self.log.emit("lifecycle", step=step, verdict=verdict.verdict,
-                      synthetic=verdict.synthetic, errors=verdict.errors)
-        self._attempt_row(attempt, "-", agent, agent, "VERIFIED", [self.repo], "", post,
-                          verdict.verdict)
-        if not verdict.approved:
-            return self._blocked(
-                exits.CLOSURE_NOT_PROVEN,
-                "the owning lifecycle skill /%s refused: %s"
-                % (step, "; ".join(f.get("summary", "?") for f in verdict.findings)
-                   or "no reason given"),
-                "031 forbids writing the status on a refusing skill's behalf. Address its reason "
-                "and re-enter; the freeze is preserved.")
-        return None
+        self.log.emit("core-complete", fingerprint=record["frozen_fingerprint"],
+                      verification=record["verification"], paths=len(record["frozen"]),
+                      handoff="lifecycle delegation, closure delta and PR-description "
+                              "evidence are outside spec 040 (D034)")
+        return self._finish(
+            "DONE", exits.OK,
+            "core complete: frozen at %s, verification %s, %d path(s) recorded for the "
+            "finalization hand-off. Lifecycle closure is outside this runner's scope."
+            % (record["frozen_fingerprint"], record["verification"], len(record["frozen"])),
+            resumable=False)
 
     def _finish(self, result, code, reason, resumable=True, escalations=None):
         self.doc.set_body("Run result",

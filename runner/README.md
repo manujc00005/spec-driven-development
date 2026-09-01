@@ -35,10 +35,10 @@ No TTY is required, stdin is never read, and nothing is ever prompted.
 
 `0` converged · `10` gate refused · `11` human-gated escalation · `12` cap abort
 · `13` budget exhausted · `14` backend precondition · `15` concurrent run ·
-`16` state unresumable · `17` processed but not converged · `18` closure not proven ·
-`70` internal error.
+`16` state unresumable · `17` processed but not converged ·
+`18` core completion not proven · `70` internal error.
 
-### Finalization, freeze and closure delta
+### Finalization, freeze and the hand-off
 
 A converged task list is not a closed run. Before it may say `DONE` the runner
 re-checks 031's DONE conditions — no unconverged task, no open finding, no
@@ -48,21 +48,25 @@ re-reviews any approval a later task's change staled, runs
 approved implementation fingerprint together with a per-path content map of the
 tree at that instant.
 
-After the freeze it delegates the owning lifecycle skills (`/spec-review`,
-`/spec-close`, `/pr-description`) and requires each one's APPROVE. It never
-writes a spec `Status` itself. Finally it compares the tree against the frozen
-map: generated artifacts, a `SPEC.md` change confined to its `## Status` section
-and `TASKS.md` checkbox bookkeeping are **allowed**; anything else is
-**unexpected** and returns the run to REVIEW with the paths named.
+**The freeze is where this runner stops.** It records `CORE-COMPLETE`, the frozen
+fingerprint, the verification outcome and the frozen tree map, and exits `0`. It
+does **not** dispatch the owning lifecycle skills (`/spec-review`, `/spec-close`,
+`/pr-description`), does not compute a closure delta over what they would have
+changed, and does not write `PR_DESCRIPTION.md`. It has never written a spec
+`Status` and still does not — closing the feature lifecycle stays a human step,
+or a follow-up spec's, because doing it here would need a provider that can
+actually execute a skill and this spec certifies none.
 
-`--baseline` is 031's second DONE condition. Declared, it must pass and must not
-mutate the tree. Undeclared, the closure record says
-`NOT DECLARED - condition 2 of 031's termination contract is unobserved`, and so
-does the run's reason line.
+The frozen tree map is persisted anyway: it is the datum that hand-off compares
+against. `closure.py` keeps the delta half for that consumer.
+
+`--baseline` is 031's second DONE condition and is **required**. Declared, it must
+exit 0 and must not mutate the tree. Undeclared, the run blocks with exit `18`
+instead of closing over a condition nobody checked.
 
 The whole record lives in `ORCHESTRATION.md`'s `## Closure delta` section and is
-re-read on re-entry: a run interrupted after the freeze resumes into the
-lifecycle steps without redoing the task work, a corrupt record blocks, and a
+re-read on re-entry: a run interrupted between the freeze and the terminal write
+reuses the freeze without redoing the task work, a corrupt record blocks, and a
 frozen fingerprint that no longer matches the tree voids the freeze.
 
 ### Re-entry

@@ -15,7 +15,7 @@ from sdd_runner import exits, state
 from sdd_runner.backends.stub import StubBackend
 from sdd_runner.log import RunLog
 from sdd_runner.loop import Loop
-from tests.support import finalization_keys, make_repo
+from tests.support import GREEN_BASELINE, finalization_keys, make_repo
 
 HOST = socket.gethostname()
 
@@ -70,7 +70,8 @@ class RepairHarness(unittest.TestCase):
                      clock=lambda: next(self.counter), environ={})
         loop = Loop(self.repo, self.feature_dir, stub, log,
                     max_iterations=max_iterations, max_delegations=max_delegations,
-                    clock=lambda: 0, hostname=HOST, pid=os.getpid())
+                    clock=lambda: 0, hostname=HOST, pid=os.getpid(),
+                    baseline_cmd=GREEN_BASELINE)
         return loop.run(), stub, loop, log
 
     # -- helpers ---------------------------------------------------------
@@ -134,8 +135,9 @@ class RejectThenRepairThenApprove(RepairHarness):
         self.assertEqual(outcome.result, "DONE")
         self.assertEqual(self.fields()["completed tasks"], "T001")
 
-        # implementation, review, repair, re-review, plus the four finalization calls.
-        self.assertEqual(stub.invocations, 8)
+        # implementation, review, repair, re-review, plus the one finalization call
+        # 040 still owns: final-conformance-reviewer (D034).
+        self.assertEqual(stub.invocations, 5)
         self.assertEqual(len(self.dispatches(log, "worker")), 2)
         self.assertEqual(len(self.dispatches(log, "domain")), 2)
 

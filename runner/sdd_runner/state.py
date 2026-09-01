@@ -81,6 +81,37 @@ class Orchestration:
         """What actually reaches disk: `dumps()` with known secret values stripped."""
         return redact(self.dumps(), secret_values(self.environ))
 
+    def create_exclusive(self, path):
+        """Publish this document at `path` only if nothing is there yet.
+
+        Two properties at once, and both are needed:
+
+        * **atomic create-if-absent.** `os.link` fails with `FileExistsError` when
+          the target exists and never replaces it, so two contenders cannot both
+          succeed. `os.replace` would be wrong here: it overwrites.
+        * **never partially visible.** The content is written and fsynced to a
+          temporary name first, so the moment `path` exists it is already a
+          complete document. Claiming with an empty `O_EXCL` file and filling it
+          in afterwards leaves a window in which a contender loads a truncated
+          document and blames the state instead of the other runner.
+
+        Nothing is cleaned up here: a stale owner's document is *resumed* by
+        `resume.inspect`, never deleted, so there is no reclaim race to lose.
+        """
+        directory = os.path.dirname(os.path.abspath(path)) or "."
+        fd, tmp = tempfile.mkstemp(dir=directory, prefix=".orchestration-new-", suffix=".tmp")
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                fh.write(self.redacted())
+                fh.flush()
+                os.fsync(fh.fileno())
+            os.link(tmp, path)
+        finally:
+            if os.path.exists(tmp):
+                os.unlink(tmp)
+        self.path = path
+        return path
+
     def save(self, path=None):
         """Atomic write — 031 requires the state file to be written atomically."""
         target = path or self.path
