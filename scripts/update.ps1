@@ -113,6 +113,7 @@ $oldCommit = ""
 $manifestProfiles = @()
 $manifestPState = @()
 $manifestLink = $false
+$manifestOk = $false
 if (Test-Path $manifest) {
     try {
         $m = Get-Content $manifest -Raw | ConvertFrom-Json
@@ -135,6 +136,7 @@ if (Test-Path $manifest) {
         }
         $profLabel = if ($manifestProfiles.Count) { $manifestProfiles -join ',' } else { 'none' }
         $verLabel = if ($oldVersion) { $oldVersion } else { 'unknown' }
+        $manifestOk = $true
         Write-Action "Recorded install: version $verLabel, profiles: $profLabel"
     } catch {
         Write-Warn2 "manifest $manifest exists but is unreadable  - continuing in unknown-version mode (it will be rewritten by this run)"
@@ -321,6 +323,46 @@ foreach ($target in $ClaudeMd) {
         $missing | ForEach-Object { Write-Host "  ## $_" }
     } else {
         Write-Action "CLAUDE.md drift  - $target has every section from CLAUDE.md.example (no merge pending)."
+    }
+}
+
+# ---------------------------------------------------------------------------
+# New-profile report (spec 030 FR-011/FR-012, D003). Mirrors scripts/update.sh:
+# update re-installs exactly the profiles the manifest records, so a profile
+# ADDED to profiles.json after the adopter's last install run never reaches them
+# and nothing says it exists. Report it; never install it.
+#
+# Gated on the manifest having PARSED. With a missing or corrupt manifest the
+# recorded list is empty, and an ungated comparison would announce every profile
+# as new - the confidently wrong answer. Say it cannot compare instead.
+# ---------------------------------------------------------------------------
+if (-not $manifestOk) {
+    Write-Action "New profiles: cannot compare  - no readable install manifest at $manifest. Re-run install.ps1 to write one; until then this run cannot tell which profiles you already have."
+} else {
+    $profilesPath = Join-Path $RepoRoot "profiles.json"
+    $newProfiles = @()
+    try {
+        $pd = Get-Content $profilesPath -Raw | ConvertFrom-Json
+        foreach ($prop in $pd.profiles.PSObject.Properties) {
+            $pName = $prop.Name
+            $pDef = $prop.Value
+            if ($pDef.disabled -eq $true) { continue }        # never advertise a switched-off profile
+            if ($pDef.alwaysInstalled -eq $true) { continue }  # core is not a choice
+            if ($manifestProfiles -contains $pName) { continue }
+            $newProfiles += ,@($pName, ($pDef.billable -eq $true))
+        }
+    } catch {
+        $newProfiles = @()   # unreadable profiles.json: stay quiet rather than guess
+    }
+    if ($newProfiles.Count -gt 0) {
+        Write-Warn2 "Profiles available but NOT installed here (this update did not add them):"
+        foreach ($np in $newProfiles) {
+            $tag = if ($np[1]) { "  (billable add-on)" } else { "" }
+            Write-Host "    $($np[0])$tag  ->  .\install.ps1 -Profile $($np[0])"
+        }
+        Write-Warn2 "  update never installs a profile you did not ask for. Add one with the command above, or every enabled profile with: .\install.ps1 -AllProfiles"
+    } else {
+        Write-Action "New profiles: none  - every enabled profile in profiles.json is already recorded for this install."
     }
 }
 

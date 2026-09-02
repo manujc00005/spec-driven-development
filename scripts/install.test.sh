@@ -390,6 +390,73 @@ else
   fail "FR-009 manifest was updated despite the removal failing"
 fi
 
+# --- Spec 030 AC-006/AC-007/AC-008/AC-017: --all-profiles --------------------
+# A blanket request installs every ENABLED profile, excludes the disabled and
+# the billable ones, and NAMES both exclusions instead of dropping them quietly.
+ALLP_DIR="$TMP_BASE/all-profiles"
+allp_out="$(bash "$REPO_ROOT/install.sh" --all-profiles --dry-run \
+  --central-dir "$ALLP_DIR/central" --claude-home "$ALLP_DIR/home" --skip-link 2>&1)"; allp_rc=$?
+allp_active="$(grep -m1 'Active profiles:' <<< "$allp_out")"
+# Every enabled, non-billable profile in profiles.json must appear.
+allp_expected="$(python3 - "$REPO_ROOT/profiles.json" <<'PYEOF'
+import json, sys
+with open(sys.argv[1], encoding="utf-8") as f:
+    data = json.load(f)
+for name, pdef in data["profiles"].items():
+    if pdef.get("disabled") is True or pdef.get("billable") is True:
+        continue
+    print(name)
+PYEOF
+)"
+allp_missing=""
+while IFS= read -r _p; do
+  [ -z "$_p" ] && continue
+  grep -qF " $_p" <<< "$allp_active" || allp_missing="$allp_missing $_p"
+done <<< "$allp_expected"
+if [ $allp_rc -ne 0 ]; then
+  fail "AC-006 --all-profiles exit" "expected 0, got $allp_rc: $allp_out"
+elif [ -n "$allp_missing" ]; then
+  fail "AC-006 --all-profiles missing enabled profile(s):$allp_missing" "$allp_active"
+elif grep -qF ' blockchain-crypto' <<< "$allp_active"; then
+  fail "AC-007 --all-profiles installed the disabled profile" "$allp_active"
+elif grep -qF ' seo-geo-addon' <<< "$allp_active"; then
+  fail "AC-008 --all-profiles installed the billable add-on" "$allp_active"
+elif ! grep -q 'Skipped (billable add-on' <<< "$allp_out"; then
+  fail "AC-017 --all-profiles did not name the billable profile it skipped" "$allp_out"
+elif ! grep -q 'Skipped (disabled in profiles.json): blockchain-crypto' <<< "$allp_out"; then
+  fail "AC-017 --all-profiles did not name the disabled profile it skipped" "$allp_out"
+else
+  pass "AC-006/007/008/017 --all-profiles installs every enabled profile and names both exclusions"
+fi
+
+# AC-007: naming a disabled profile explicitly still fails hard. The blanket
+# flag must not have softened the existing refusal.
+dis_out="$(bash "$REPO_ROOT/install.sh" --profile blockchain-crypto --dry-run \
+  --central-dir "$ALLP_DIR/disabled" --skip-link 2>&1)"; dis_rc=$?
+if [ $dis_rc -eq 0 ]; then
+  fail "AC-007 an explicit disabled profile no longer fails hard" "$dis_out"
+elif ! grep -q 'disabled by design' <<< "$dis_out"; then
+  fail "AC-007 disabled refusal lost its message" "$dis_out"
+else
+  pass "AC-007 an explicitly named disabled profile still fails hard"
+fi
+
+# AC-008: the billable add-on is still installable when the adopter asks for it,
+# and asking for it alongside --all-profiles must not report it as skipped while
+# installing it - that output would contradict itself.
+bill_out="$(bash "$REPO_ROOT/install.sh" --all-profiles --profile seo-geo-addon --dry-run \
+  --central-dir "$ALLP_DIR/billable" --skip-link 2>&1)"; bill_rc=$?
+bill_active="$(grep -m1 'Active profiles:' <<< "$bill_out")"
+if [ $bill_rc -ne 0 ]; then
+  fail "AC-008 explicit billable opt-in exit" "expected 0, got $bill_rc"
+elif ! grep -qF ' seo-geo-addon' <<< "$bill_active"; then
+  fail "AC-008 explicitly requested billable profile was not installed" "$bill_active"
+elif grep -q 'Skipped (billable add-on' <<< "$bill_out"; then
+  fail "AC-008 profile reported as skipped while being installed" "$bill_out"
+else
+  pass "AC-008 an explicitly named billable profile installs, and is not also reported as skipped"
+fi
+
 echo
 echo "Results: $PASS passed, $FAIL failed"
 [ "$FAIL" -eq 0 ] || exit 1

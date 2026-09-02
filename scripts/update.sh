@@ -119,6 +119,7 @@ OLD_COMMIT=""
 MANIFEST_PSTATE=""
 MANIFEST_PROFILES=""
 MANIFEST_LINK=0
+MANIFEST_OK=0
 if [ -f "$MANIFEST" ]; then
   if MANIFEST_DATA="$(python3 - "$MANIFEST" <<'PYEOF'
 import json
@@ -167,6 +168,7 @@ PYEOF
         LINK:*)     MANIFEST_LINK="${line#LINK:}" ;;
       esac
     done <<< "$MANIFEST_DATA"
+    MANIFEST_OK=1
     log "Recorded install: version ${OLD_VERSION:-unknown}, profiles: ${MANIFEST_PROFILES:-none}"
   else
     warn "manifest $MANIFEST exists but is unreadable  - continuing in unknown-version mode (it will be rewritten by this run)"
@@ -377,5 +379,60 @@ PYEOF
     log "CLAUDE.md drift  - $target has every section from CLAUDE.md.example (no merge pending)."
   fi
 done
+
+# ---------------------------------------------------------------------------
+# New-profile report (spec 030 FR-011/FR-012). update re-installs exactly the
+# profiles recorded in the manifest, so a profile ADDED to profiles.json after
+# an adopter's last install.sh run never reaches them - and nothing told them it
+# exists. This reports the difference and names the command that would add it.
+#
+# It never installs. Deciding for the adopter would install unrequested content
+# on a silent update, which the spec rules out as a non-goal (FR-012).
+#
+# AC-010: this is gated on the manifest having PARSED. With a missing or corrupt
+# manifest, MANIFEST_PROFILES is empty - and an ungated comparison would then
+# announce every profile in the repository as "new", which is the confidently
+# wrong answer. Say the comparison cannot be made instead.
+# ---------------------------------------------------------------------------
+if [ "$MANIFEST_OK" != "1" ]; then
+  log "New profiles: cannot compare  - no readable install manifest at $MANIFEST. Re-run install.sh to write one; until then this run cannot tell which profiles you already have."
+else
+  NEW_PROFILES="$(python3 - "$REPO_ROOT/profiles.json" "$MANIFEST_PROFILES" <<'PYEOF'
+import json
+import sys
+
+try:
+    with open(sys.argv[1], encoding="utf-8-sig") as f:
+        data = json.load(f)
+except (OSError, ValueError):
+    sys.exit(2)  # unreadable profiles.json: caller stays quiet rather than guessing
+
+recorded = {p.strip() for p in sys.argv[2].split(",") if p.strip()}
+for name, pdef in data.get("profiles", {}).items():
+    if pdef.get("disabled") is True:
+        continue          # never advertise a profile that was switched off
+    if pdef.get("alwaysInstalled") is True:
+        continue          # core is not something an adopter chooses to add
+    if name not in recorded:
+        # Flag billable add-ons: the report exists to inform a decision, and one that
+        # recommends a separately-billed service as if it were free is misleading.
+        print(name + ("\tbillable" if pdef.get("billable") is True else ""))
+PYEOF
+  )" || NEW_PROFILES=""
+  if [ -n "$NEW_PROFILES" ]; then
+    warn "Profiles available but NOT installed here (this update did not add them):"
+    while IFS= read -r _p; do
+      [ -z "$_p" ] && continue
+      _name="${_p%%$'\t'*}"
+      case "$_p" in
+        *$'\t'billable) echo "    $_name  (billable add-on)  ->  ./install.sh --profile $_name" ;;
+        *)              echo "    $_name  ->  ./install.sh --profile $_name" ;;
+      esac
+    done <<< "$NEW_PROFILES"
+    warn "  update never installs a profile you did not ask for. Add one with the command above, or every enabled profile with: ./install.sh --all-profiles"
+  else
+    log "New profiles: none  - every enabled profile in profiles.json is already recorded for this install."
+  fi
+fi
 
 log "Done."
