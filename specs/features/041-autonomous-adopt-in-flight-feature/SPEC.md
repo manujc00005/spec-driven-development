@@ -2,7 +2,21 @@
 
 ## Status
 
-In Progress
+In Review
+
+> `In Review` 2026-09-02 — `/spec-review` **Pass** on the seventh round. All 32 tasks complete; all
+> fourteen acceptance criteria met against observed evidence; 275 tests (239 on `main`);
+> `check-consistency.sh` exit 0; installers and manifests byte-identical to `main`. Eight commits on
+> `feature/041-autonomous-adopt-in-flight`.
+>
+> Six rounds preceded this one and each returned Partial. Rounds 1–3 found a behavioral regression
+> each, all in the same blind spot: the gate's CLI callers had no test. Round 4 found two
+> documentation defects. Rounds 5 and 6 found no code defect at all — only that the record
+> contradicted itself, the second time one document beyond where the first was repaired. That is
+> recorded in `CALIBRATION.md` as a named finding, and it is why round 7's repair was a sweep.
+>
+> `Done` stays gated on [[DEBT-010]] by D011: the adopted loop has never reached a human-gated
+> `PAUSED` outside a fixture.
 
 > `In Progress` 2026-09-02 — `/spec-implement`, first task (T001, adoption fixture) implemented.
 >
