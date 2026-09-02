@@ -196,7 +196,11 @@ the two halves as separate commits — they share only `profiles.json` and the s
   Verify: both scripts parse and produce the expected output under `pwsh` on this Mac; the Windows
   runtime gap is stated explicitly in the closing note rather than left implied.
 
-- [ ] T026 - Run `/spec-review` on this feature, then `/qa-review`. Covers: all ACs.
+- [x] T026 - Run `/spec-review` on this feature, then `/qa-review`. Covers: all ACs.
+  Both ran. `/spec-review` returned **Fail** on the first pass (the `--all-profiles` /
+  `--remove-profile` regression, plus AC-016's narrow audit) and **Pass** after T027/T028.
+  `/qa-review` found two further defects on error paths, fixed as T029/T030, and returned **Pass**.
+  D003 and D004's deliberate extensions were acknowledged rather than reported as scope creep.
   Verify: the reviewer confirms every AC-001..AC-017 maps to observed evidence in the diff and the
   attached transcripts, and D003/D004's deliberate extensions beyond the literal AC text are
   acknowledged rather than reported as scope creep.

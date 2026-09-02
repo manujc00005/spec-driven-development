@@ -2,7 +2,7 @@
 
 ## Status
 
-In Review
+Done
 
 ## Problem
 
@@ -310,8 +310,12 @@ surfaces profiles added since their install.
   `privacy-compliance-review` under `security-reviewer` because both genuinely declare it as
   primary. FR-006 lands green on the repository as shipped, so it needs no migration and no
   grandfathering clause.
-- OQ-5 **(non-blocking):** should the "reviewers run" line of FR-016 be a requirement on
-  `domain-reviewer` alone, or on every review skill's output format?
+- ~~OQ-5 **(non-blocking):** should the "reviewers run" line of FR-016 be a requirement on
+  `domain-reviewer` alone, or on every review skill's output format?~~ **Resolved — D007:
+  `domain-reviewer` alone.** FR-016 exists because *selection* became invisible. Only this agent
+  selects; every other review skill is invoked directly, so its absence is visible at the call site.
+  Imposing an output clause on ~26 skills would be the extra validation the maintainability NFR
+  rules out, for a problem those skills do not have.
 - ~~OQ-6: where does "which profiles apply" live for an adopted project?~~ **Resolved: option (a) —
   nowhere, because the concept is removed.** Verified that it lives nowhere today either:
   `agents/domain-reviewer.md:27` names two sources and neither resolves inside an adopted
@@ -326,10 +330,13 @@ surfaces profiles added since their install.
   blocking this one behind it trades a real improvement for a process. The executed run with an
   attached transcript is honest evidence; it is simply weaker than an eval, and the spec says so
   rather than implying otherwise.
-- OQ-8 **(new, non-blocking):** FR-004b requires every reviewer description to name its artifact,
-  but nothing enforces it. Should `check-consistency.sh` gain a proxy check, or does that repeat the
-  false-positive problem spec 022 D006 documented for the skill-form proxies? Leaning towards no
-  check — the NFR caps this feature at exactly one new rule.
+- ~~OQ-8 **(new, non-blocking):** should `check-consistency.sh` gain a proxy check for FR-004b?~~
+  **Resolved — D008: no.** The maintainability NFR caps this feature at exactly one new rule and
+  FR-006 spends it. Any check here is a prose proxy — "does this sentence name a file type?" — the
+  false-positive class spec 022 D006 documented. **Consequence, stated rather than implied:**
+  FR-004b is defended by review, not by tooling. A new reviewer skill can ship with a concern-only
+  description and nothing will complain. The audit that closed AC-016 covered all 29 routed skills
+  and is a point-in-time check, not a standing guard.
 
 ## Contracted services
 
