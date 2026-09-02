@@ -2,7 +2,25 @@
 
 ## Status
 
-In Review
+Done
+
+> `Done` 2026-09-02 — `/spec-close`. All 33 tasks closed against their `Verify:` clause or a dated
+> amendment; all fourteen acceptance criteria covered by at least one task and met against observed
+> evidence. **276 tests** (239 on `main`), `check-consistency.sh` exit 0, installers and manifests
+> byte-identical to `main`. Twelve decisions, all Accepted. No open question.
+>
+> **What `Done` means here.** The adoption entry works and is evidenced: an adopted run caught a
+> seeded defect in inherited work before touching a new task, an all-checked adoption reached
+> conformance without delegating any implementation, the human-gated path ended `PAUSED` with a real
+> worker's verbatim question, and two `codex exec` runs exercised the entry on the other provider.
+> The replay against the originating repository was performed and **failed**, which is recorded as
+> the finding it was: it exposed two runner defects, fixed as T029 and T030.
+>
+> **One residual, carried knowingly:** [[DEBT-010]] — the adopted loop has never reached a
+> human-gated `PAUSED` against a real feature's task list, only against a fixture feature driven by
+> real workers. D012 lifted that from a gate to known debt. Its closing condition is unchanged and
+> the next feature adopted by hand pays it off.
+>
 
 > `In Review` 2026-09-02 — `/spec-review` **Pass** on the seventh round, against a tree of 32 tasks,
 > 275 tests and eight commits. **Superseded in place the same day:** `/qa-review` then found a
