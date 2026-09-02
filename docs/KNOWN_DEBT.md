@@ -50,6 +50,19 @@ this register is renamed or moved, fix the message and that assertion in the sam
 (including `--model` versus `-m`), record it in spec 028's `DECISIONS.md` as D008, and correct the
 provider table row if they differ. This was task T013.
 
+> **2026-09-02 — the premise is dead; two of the three closing steps are done.** The Codex CLI **is**
+> installed on the maintainer's machine (`codex-cli 0.152.1`, `~/.local/bin/codex`), so every
+> sentence above claiming it is not is superseded. Real `codex exec` runs were made during spec 041's
+> T013 and are recorded in
+> [041/CALIBRATION.md](../specs/features/041-autonomous-adopt-in-flight-feature/CALIBRATION.md).
+> Against `codex exec --help` on that version, all three required flags exist with the spellings
+> `PROVIDER_TABLE` uses: `--ignore-user-config`, `--ephemeral`, and `--model` (with `-m` as its short
+> alias, so the long form the table pins is correct). **Nothing in the table needs correcting.**
+> What is still owed before flipping the row's fourth field to `verified` belongs to spec 028, not to
+> 041: a recorded run of `scripts/skill-eval.sh` itself with that runner, and the D008 entry in spec
+> 028's `DECISIONS.md`. Flipping the field from another feature's session would be the silent
+> cross-spec edit this register exists to prevent.
+
 Then flip the row's fourth field from `unverified` to `verified` in `PROVIDER_TABLE`
 ([skill-eval.sh](../scripts/skill-eval.sh)). That field is what drives the caveat in the refusal
 message, so the hedge disappears on its own — and the test
@@ -78,6 +91,18 @@ repo is not currently overclaiming — but the label has to stay until someone c
 
 **Cost if wrong.** `adapters/codex/` ships prompts to a location the CLI may not read. A user
 following `adapters/codex/README.md` gets an adapter that appears installed and does nothing.
+
+> **2026-09-02 — partially advanced, not closed.** The CLI is installed (see [[DEBT-001]]), and
+> `$CODEX_HOME/prompts` — the directory `adapters/codex/install-codex.sh` targets — exists at
+> `~/.codex/prompts` and already holds eight SDD prompt files, so the *write* half of the assumption
+> is real on this version. Three caveats keep this open. First, whether the CLI actually **reads**
+> that directory could not be shown here: custom prompts surface as slash commands in the interactive
+> TUI, and `codex exec` offers no way to demonstrate it non-interactively. Second, the installed
+> copies have drifted from source — `sdd-spec-implement.md`, `sdd-spec-plan.md`, `sdd-spec-analyze.md`
+> and `README.md` differ, and `sdd-workspace-onboarding.md` was never installed — so an operator
+> reading `adapters/codex/README.md` today gets a partial adapter. Third, `config.example.toml` is
+> still unverified against this version's real key names. Closing this needs an interactive Codex
+> session that invokes one installed prompt by name, plus a re-run of the installer.
 
 **What closes it.** Verify against an installed Codex CLI before advertising the adapter as
 verified.
