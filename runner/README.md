@@ -38,6 +38,8 @@ No TTY is required, stdin is never read, and nothing is ever prompted.
 (spec 041 D004): before adoption existed, accepting a part-implemented feature meant starting a loop
 over work nobody had reviewed. `In Review` is not a first-entry status in either mode — QA and
 closure have owning skills.
+A **detached HEAD** is the other refusal that used to pass: it reported no branch name, so the
+isolation check never fired. It now refuses under `default branch` in both modes.
 
 **Re-entry and the dirty tree.** On first entry any dirty path refuses. On re-entry the gate
 tolerates the four names its own bookkeeping owns inside the feature folder

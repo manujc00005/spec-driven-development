@@ -436,12 +436,17 @@
   both the baseline and the attribution and on a detached HEAD no branch references it. Also document
   the behaviour change T008 introduced for anyone already using the runner: first entry used to
   accept `Ready`, `In Progress` and `In Review`, and now accepts `Ready` only, or `In Progress` under
-  `--adopt`. Covers: AC-003, AC-009, AC-013.
+  `--adopt`. Covers: AC-004, AC-009, AC-013.
   Verify: `gate.check` refuses a detached HEAD under condition `default branch` in **both** modes,
   with a detail saying it is detached and a remediation naming a branch; an ordinary branch still
   passes; `runner/README.md` states the first-entry change; suite green above 275 and
   `bash scripts/check-consistency.sh` exits 0.
 
+  **[Covers corrected 2026-09-02 — delta review]** This task first cited AC-003, the dirty-tree
+  criterion, which the detached-HEAD guard has nothing to do with. The criterion it serves is
+  **AC-004**, isolated git location.
+
   **[OBSERVED 2026-09-02]** Both new tests were red before the guard and green after. Suite 275 →
-  **277**, consistency exit 0. The hole was pre-existing — `main` has the same logic — but adoption
+  277, then **276** after the delta review removed one of them as a strict duplicate of
+  `test_status_matrix`'s `("In Progress", True)` case; consistency exit 0. The hole was pre-existing — `main` has the same logic — but adoption
   is what made it reachable in a way that matters, so it is closed here rather than deferred.

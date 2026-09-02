@@ -4,10 +4,14 @@
 
 In Review
 
-> `In Review` 2026-09-02 — `/spec-review` **Pass** on the seventh round. All 32 tasks complete; all
-> fourteen acceptance criteria met against observed evidence; 275 tests (239 on `main`);
-> `check-consistency.sh` exit 0; installers and manifests byte-identical to `main`. Eight commits on
-> `feature/041-autonomous-adopt-in-flight`.
+> `In Review` 2026-09-02 — `/spec-review` **Pass** on the seventh round, against a tree of 32 tasks,
+> 275 tests and eight commits. **Superseded in place the same day:** `/qa-review` then found a
+> functional hole the seven reading-based rounds had missed — a detached HEAD passed the isolation
+> condition — and T033 closed it. Current state: **33 tasks**, **276 tests** (239 on `main`),
+> **eleven commits**. The seventh round's certification is unaffected: the delta review confirmed no
+> acceptance criterion needed re-evidencing, and `check-consistency.sh` exits 0 with installers and
+> manifests still byte-identical to `main`. The status stays `In Review` because that is the stage
+> that owns QA findings and their repair.
 >
 > Six rounds preceded this one and each returned Partial. Rounds 1–3 found a behavioral regression
 > each, all in the same blind spot: the gate's CLI callers had no test. Round 4 found two

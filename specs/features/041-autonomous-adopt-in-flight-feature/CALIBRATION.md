@@ -478,3 +478,22 @@ They were reading. Every round after the third compared documents against each o
 tests, and the tests encoded the same assumption the code did. The hole needed someone to run the
 thing in a state nobody had written down. That is what the QA gate is for, and it is the argument
 against collapsing it into the conformance review.
+
+### The delta review of T033
+
+Reviewing one commit rather than the whole feature found five things, three of them `/spec-close`
+blockers — and all five were record defects, none a code defect in the six added lines.
+
+| Finding | Repair |
+|---|---|
+| T033 cited `AC-003`, the dirty-tree criterion, which the guard has nothing to do with | corrected to **AC-004**, isolated git location, with a dated note saying so |
+| The runner now refused a state the skill did not clearly refuse: `SKILL.md` filed "detached checkout" under condition 7 (*inherited diff undetermined*), which is also imprecise — on a detached checkout with `origin/HEAD` set, the diff base **is** computable | condition 4 gains the detached clause and condition 7 loses the word. This is the direction 040 D007 mandates: the runner and the skill agree, rather than the divergence being recorded |
+| The SPEC status note asserted 32 tasks, 275 tests and eight commits, all falsified by this very commit — the exact class rounds 5 and 6 rejected | superseded in place with the current counts and a sentence on why the seventh round's certification still holds |
+| The README documented one behaviour change that used to pass and now refuses, and omitted its sibling | the detached HEAD is now named in the same paragraph |
+| `test_a_branch_is_still_accepted` duplicated `test_status_matrix`'s `("In Progress", True)` case exactly, and both new tests sat in `HonestRefusals`, a class whose docstring describes T029/T030 | duplicate removed, the detached test moved beside `test_default_branch`, which owns that condition. Suite 277 → **276**: a real test count going down because a fake one left |
+
+**The reviewer talked me out of a change I would have made.** Reusing the condition name `default
+branch` for a detached HEAD, rather than minting a new stable name under D011's precedent, is right:
+D011 is about a new *condition*; this is a new *reason* under a condition that already exists in all
+three enumerations. A distinct name would have forced three document edits for no gain. The price is
+that a test can only tell the two reasons apart by asserting on the detail prose, and it does.

@@ -99,8 +99,11 @@ The six conditions and remediations are (a seventh applies under `--adopt`):
    prerequisite in `TASKS.md`/`DECISIONS.md`.
 4. **Isolated git location.** The current branch must not be the repository's default branch, or
    the current worktree must be a dedicated linked worktree on a non-default branch. Determine the
-   default branch from git metadata; never assume its name. Remediation: create/switch to a feature
-   branch or worktree, e.g. `git switch -c feature/<name>`.
+   default branch from git metadata; never assume its name. A **detached HEAD** refuses under this
+   condition too: it is not an isolated location, it is no location at all, and a commit made there
+   is referenced by nothing — which matters most under `--adopt`, where the maintainer's commit is
+   both the adoption baseline and the attribution. Remediation: create/switch to a feature branch or
+   worktree, e.g. `git switch -c feature/<name>`.
 5. **Clean working tree.** `git status --porcelain` must be empty at first entry. On re-entry, only
    paths attributable to the recorded autonomous run may be dirty; any pre-existing/unattributed
    path refuses. Remediation: inspect `git status --short`, then commit/stash/discard manually—the
@@ -124,7 +127,7 @@ The six conditions and remediations are (a seventh applies under `--adopt`):
    adoption baseline commit (`HEAD`), the adoption diff base (`git merge-base <default-branch>
    HEAD`, with the default branch resolved from git metadata such as `origin/HEAD` — never
    assumed), and the set of tasks already checked in `TASKS.md`. If the diff base cannot be
-   determined (no default-branch metadata, unrelated histories, detached checkout), refuse as
+   determined (no default-branch metadata, unrelated histories), refuse as
    *Inherited diff undetermined*; remediation: set the metadata, e.g. `git remote set-head origin
    <branch>`, and re-run. There is no `--base <ref>` flag: provenance comes from git, not from
    arguments (D003).
