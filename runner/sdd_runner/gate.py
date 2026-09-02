@@ -258,7 +258,18 @@ def check(repo, feature_dir, baseline_cmd=None, first_entry=True, adopt=False,
     else:
         # Without adoption the pre-041 fallback to "main" stands; adoption never guesses.
         default_branch = _default_branch(repo) or "main"
-        if branch == default_branch:
+        # A detached HEAD reports the literal string "HEAD" as its branch name, so it
+        # never equalled the default branch and slipped through this condition. It is
+        # not an isolated git location: it is no location at all, and adoption is the
+        # worst place to allow it, because the maintainer's commit is both the baseline
+        # and the attribution, and on a detached HEAD no branch references it.
+        if branch == "HEAD":
+            refusals.append(Refusal(
+                "default branch", "HEAD is detached, so this run is on no branch at all",
+                "check out a dedicated feature branch or worktree first, e.g. "
+                "`git switch -c feature/<name>`; a commit made here would be referenced "
+                "by nothing"))
+        elif branch == default_branch:
             refusals.append(Refusal(
                 "default branch", "HEAD is on %r" % branch,
                 "check out a dedicated feature branch or worktree before running"

@@ -32,6 +32,13 @@ No TTY is required, stdin is never read, and nothing is ever prompted.
 | `--dry-run` | gate + plan + budget, dispatching nothing — and needing no usable backend |
 | `--adopt` | first entry on a feature already `In Progress` (spec 041): `Ready` only without it; any dirty path refuses in both modes; `--dry-run --adopt` prints the inherited record (baseline commit, diff base, checked tasks). The runner records the entry and dispatches nothing extra for it (041 D006) |
 
+**A behaviour change from before spec 041.** First entry used to accept `Ready`, `In Progress` and
+`In Review`; it now accepts `Ready` only, or `In Progress` under `--adopt`. A run pointed at an
+`In Progress` feature without the flag gets exit 10 where it used to proceed. That is deliberate
+(spec 041 D004): before adoption existed, accepting a part-implemented feature meant starting a loop
+over work nobody had reviewed. `In Review` is not a first-entry status in either mode — QA and
+closure have owning skills.
+
 **Re-entry and the dirty tree.** On first entry any dirty path refuses. On re-entry the gate
 tolerates the four names its own bookkeeping owns inside the feature folder
 (`ORCHESTRATION.md`, `run.jsonl`, `TASKS.md`, and `PR_DESCRIPTION.md` — which this runner never

@@ -426,3 +426,22 @@
   hits are the legitimate ones the clause allows: T013's clause naming the literal blocker as its
   alternative branch, and T014's record that an earlier note was removed. No document now asserts a
   premise T013 or T014 disproved. Suite 275, consistency exit 0.
+
+## Phase 13: QA review findings
+
+- [x] T033 - Close the one functional hole `/qa-review` found by exercising behaviour rather than
+  reading documents: a **detached HEAD** passed the isolated-git-location condition. `git rev-parse
+  --abbrev-ref HEAD` reports the literal `HEAD` when detached, which never equalled the default
+  branch, so the check never fired. It matters most under adoption, where the maintainer's commit is
+  both the baseline and the attribution and on a detached HEAD no branch references it. Also document
+  the behaviour change T008 introduced for anyone already using the runner: first entry used to
+  accept `Ready`, `In Progress` and `In Review`, and now accepts `Ready` only, or `In Progress` under
+  `--adopt`. Covers: AC-003, AC-009, AC-013.
+  Verify: `gate.check` refuses a detached HEAD under condition `default branch` in **both** modes,
+  with a detail saying it is detached and a remediation naming a branch; an ordinary branch still
+  passes; `runner/README.md` states the first-entry change; suite green above 275 and
+  `bash scripts/check-consistency.sh` exits 0.
+
+  **[OBSERVED 2026-09-02]** Both new tests were red before the guard and green after. Suite 275 →
+  **277**, consistency exit 0. The hole was pre-existing — `main` has the same logic — but adoption
+  is what made it reachable in a way that matters, so it is closed here rather than deferred.

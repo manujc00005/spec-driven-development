@@ -338,6 +338,28 @@ class HonestRefusals(unittest.TestCase):
             self.assertIn("Q2", r.detail)
             self.assertIn("blocks an unchecked task", r.remediation)
 
+    def test_a_detached_head_is_not_an_isolated_git_location(self):
+        """QA round: `git rev-parse --abbrev-ref HEAD` says "HEAD" when detached, which
+        equals no branch name, so the default-branch comparison never fired and the gate
+        passed. Adoption is the worst place for that: the maintainer's commit is the
+        baseline and the attribution, and on a detached HEAD no branch references it."""
+        for adopt in (False, True):
+            with self.subTest(adopt=adopt):
+                with tempfile.TemporaryDirectory() as tmp:
+                    repo, feature_dir, _ = make_adopted_repo(tmp)
+                    subprocess.run(["git", "-C", repo, "checkout", "-q", "--detach", "HEAD"],
+                                   check=True, capture_output=True)
+                    found = {r.condition: r for r in gate.check(repo, feature_dir, adopt=adopt)}
+                    self.assertIn("default branch", found)
+                    self.assertIn("detached", found["default branch"].detail)
+                    self.assertIn("branch", found["default branch"].remediation)
+
+    def test_a_branch_is_still_accepted(self):
+        """The guard must not refuse the ordinary case it sits next to."""
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, feature_dir, _ = make_adopted_repo(tmp)
+            self.assertEqual(gate.check(repo, feature_dir, adopt=True), [])
+
 
 class RefusalRendering(unittest.TestCase):
     def test_refusal_names_condition_detail_and_remediation(self):

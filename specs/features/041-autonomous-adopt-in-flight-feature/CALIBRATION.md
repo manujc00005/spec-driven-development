@@ -448,3 +448,33 @@ provider tasks disproved was found by pattern across all four documents and supe
 a date, not deleted and not fixed one at a time. Two hits remain and are meant to: T013's clause
 naming the literal blocker as its alternative branch, and T014's record that an earlier note was
 removed.
+
+## QA review (2026-09-02)
+
+The seventh `/spec-review` passed, and `/qa-review` then found something all seven had missed,
+because it asked a different question: not "does the record agree with itself" but "what does the
+code do".
+
+**One functional hole.** A detached HEAD passed the isolated-git-location condition. `git rev-parse
+--abbrev-ref HEAD` returns the literal string `HEAD` when detached, so the comparison against the
+default branch never matched and the gate approved a run on no branch at all. Reproduced before the
+fix, and it is the worst place for that hole: adoption's whole premise is that the maintainer's
+commit is the baseline and the attribution, and on a detached HEAD nothing references that commit.
+Pre-existing in `main`, made reachable in a way that matters by adoption. Closed by T033.
+
+**One undocumented behaviour change.** T008 narrowed first entry from three statuses to one, so a
+runner pointed at an `In Progress` feature without `--adopt` now exits 10 where it used to proceed.
+Deliberate under D004, and low-impact in practice — the runner is `stub`-only and never writes a spec
+status, so reaching `In Progress` takes a manual edit — but no document said so. Now in
+`runner/README.md`.
+
+**Two edge cases checked and found already handled**, recorded so nobody re-derives them: an
+`ORCHESTRATION.md` that is a *directory* exits 16 with its remediation and no traceback, caught by
+T026's guard; and no caller of `gate.check` was left behind when its signature grew two parameters.
+
+### Why seven conformance rounds did not find this
+
+They were reading. Every round after the third compared documents against each other and against the
+tests, and the tests encoded the same assumption the code did. The hole needed someone to run the
+thing in a state nobody had written down. That is what the QA gate is for, and it is the argument
+against collapsing it into the conformance review.
