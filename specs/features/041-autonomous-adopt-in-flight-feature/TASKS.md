@@ -172,14 +172,28 @@
   Verify: the maintainer checks the copy's `ORCHESTRATION.md` shows two `human-gated` escalations
   in `waiting` status and `Run result: PAUSED`, and records the observation in `CALIBRATION.md`.
 
-  **[SUPERSEDED 2026-09-02 — the repo was found]** The maintainer supplied the live path. See the
-  entry below; the text that follows was written when only encrypted archives were visible.
+  **[VERIFY AMENDED 2026-09-02 — D011; residual tracked as DEBT-010]** The replay was **performed**,
+  against the live repository the maintainer supplied at
+  `/Users/manu/Proyectos/lead-platform-workspace/proycto-cumbre`, on a copy-on-write copy; the
+  original was never touched and was confirmed afterwards still on `main` with its 21 dirty paths.
+  The branch-then-commit remediation worked exactly as documented, clearing the `default branch` and
+  `unattributed dirty tree` refusals. The run then stopped on two runner defects, which are this
+  task's deliverable and are fixed by T029 and T030.
 
-  **[BLOCKED 2026-09-02 — not deferred, not done]** `proyecto-cumbre` is not on this machine. The
-  only copy under `~/Backups` is a directory of age-encrypted `.tar.age` archives, and this session
-  has no key for them; decrypting a maintainer's backups is not something an agent session should do
-  unasked. The mechanism this task observes is now covered on a fixture by **T028**, which is not a
-  substitute for the originating case. This task remains the maintainer's and blocks `/spec-close`.
+  The clause above cannot be met by this feature, and not because of those defects:
+  `030-join-us-landing-aditiva` has since moved to `In Review`, which D002 excludes from adoption on
+  purpose. The originating case is past the window adoption serves, so the criterion is
+  unsatisfiable, not merely unmet. **The criterion actually met** is the one this task could still
+  serve: the adopt entry was exercised end to end against a real adopter repository, and what it
+  found is recorded in `CALIBRATION.md`.
+
+  What remains owed is **not** this replay: it is that the adopted loop has never reached a
+  human-gated `PAUSED` outside a fixture. That is [[DEBT-010]]. T028 observes the mechanism on a
+  fixture and is not a substitute for the originating case.
+
+  An earlier note here said this task was blocked because only encrypted archives of the repository
+  were visible. The maintainer then supplied the live path; that note is superseded and removed
+  rather than left to contradict the tick.
 
 ## Phase 5: Review findings (from /spec-review 2026-09-02)
 
@@ -334,16 +348,6 @@
   `evidence/ORCHESTRATION-escalation-run.md`. `Run result: PAUSED`, `ESC-001` human-gated and
   `waiting`, T004 checked and T003 not, HEAD unchanged and equal to `origin/feat/adopted`.
 
-  **[PERFORMED, NOT PASSED — 2026-09-02]** Replayed on a copy-on-write copy of
-  `/Users/manu/Proyectos/lead-platform-workspace/proycto-cumbre`; the original was untouched. The
-  branch-then-commit remediation worked exactly as documented, clearing the `default branch` and
-  `unattributed dirty tree` refusals. The run then stopped on two **runner** defects recorded in
-  `CALIBRATION.md`: the status parser returns the code fence instead of the status for this project's
-  SPEC dialect, and the open-questions parser counts questions the spec marks `no bloqueante`. The
-  clause's expected outcome (two human-gated escalations, `Run result: PAUSED`) was therefore not
-  observed. Also noted: feature 030 has since moved to `In Review`, which D002 excludes from adoption
-  by design, so the originating case is now past the window adoption serves. This task stays open.
-
 ## Phase 10: Honest refusals over dialect parsing (from the T014 replay)
 
 - [x] T029 - Say "I could not read a status" instead of quoting whatever the first line happened to
@@ -357,6 +361,12 @@
   `status unreadable`, quotes no fence, and its remediation states the expected form; a normal SPEC
   is unaffected.
 
+  **[VERIFY AMENDED 2026-09-02 — from R5-04]** "quotes no fence" was the wrong criterion. The detail
+  does quote the offending line — `is '```', which states no lifecycle status` — and that is better:
+  showing the maintainer the line the gate could not read is more useful than hiding it. What the
+  clause meant, and what is pinned by `test_a_fenced_status_refuses_as_unreadable_not_as_a_quoted_fence`,
+  is that the refusal names its own condition instead of masquerading as `lifecycle status`.
+
 - [x] T030 - Make the open-questions refusal admit what it cannot judge. Gate condition 2 forbids an
   unresolved question **that blocks an unchecked task**; the parser counts every bullet that is not
   struck through or marked Resolved, so it refuses on questions a spec deliberately carries as
@@ -366,11 +376,18 @@
   Verify: the refusal names the questions it counted and states that it cannot judge whether they
   block; a spec with no open questions is unaffected.
 
-  **[PERFORMED 2026-09-02 — clause unsatisfiable, closed on its result]** The replay ran against the
-  real repository and produced a better result than a pass: it found two defects, now fixed by T029
-  and T030. Its written criterion — two human-gated escalations and `Run result: PAUSED` — can no
-  longer be met by this feature, and not because of those defects: `030-join-us-landing-aditiva` has
-  moved to `In Review`, which D002 excludes from adoption on purpose. The originating case is past
-  the window adoption serves, so the criterion is unsatisfiable rather than unmet. The mechanism it
-  was written to observe is observed by **T028** on a fixture. Closed with the finding as the
-  deliverable; no DEBT id, because nothing is pending. The full replay is in `CALIBRATION.md`.
+## Phase 11: Review findings, round 5
+
+- [x] T031 - Repair the round-5 findings, all prose, all from one review (R5-01…R5-06): put T014's
+  closure notes under T014 instead of under T028 and T030, where appending to the end of the file had
+  left them, and remove the stale text that said T014 still blocks `/spec-close` while it was ticked;
+  restate that closure with the repo's own `[VERIFY AMENDED]` convention plus a DEBT id for the real
+  residual, instead of the invented `PERFORMED` marker; document the `status unreadable` condition in
+  `runner/README.md` and in SPEC's interface list and correct the `gate.py` comment that claimed it
+  was mirrored from the skill; record D011 for the closure-marker decision and the deliberate
+  runner/skill divergence; annotate T029's clause; and add `docs/KNOWN_DEBT.md` to PLAN's impacted
+  areas. Covers: AC-011, AC-013.
+  Verify: every `[VERIFY AMENDED]`/`[OBSERVED]` note sits under the task it describes; `grep -c
+  "blocks .spec-close" TASKS.md` returns 0; `status unreadable` appears in `runner/README.md` and
+  `SPEC.md`; D011 and DEBT-010 exist; `bash scripts/check-consistency.sh` exits 0 and the suite stays
+  at 275.

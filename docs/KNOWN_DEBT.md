@@ -22,6 +22,7 @@ claims the repo currently makes that nobody has checked.
 | DEBT-007 | `install.ps1` has never been run on real Windows outside CI | spec 016 | Open |
 | DEBT-008 | The scope-keeper hook has never been observed firing in a live session | spec 036 | Open |
 | DEBT-009 | The runner has never executed against a real provider, or from `cron` | spec 040 | Open |
+| DEBT-010 | The adopted loop has never reached a human-gated `PAUSED` outside a fixture | spec 041 | Open |
 
 ---
 
@@ -286,3 +287,36 @@ two downgraded clauses in spec 040's `SPEC.md` and close this entry. Until then 
 
 **Related:** [[DEBT-001]] and [[DEBT-002]] — the Codex half of the same gap, and both are now
 load-bearing for spec 040 as well.
+
+---
+
+## DEBT-010 — The adopted loop has never reached a human-gated `PAUSED` outside a fixture
+
+**Origin:** spec 041 (`autonomous-adopt-in-flight-feature`), T014's residual, recorded by D011 on
+2026-09-02.
+
+**The unverified claim.** That a real feature's human-only task — a visual check, a real-world run —
+surfaces as a human-gated escalation and pauses the adopted run with the answers needed, rather than
+failing it. Spec 041's T028 observes exactly that on a **fixture**: a worker returned `BLOCKED` with
+its question verbatim, the classifier called it human-gated, the independent task continued, and the
+run ended `PAUSED` with its remediation. What has never been seen is the same on a real repository
+with a real feature's tasks.
+
+**Why T014 did not close it.** T014 was written to see this on `proyecto-cumbre` feature 030 — the
+case that motivated the whole feature. The replay ran, found two real defects (fixed as T029/T030),
+and then could go no further: 030 had moved to `In Review`, which D002 excludes from adoption on
+purpose. The originating case is permanently past the window adoption serves, so that task's
+criterion is dead rather than pending, and the residual moved here.
+
+**Cost if wrong.** Contained. The escalation classifier and the PAUSED path are spec 031 code that
+this feature did not touch, and the fixture run exercises them end to end; what is unverified is only
+their behavior against the untidier shape of a real feature's task list. The failure mode would be a
+run that aborts where it should pause, which is visible and recoverable, not a silent wrong answer.
+
+**What closes it.** Adopt any real in-flight feature that has at least one human-only task, and
+record the run's `ORCHESTRATION.md` showing a `human-gated` escalation in `waiting` and `Run result:
+PAUSED`. The next feature the maintainer starts by hand is the natural candidate — adoption pays
+there, not on a feature already past `In Review`.
+
+**Related:** [[DEBT-009]] — both are about the loop never having met reality; that one is the runner
+against a provider, this one is the protocol against a real feature's human tasks.

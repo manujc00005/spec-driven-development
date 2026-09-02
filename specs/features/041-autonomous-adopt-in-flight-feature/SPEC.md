@@ -261,7 +261,8 @@ gate is brought back into agreement with the skill.
 - `/sdd-orchestrate --autonomous <feature-path> --adopt [--max-iterations N] [--max-delegations N]`
   — new flag.
 - New refusal conditions (stable names): *Adoption not needed*, *Already adopted or entered*,
-  *Inherited diff undetermined*. Rewritten remediations for *Lifecycle status* and
+  *Inherited diff undetermined*; and, in the runner only, *status unreadable* — added by T029 after
+  the T014 replay, and runner-only by design because the skill path reads any SPEC dialect (D011). Rewritten remediations for *Lifecycle status* and
   *Clean working tree* under `--adopt`.
 - `ORCHESTRATION.md` header gains `Entry`, `Adopted at`, `Adoption baseline commit`,
   `Adoption diff base`; new `## Inherited` section. Runs entered at `Ready` write `Entry: ready`

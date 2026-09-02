@@ -45,7 +45,10 @@ instead.
 
 ### Exit codes
 
-`0` converged · `10` gate refused (under `--adopt` also *adoption not needed*, *already adopted or entered*, *inherited diff undetermined*) · `11` human-gated escalation · `12` cap abort
+`0` converged · `10` gate refused (under `--adopt` also *adoption not needed*, *already adopted or
+entered*, *inherited diff undetermined*; and *status unreadable* in either mode, when the line under
+`## Status` states no lifecycle status — this runner reads the framework's own SPEC form and does not
+parse other dialects, while the skill path does) · `11` human-gated escalation · `12` cap abort
 · `13` budget exhausted · `14` backend precondition · `15` concurrent run ·
 `16` state unresumable · `17` processed but not converged ·
 `18` core completion not proven · `70` internal error.

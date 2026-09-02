@@ -22,10 +22,14 @@ READY_STATUSES = ("Ready",)
 ADOPT_STATUSES = ("In Progress",)
 REENTRY_STATUSES = ("Ready", "In Progress", "In Review")
 
-# Stable condition names, mirrored from skills/sdd-orchestrate/SKILL.md.
+# Stable condition names. The first three mirror skills/sdd-orchestrate/SKILL.md.
 ADOPTION_NOT_NEEDED = "adoption not needed"
 ALREADY_ENTERED = "already adopted or entered"
 INHERITED_UNDETERMINED = "inherited diff undetermined"
+# The fourth is the runner's alone, and deliberately so (spec 041 D011): the skill
+# path is model-mediated and reads any SPEC dialect, so it never needs to say it
+# could not read one. This parser does. Documented in runner/README.md and in the
+# feature's SPEC so an operator who hits it on exit 10 finds it written down.
 STATUS_UNREADABLE = "status unreadable"
 
 # The lifecycle words this framework's own template uses. The gate does NOT try to

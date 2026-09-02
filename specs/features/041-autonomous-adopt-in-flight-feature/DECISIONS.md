@@ -283,3 +283,44 @@ resumed through the runner CLI**: the gate refuses `unattributed dirty tree` and
 reconcile by hand. That is consistent with 040's `EXPERIMENTAL` classification, where `stub` is the
 only supported backend, and it is the first thing the follow-up must fix if it gives the runner a
 real provider.
+
+---
+
+### D011 - Two things round 5 caught: how a performed task with a dead criterion closes, and one condition the runner owns alone
+
+**Date:** 2026-09-02
+
+**Status:** Accepted
+
+**Context:** Two findings from the fifth review, both about things this feature did without recording
+them.
+
+The first: T014 was performed — the replay ran against the live repository — but its `Verify:` clause
+became unsatisfiable for a reason unrelated to what the replay found (`030` moved to `In Review`,
+which D002 excludes). It was closed with an invented marker, `PERFORMED`, in a file whose own header
+fixes three markers and says they are not interchangeable.
+
+The second: T029 added `status unreadable`, a user-visible refusal condition, under a comment saying
+these names are mirrored from `skills/sdd-orchestrate/SKILL.md`. It is in no skill, no document and
+no requirement. It is also a deliberate divergence: the skill is model-mediated and reads any SPEC
+dialect, so it needs no such condition, while the runner's parser does.
+
+**Decision:** No fourth closure marker. A task that was performed keeps a plain tick — the template
+already says a tick with no marker means performed — and when its criterion turns out mis-stated or
+dead, the repo's existing `[VERIFY AMENDED]` note says so and names the criterion actually met.
+Anything still owed becomes a DEBT id; for T014 that is [[DEBT-010]], the adopted loop never having
+reached a human-gated `PAUSED` outside a fixture. And `status unreadable` is recorded as a
+runner-only condition: documented in `runner/README.md` and in this SPEC's interface list, with the
+gate's comment corrected to stop claiming a mirror that does not exist.
+
+**Reasoning:** Inventing a marker inside one feature's task list leaves the repo with a fourth
+closure keyword defined nowhere, which is the drift `specs/_templates/TASKS.md` exists to prevent —
+and that template is not this feature's to edit. On the second point, 040 D007 says the runner is
+wrong where it and the skill disagree; the exception is a divergence that is *recorded*, and this one
+is defensible on the merits: a regex parser and a model do not have the same job. Undocumented, it
+would be indistinguishable from the accidental drift this feature was written to remove.
+
+**Consequences:** T014 carries a plain tick, a `[VERIFY AMENDED]` note and a DEBT id. `status
+unreadable` is documented where an operator hitting exit 10 will look. Nothing in the framework's
+template changes, and a later feature that wants a "performed but the criterion died" marker has to
+amend the template deliberately rather than inherit one from here.

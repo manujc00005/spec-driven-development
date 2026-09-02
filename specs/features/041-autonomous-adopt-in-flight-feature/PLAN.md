@@ -41,6 +41,8 @@ contract as the parent mode. Behavioral evidence on both providers gates `Done`.
   the adopt entry and its re-entry (`runner/tests/integration/test_adopt_cli.py`, T015/T016).
 - `specs/features/041-autonomous-adopt-in-flight-feature/CALIBRATION.md` — provider evidence
   (created during Phase 4, not before).
+- `docs/KNOWN_DEBT.md` — added 2026-09-02: DEBT-001 and DEBT-002 rest on the premise that no Codex
+  CLI exists on this machine, which T013 disproved, and T014's residual is registered as DEBT-010.
 
 Not touched: `install.sh`, `install.ps1`, `install-all.*`, `profiles.json`,
 `settings.template*.json`, agents, hooks. AC-011 makes this checkable.

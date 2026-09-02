@@ -370,9 +370,13 @@ be its own test.
 
 ### Status of T014
 
-Performed, not passed. Its `Verify:` clause expects two human-gated escalations and `Run result:
-PAUSED`; the run never reached the loop, so that outcome was not observed and cannot be until the two
-defects are resolved. The escalation mechanism itself is observed on a fixture by T028.
+Performed. Its `Verify:` clause expects two human-gated escalations and `Run result: PAUSED`; the run
+never reached the loop, so that outcome was not observed — and it is not merely pending the two
+defects, which T029 and T030 have since fixed. It is unsatisfiable: `030` has moved to `In Review`,
+which D002 excludes from adoption on purpose, so this feature can never produce that run. The task is
+closed on what the replay found, with `[VERIFY AMENDED]` and D011; the residual — a human-gated
+`PAUSED` on a real repository rather than a fixture — is [[DEBT-010]]. The mechanism itself is
+observed on a fixture by T028.
 
 ## What the T014 replay changed (T029, T030)
 
@@ -389,3 +393,26 @@ nothing, and the skill path already reads any of them because a model reads them
 A decorated status like `**Done — 2026-08-22.**` is still read rather than refused as unreadable: the
 detector is generous on purpose, and catches only the line that carries no status at all. Suite
 270 -> 275.
+
+## Review findings, round 5 (2026-09-02)
+
+The fifth review found **no defect in the code**: no regression in the last commit, the suite green
+at 275, the consistency gate green, and every acceptance criterion evidenced. What it found was my
+own bookkeeping, and it was the exact failure `specs/_templates/TASKS.md` warns about.
+
+| Finding | Repair (T031) |
+|---|---|
+| R5-01 | T014 was ticked while its own text still read "this task remains the maintainer's and blocks `/spec-close`", and both of its closure notes had landed under **T028** and **T030** — I appended them to the end of the file instead of inserting them under the task. Notes moved under T014, stale text removed in place, closure restated |
+| R5-01b | The invented `PERFORMED` marker is gone. The repo fixes three closure markers and says they are not interchangeable; a performed task keeps a plain tick, and `[VERIFY AMENDED]` says why the criterion died. Recorded as **D011**, with the residual as **DEBT-010** |
+| R5-02 | `status unreadable` was a user-visible refusal documented nowhere, under a comment claiming it mirrored the skill. It is runner-only by design — the skill is model-mediated and reads any dialect — so the comment now says that, and the condition is in `runner/README.md` and SPEC's interface list. Also D011 |
+| R5-03 | `docs/KNOWN_DEBT.md` added to PLAN's impacted areas |
+| R5-04 | T029's clause said "quotes no fence"; the message does quote it, and should — showing the maintainer the unreadable line beats hiding it. Clause amended to what the test actually pins: the refusal names its own condition instead of masquerading as `lifecycle status` |
+| R5-05, R5-06 | Accepted as cosmetic and left: both fail closed. A `## Status` section holding only blank lines reports "no section", and `ready` matches inside `already`. Named here so they are carried knowingly rather than missed |
+
+### The shape of these five rounds
+
+Rounds 1 to 3 each found a regression this feature introduced, all in one blind spot: a gate whose
+CLI callers had no test. Round 4 found no regression, two documentation defects. Round 5 found no
+code defect at all — only that the record of the work disagreed with itself. The defect curve moved
+from behavior to prose, which is what convergence looks like; and the last two rounds were both
+caught by review rather than by 275 green tests, which is what the review gate is for.
