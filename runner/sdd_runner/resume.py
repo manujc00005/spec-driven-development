@@ -68,6 +68,7 @@ class ResumeState:
     prior_result: str = ""
     recovered_from_interrupt: bool = False
     closure: dict = None
+    entry: str = "ready"       # spec 041 D007: a document without the field is a `ready` entry
 
 
 def _pid_alive(pid):
@@ -221,7 +222,7 @@ def _load_attempts(doc, doc_path):
             "the attempt history is what proves a task was already done. Inspect the table, or "
             "delete the state file to start a fresh run.")
     if not rows:
-        return set(), set(), 0
+        return set(), set(), set(), 0     # spec 041 D009: was 3 values, and inspect unpacks 4
     if headers != state_mod.ATTEMPT_COLUMNS:
         raise UnresumableState(
             "the Attempts table in %s uses columns this runner does not write: %s"
@@ -367,4 +368,5 @@ def inspect(doc, doc_path, max_iterations, hostname, pid_alive=_pid_alive):
         prior_result=result,
         recovered_from_interrupt=recovered,
         closure=closure_record,
+        entry=fields.get("entry", "ready"),
     )

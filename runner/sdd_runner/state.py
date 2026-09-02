@@ -182,6 +182,8 @@ class Orchestration:
 # The runner recognizes its OWN documents by these exact table headers. A
 # document written by the phase-1 executor uses different columns; resume must
 # BLOCK on it rather than guess (spec 040 T013, "no inventes estado").
+INHERITED_COLUMNS = ["Task", "Checked before adoption", "Verify clause",
+                     "Verification observed by this run"]
 ATTEMPT_COLUMNS = ["Attempt", "Task", "Agent", "Objective", "Lifecycle",
                    "Allowed paths", "Pre", "Post", "Outcome", "Timestamp"]
 FINDING_COLUMNS = ["Reviewer:finding", "Task", "Repair task", "Severity", "Required action",
@@ -246,8 +248,14 @@ def new_document(feature_path, mode, started_at, caps):
                  "> Mode: %s. Started: %s.\n\n" % (feature_path, mode, started_at),
         sections=[],
     )
+    inherited = caps.get("inherited")          # gate.Inherited, or None for a ready entry
     doc.set_body("State", render_fields({
         "writer": "sdd_runner",
+        "entry": str(caps.get("entry", "ready")),
+        "adoption baseline commit": inherited.baseline if inherited else "n/a",
+        "adoption diff base": ("%s (against %s)" % (inherited.diff_base,
+                                                    inherited.default_branch)
+                               if inherited else "n/a"),
         "phase": "INIT",
         "current task": "none",
         "current attempt": "none",
@@ -262,6 +270,15 @@ def new_document(feature_path, mode, started_at, caps):
         "runner host": str(caps.get("host", "")),
     }))
     doc.set_body("Attempts", render_table(ATTEMPT_COLUMNS, []))
+    # An adopted run inherits checked tasks it never watched happen. Recording them
+    # is the whole point: without these rows the document cannot say what it took on
+    # trust (spec 041 FR-005/FR-010).
+    doc.set_body("Inherited", render_table(INHERITED_COLUMNS, [
+        {"Task": task_id, "Checked before adoption": "yes",
+         "Verify clause": verify.replace("|", "\\|"),
+         "Verification observed by this run": "no"}
+        for task_id, verify in (inherited.checked if inherited else [])
+    ]))
     doc.set_body("Findings", render_table(FINDING_COLUMNS, []))
     doc.set_body("Delegation log", "\n")
     doc.set_body("Escalations", "\n_None._\n\n")
