@@ -19,8 +19,12 @@ In Review
 > contradicted itself, the second time one document beyond where the first was repaired. That is
 > recorded in `CALIBRATION.md` as a named finding, and it is why round 7's repair was a sweep.
 >
-> `Done` stays gated on [[DEBT-010]] by D011: the adopted loop has never reached a human-gated
-> `PAUSED` outside a fixture.
+> ~~`Done` stays gated on [[DEBT-010]] by D011: the adopted loop has never reached a human-gated
+> `PAUSED` outside a fixture.~~ **Amended 2026-09-02 by D012:** the maintainer lifted that gate.
+> DEBT-010 stays open and tracked as known debt, and no longer blocks closure — the human-gated path
+> is proven end to end by T028, what is missing is observation on a real feature rather than the
+> mechanism, the escalation code is spec 031's and untouched here, and the runner is experimental and
+> `stub`-only, so a residual failure would be a visible, recoverable abort.
 
 > `In Progress` 2026-09-02 — `/spec-implement`, first task (T001, adoption fixture) implemented.
 >

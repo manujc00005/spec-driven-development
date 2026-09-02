@@ -22,7 +22,7 @@ claims the repo currently makes that nobody has checked.
 | DEBT-007 | `install.ps1` has never been run on real Windows outside CI | spec 016 | Open |
 | DEBT-008 | The scope-keeper hook has never been observed firing in a live session | spec 036 | Open |
 | DEBT-009 | The runner has never executed against a real provider, or from `cron` | spec 040 | Open |
-| DEBT-010 | The adopted loop has never reached a human-gated `PAUSED` outside a fixture | spec 041 | Open |
+| DEBT-010 | The adopted loop has never reached a human-gated `PAUSED` outside a fixture | spec 041 | Open (non-blocking) |
 
 ---
 
@@ -260,11 +260,6 @@ subprocess, stdin closed, two tasks, exit 0, artifacts present, no runner-create
 a **scripted** stub backend. What that removes from this debt is the question "does the command-line
 entry point work at all". What it leaves untouched is every one of the four items above.
 
-**Narrowed 2026-08-31 (spec 040 D031).** The CLI is now observed converging end to end — a real
-subprocess, stdin closed, two tasks, exit 0, artifacts present, no runner-created commit — against a
-**scripted** stub backend. That removes the question "does the command-line entry point work at
-all". It leaves every one of the four items above untouched.
-
 **Cost if wrong.** The failure mode is a first real run that does not work, not a silent
 corruption: the entry gate refuses before touching anything, and every ambiguous path in the runner
 fails closed. What is genuinely unknown is the *shape* of the integration — whether an
@@ -283,7 +278,11 @@ The gap is the seam between that machinery and a real provider.
 from a non-interactive shell and one from `cron`) and T022 (one overnight run on a real `Ready`
 spec, with its `ORCHESTRATION.md` and `run.jsonl` read start to finish by hand). Then restore the
 two downgraded clauses in spec 040's `SPEC.md` and close this entry. Until then the spec may reach
-`In Review` and `Implemented`; **it may not reach `Done`**.
+`In Review` and `Implemented`; ~~**it may not reach `Done`**~~.
+**Superseded 2026-09-02 (spec 040's record, corrected while spec 041 was editing this file):**
+spec 040 closed `Done` on 2026-09-01 as EXPERIMENTAL, with T018 and T022 moved out of scope by
+its D034, so that clause read as a live gate the repo contradicts. The debt itself is unchanged
+and still open.
 
 **Related:** [[DEBT-001]] and [[DEBT-002]] — the Codex half of the same gap, and both are now
 load-bearing for spec 040 as well.
@@ -317,6 +316,13 @@ run that aborts where it should pause, which is visible and recoverable, not a s
 record the run's `ORCHESTRATION.md` showing a `human-gated` escalation in `waiting` and `Run result:
 PAUSED`. The next feature the maintainer starts by hand is the natural candidate — adoption pays
 there, not on a feature already past `In Review`.
+
+**Blocking status.** Spec 041's D011 first made this a gate on that feature's `Done`. D012 lifted
+it on 2026-09-02: the mechanism is proven end to end by T028's fixture run, what is missing is
+observation on a real feature; the escalation and `PAUSED` code belongs to spec 031 and was not
+touched; and the runner is experimental and `stub`-only, so the failure mode is a visible,
+recoverable abort rather than a silent wrong answer. The entry stays open with its closing condition
+unchanged — it is carried, not dismissed.
 
 **Related:** [[DEBT-009]] — both are about the loop never having met reality; that one is the runner
 against a provider, this one is the protocol against a real feature's human tasks.

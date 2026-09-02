@@ -330,3 +330,40 @@ would be indistinguishable from the accidental drift this feature was written to
 unreadable` is documented where an operator hitting exit 10 will look. Nothing in the framework's
 template changes, and a later feature that wants a "performed but the criterion died" marker has to
 amend the template deliberately rather than inherit one from here.
+
+**Amended 2026-09-02 by [[#D012]]:** this decision originally made [[DEBT-010]] a gate on `Done`.
+The maintainer lifted that gate. DEBT-010 remains open and tracked; it no longer blocks closure. The
+rest of D011 — the closure-marker rule and the recorded runner/skill divergence — is unchanged.
+
+---
+
+### D012 - Spec updated: DEBT-010 is known debt, not a `Done` gate
+
+**Date:** 2026-09-02
+
+**Status:** Accepted
+
+**Context:** D011 made [[DEBT-010]] block `/spec-close`: the adopted loop had never reached a
+human-gated `PAUSED` outside a fixture, and T014's replay could not supply that observation because
+the originating feature had moved past adoption's window. Holding closure open for it would mean
+waiting for the next real in-flight feature — an unbounded wait for evidence about a path that is
+already exercised end to end.
+
+**Decision:** DEBT-010 stops gating `Done`. It stays open in `docs/KNOWN_DEBT.md` with its closing
+condition unchanged, and is now carried as known debt. Nothing else moves: no code, no task, no
+acceptance criterion, and D011's other two rulings stand.
+
+**Reasoning:** The maintainer's, and it holds. Three things make the residual small. The
+human-gated path is proven end to end by T028 — a real worker returned `BLOCKED` with its question
+verbatim, the classifier called it human-gated, the independent task continued, and the run ended
+`PAUSED` with its remediation — so what is missing is *observation on a real feature*, not the
+mechanism. The escalation and `PAUSED` code is spec 031's and this feature did not touch it. And the
+tool is experimental and local: `stub` is the only supported backend (040's classification), so a
+failure here would surface as a run that aborts where it should pause — visible and recoverable, not
+a silent wrong answer.
+
+**Consequences:** `/spec-close` may run. No task is impacted, none is over-implemented, and no
+acceptance criterion changes — AC-014's evidence never depended on DEBT-010. The debt keeps its
+entry and its closing condition, so the next feature adopted by hand still pays it off; what changed
+is that this feature no longer waits for that. If the path does misbehave against a real feature, the
+cost is one aborted run and this entry to point at.
