@@ -136,6 +136,18 @@ $Timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $RemoveProfileList = @()
 if ($null -ne $RemoveProfile) { $RemoveProfileList = @($RemoveProfile | Where-Object { $null -ne $_ }) }
 
+# Spec 030: -AllProfiles expands to every enabled profile, necessarily including
+# the one -RemoveProfile is deleting. Unguarded, the run deletes the profile,
+# backs it up as removed, re-installs it in the same pass and records it in the
+# manifest - an explicitly destructive command that silently does nothing while
+# the manifest lies about it. Spec 034 D010's invariant through a door its own
+# guard does not cover (it checks -Profile, which -AllProfiles never populates).
+if ($AllProfiles -and $RemoveProfileList.Count -gt 0) {
+    Write-Host "[ERROR]   -AllProfiles and -RemoveProfile cannot be combined: the blanket request would re-install the very profile you are removing, in the same run. Refusing to guess which you meant. Nothing was changed." -ForegroundColor Red
+    Write-Host "[ERROR]   Remove first, then install: '.\install.ps1 -RemoveProfile <name>' followed by '.\install.ps1 -AllProfiles' (which would re-add it), or name the profiles you want with -Profile." -ForegroundColor Red
+    exit 1
+}
+
 foreach ($rp in $RemoveProfileList) {
     if ([string]::IsNullOrWhiteSpace($rp)) {
         Write-Host "[ERROR]   -RemoveProfile needs a profile name. Nothing was changed." -ForegroundColor Red

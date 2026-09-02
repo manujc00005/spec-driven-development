@@ -457,6 +457,61 @@ else
   pass "AC-008 an explicitly named billable profile installs, and is not also reported as skipped"
 fi
 
+# --- Spec 030: --all-profiles must not resurrect what --remove-profile deletes -
+# Found by /spec-review, not by this suite: unguarded, the blanket expansion
+# included the profile being removed, so the run deleted its files, backed them
+# up as removed, re-installed them in the same pass, and left the profile
+# RECORDED in the manifest. Spec 034 D010's invariant through a door its guard
+# did not cover. The combination is now refused outright.
+RMDIR="$TMP_BASE/all-profiles-remove"
+bash "$REPO_ROOT/install.sh" --profile java-spring-backend,payments-fintech \
+  --central-dir "$RMDIR/central" --skip-link >/dev/null 2>&1
+rm_out="$(bash "$REPO_ROOT/install.sh" --all-profiles --remove-profile payments-fintech \
+  --central-dir "$RMDIR/central" --skip-link 2>&1)"; rm_rc=$?
+rm_recorded="$(python3 -c 'import json,sys;print(",".join(json.load(open(sys.argv[1]))["profiles"]))' \
+  "$RMDIR/central/.sdd-install.json" 2>/dev/null)"
+if [ $rm_rc -eq 0 ]; then
+  fail "--all-profiles + --remove-profile was accepted instead of refused" "$rm_out"
+elif ! grep -q 'cannot be combined' <<< "$rm_out"; then
+  fail "--all-profiles + --remove-profile refused without explaining why" "$rm_out"
+elif [ ! -d "$RMDIR/central/skills/stripe-payments-reviewer" ]; then
+  fail "the refusal still deleted files - it must change nothing"
+elif [ "$rm_recorded" != "core,java-spring-backend,payments-fintech" ]; then
+  fail "the refusal modified the manifest" "recorded: $rm_recorded"
+else
+  pass "--all-profiles + --remove-profile is refused, and nothing is changed"
+fi
+
+# The removal must still work on its own - the guard must not have broken it.
+solo_out="$(bash "$REPO_ROOT/install.sh" --remove-profile payments-fintech \
+  --central-dir "$RMDIR/central" --skip-link 2>&1)"; solo_rc=$?
+solo_recorded="$(python3 -c 'import json,sys;print(",".join(json.load(open(sys.argv[1]))["profiles"]))' \
+  "$RMDIR/central/.sdd-install.json" 2>/dev/null)"
+if [ $solo_rc -ne 0 ]; then
+  fail "plain --remove-profile broke" "$solo_out"
+elif [ "$solo_recorded" != "core,java-spring-backend" ]; then
+  fail "plain --remove-profile did not drop the profile from the manifest" "recorded: $solo_recorded"
+elif [ -d "$RMDIR/central/skills/stripe-payments-reviewer" ]; then
+  fail "plain --remove-profile left the removed profile's exclusive skill on disk"
+else
+  pass "plain --remove-profile still removes, guard did not break it"
+fi
+
+# The blanket run's reported "Active profiles:" must match what the manifest
+# records. The defect above was visible precisely as a disagreement between the
+# two, and nothing was asserting it.
+AGDIR="$TMP_BASE/all-profiles-manifest-agrees"
+ag_out="$(bash "$REPO_ROOT/install.sh" --all-profiles \
+  --central-dir "$AGDIR/central" --skip-link 2>&1)"
+ag_reported="$(grep -m1 'Active profiles:' <<< "$ag_out" | sed 's/.*Active profiles: //' | tr ' ' '\n' | sort | tr '\n' ',')"
+ag_recorded="$(python3 -c 'import json,sys;print(",".join(sorted(json.load(open(sys.argv[1]))["profiles"])))' \
+  "$AGDIR/central/.sdd-install.json" 2>/dev/null),"
+if [ "$ag_reported" != "$ag_recorded" ]; then
+  fail "--all-profiles: reported active profiles disagree with the manifest" "reported: $ag_reported / recorded: $ag_recorded"
+else
+  pass "--all-profiles: reported active profiles match the manifest exactly"
+fi
+
 echo
 echo "Results: $PASS passed, $FAIL failed"
 [ "$FAIL" -eq 0 ] || exit 1

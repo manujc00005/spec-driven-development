@@ -1,6 +1,6 @@
 ---
 name: privacy-compliance-review
-description: Review code changes for RGPD (EU GDPR), LOPDGDD (Spain), and AEPD compliance risks. Covers personal data handling, legal bases, consent, data retention, PII in logs, encryption, cookies, children's data (age 14 in Spain), right to erasure, and data portability. Use after qa-review for features that touch user data, registration, analytics, cookies, or data exports.
+description: Review user-data models, registration and consent forms, analytics and cookie code, logging, and data-export endpoints for RGPD (EU GDPR), LOPDGDD (Spain) and AEPD compliance risks — legal bases, consent, retention, PII in logs, encryption, children's data (age 14 in Spain), right to erasure, and portability. Use after qa-review.
 ---
 
 ## SDD Contract

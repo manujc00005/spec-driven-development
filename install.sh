@@ -118,6 +118,22 @@ TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 # in profiles.json is checked later, in remove_profiles(), once the file has
 # been parsed - but still before any deletion (FR-008, AC-010).
 # ---------------------------------------------------------------------------
+# Spec 030: --all-profiles expands to every enabled profile, which necessarily
+# includes the one --remove-profile is deleting. Left unguarded, the run deletes
+# the profile's files, backs them up as removed, re-installs them in the same
+# pass, and records the profile in the manifest - so an explicitly destructive
+# command silently does nothing and the manifest lies about it.
+#
+# This is spec 034 D010's invariant reached through a different door: D010
+# guards the defaults.profile fallback by checking PROFILE_ARGS, which
+# --all-profiles never populates. Refuse rather than guess, exactly as the
+# both-lists check below does for the equivalent collision.
+if [ "$ALL_PROFILES" = "1" ] && [ ${#REMOVE_PROFILE_ARGS[@]} -gt 0 ]; then
+  echo "[ERROR]   --all-profiles and --remove-profile cannot be combined: the blanket request would re-install the very profile you are removing, in the same run. Refusing to guess which you meant. Nothing was changed."
+  echo "[ERROR]   Remove first, then install: './install.sh --remove-profile <name>' followed by './install.sh --all-profiles' (which would re-add it), or name the profiles you want with --profile."
+  exit 1
+fi
+
 for _rp in ${REMOVE_PROFILE_ARGS[@]+"${REMOVE_PROFILE_ARGS[@]}"}; do
   if [ -z "${_rp// /}" ]; then
     echo "[ERROR]   --remove-profile needs a profile name. Nothing was changed."

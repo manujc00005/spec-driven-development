@@ -224,3 +224,67 @@ motivation. Independent commits capture most of the bisect benefit a split would
 **Consequences:** The feature's diff spans two areas, and `/spec-review` sees a wider change than
 usual. R6 in `PLAN.md` records the residual risk. If implementation stalls on one half, the other
 can still close — the phases do not interlock except at T023's suite run.
+
+---
+
+### D010 - `/spec-implement` was bypassed; the work ran in the maintainer's session
+
+**Date:** 2026-09-02
+
+**Status:** Accepted
+
+**Context:** `/spec-plan` promoted this spec `Draft` → `Ready`, and the implementation then ran
+directly in the maintainer's session rather than through `/spec-implement`. The spec therefore
+never reached `In Progress`, and `/spec-review` refuses `Ready` → `In Review` unless an **Accepted**
+decision records why the bypass happened. Without this decision the status transition is exactly the
+silent edit `sdd-guardrails` section 11 exists to prevent — so it is written down rather than waved
+through.
+
+**Decision:** Record the bypass. The implementation was executed task by task from `TASKS.md` in the
+same session that planned it, with each task's `Verify:` clause exercised as it closed.
+
+**Reasoning:** The feature is entirely framework-internal — installer scripts, an agent file, skill
+descriptions and the consistency checker. There is no application code, and the tasks are small and
+sequentially dependent (T001's baseline must precede every edit, T010's rule must exist before T018
+can test it). Delegating them through `/spec-implement` would have added a handoff without adding a
+check, and T001's ordering constraint is the kind a handoff loses.
+
+**Consequences:** The status path is `Draft → Ready → In Review`, skipping `In Progress`. That is
+legible only because this decision exists; a future reader who finds the gap has the reason here
+rather than having to reconstruct it. It also means no independent implementer read the tasks before
+executing them — the tasks were written and executed by the same session, which is a weaker check
+than the workflow normally provides, and `/spec-review` plus `/qa-review` carry correspondingly more
+weight for this feature.
+
+---
+
+### D011 - `--all-profiles` and `--remove-profile` are refused in combination
+
+**Date:** 2026-09-02
+
+**Status:** Accepted
+
+**Context:** Found by `/spec-review` after implementation, not by the 32-case installer suite.
+`--all-profiles` expands to every enabled profile, which necessarily includes the one
+`--remove-profile` is deleting. Unguarded, one run deleted the profile's files, backed them up as
+"removed", re-installed them in the same pass, and left the profile **recorded in the manifest** —
+an explicitly destructive command that silently did nothing while the manifest misreported the
+result. Verified by execution, before and after.
+
+This is spec 034 D010's invariant reached through a door its guard does not cover: D010 protects the
+`defaults.profile` fallback by checking `PROFILE_ARGS`, and `--all-profiles` never populates it. The
+same blind spot bypassed the existing `install.sh:121` refusal for a profile named in both lists.
+
+**Decision:** Refuse the combination outright, in `install.sh` and `install.ps1`, with a message
+naming the sequential alternative. Not "exclude the removed profiles from the expansion".
+
+**Reasoning:** This installer refuses to guess everywhere else — unknown profile name, disabled
+profile, a profile named in both `--profile` and `--remove-profile`. Silently excluding the removed
+profile from a request that literally says "all profiles" would make the flag mean something
+different depending on what else is on the command line, and the adopter would have no way to see
+it. The refusal is consistent with `install.sh:121`, which is the same collision.
+
+**Consequences:** `--all-profiles --remove-profile X` now exits 1 and changes nothing. The two
+operations are a two-command sequence, and the error message says so — including the fact that a
+subsequent `--all-profiles` would re-add what was just removed, which is the real trap. Guarded by
+two cases in `install.test.sh`, both confirmed to fail when the guard is reverted.

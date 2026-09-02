@@ -161,6 +161,14 @@ the two halves as separate commits — they share only `profiles.json` and the s
 
 ## Phase 4: Review
 
+- [x] T027 - **Found by `/spec-review`:** refuse `--all-profiles` combined with `--remove-profile`
+  in both installers, and cover it in `install.test.sh`. Covers: FR-009 (regression against spec 034
+  D010). Verify: the combination exits 1 changing nothing, plain `--remove-profile` still removes,
+  and reverting the guard makes exactly those two cases fail — all three observed.
+- [x] T028 - **Found by `/spec-review`:** extend the AC-016 audit to the 3 reviewer skills routed to
+  `security-reviewer`, which FR-004b covers and T002 did not. Covers: AC-016, FR-004b. Verify: all
+  29 routed skills audited, none naming no artifact, none over the 400-char cap.
+
 - [x] T023 - Execute a real `domain-reviewer` run against a diff containing both a `.java` and a
   `.py` file, in a repository with both profiles installed, and attach the transcript. Building the
   fixture repository and diff is part of this task. Covers: AC-003, FR-016. Verify: the transcript
