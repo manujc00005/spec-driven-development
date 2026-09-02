@@ -27,8 +27,16 @@ heavy reading and heavy editing into subagents.
 ARGUMENTS: either a free-form description of the goal, or:
 
 ```text
---autonomous specs/features/<nnn>-<name> [--max-iterations N] [--max-delegations N]
+--autonomous specs/features/<nnn>-<name> [--adopt] [--max-iterations N] [--max-delegations N]
 ```
+
+`--adopt` (spec 041) is a first-entry-only modifier of `--autonomous` for a feature that is already
+`In Progress` because the maintainer started it by hand. It is rejected outside `--autonomous` and
+when duplicated, with the other syntactic flag errors, before any feature-state read or write. Once
+feature state is read, it is refused as *Already adopted or entered* when a valid `ORCHESTRATION.md`
+for the feature already exists — an existing run is resumed, never re-adopted, so the flag is never
+passed on re-entry — and as *Adoption not needed* when `SPEC.md` is `Ready`. What it changes is
+confined to the entry gate and to state initialization below; the loop after entry is identical.
 
 Both overrides must be positive integers. Defaults: `max-iterations=3`, applied to the two
 non-convergence counters defined below, and `max-delegations` computed once at first entry as
@@ -65,7 +73,7 @@ AUTONOMOUS REFUSED
   remediation: <exact command or action>
 ```
 
-The six conditions and remediations are:
+The six conditions and remediations are (a seventh applies under `--adopt`):
 
 1. **Lifecycle status.** On first entry (no valid `ORCHESTRATION.md` for this feature), `SPEC.md`
    must be exactly `Ready`; otherwise run `/spec-plan <feature-path>`. On authenticated re-entry,
@@ -73,6 +81,15 @@ The six conditions and remediations are:
    result is `ACTIVE`, `PAUSED`, or `ABORTED` with `resumable: yes`; a mismatched, non-resumable,
    `Draft`, `Done`, or `Archived` run refuses and names the owning lifecycle action. This
    distinction is D010/D013; it is not permission to edit status.
+   Under `--adopt` (spec 041), first entry requires exactly `In Progress`, and every other status
+   refuses naming the owning action: `Ready` → *Adoption not needed*, remediation "run without
+   `--adopt`"; `Draft` → `/spec-plan <feature-path>`; `In Review` → `/qa-review <feature-path>`
+   then `/spec-close <feature-path>` (QA and closure have owning skills; adoption never runs them
+   for a feature that already passed `/spec-review`); `Done`/`Archived` → nothing to run. A valid
+   `ORCHESTRATION.md` for the feature together with `--adopt` refuses as *Already adopted or
+   entered*, remediation "re-enter without `--adopt`"; a stale state file from another feature or a
+   non-resumable run is preserved under a timestamped name by the maintainer, as the recovery rule
+   below already requires, before adopting.
 2. **No open decisions.** `DECISIONS.md` must contain no unresolved/open question or Proposed
    decision that blocks an unchecked task. Remediation: resolve it with `/spec-clarify
    <feature-path>` (first entry) or record the maintainer's answer in `DECISIONS.md` (re-entry).
@@ -82,12 +99,23 @@ The six conditions and remediations are:
    prerequisite in `TASKS.md`/`DECISIONS.md`.
 4. **Isolated git location.** The current branch must not be the repository's default branch, or
    the current worktree must be a dedicated linked worktree on a non-default branch. Determine the
-   default branch from git metadata; never assume its name. Remediation: create/switch to a feature
-   branch or worktree, e.g. `git switch -c feature/<name>`.
+   default branch from git metadata; never assume its name. A **detached HEAD** refuses under this
+   condition too: it is not an isolated location, it is no location at all, and a commit made there
+   is referenced by nothing — which matters most under `--adopt`, where the maintainer's commit is
+   both the adoption baseline and the attribution. Remediation: create/switch to a feature branch or
+   worktree, e.g. `git switch -c feature/<name>`.
 5. **Clean working tree.** `git status --porcelain` must be empty at first entry. On re-entry, only
    paths attributable to the recorded autonomous run may be dirty; any pre-existing/unattributed
    path refuses. Remediation: inspect `git status --short`, then commit/stash/discard manually—the
    orchestrator never does so.
+   Under `--adopt` there is no attributable path at all: no run exists yet to attribute anything
+   to, so `git status --porcelain` must be empty, and the remediation is the exact commit on the
+   feature branch — `git add -A && git commit -m "<pre-adoption work>"` — whose result becomes the
+   adoption baseline (D004). `git stash` is acceptable only when the maintainer wants that work
+   *excluded* from the feature. The orchestrator never commits or stashes on the maintainer's
+   behalf. When conditions 4 and 5 fail together, report them in that order — branch first, tree
+   second — so the remediation the maintainer follows lands the commit on the feature branch
+   (`git switch -c feature/<name>` carries uncommitted work with it).
 6. **Green baseline suite.** Run exactly the verification commands mandated by `PLAN.md` before
    the first implementation delegation. Every command must exit 0 and the complete suite must leave
    the same clean tree it received. Record commands, results, and before/after status in
@@ -95,9 +123,17 @@ The six conditions and remediations are:
    mutating-baseline refusal, not attributable work. Remediation: make the suite hermetic, clean the
    named generated paths manually, or update the PLAN through `/spec-update`; never attribute
    baseline red or baseline dirt to this run.
+7. **Inherited record is computable** (`--adopt` only). The orchestrator must determine the
+   adoption baseline commit (`HEAD`), the adoption diff base (`git merge-base <default-branch>
+   HEAD`, with the default branch resolved from git metadata such as `origin/HEAD` — never
+   assumed), and the set of tasks already checked in `TASKS.md`. If the diff base cannot be
+   determined (no default-branch metadata, unrelated histories), refuse as
+   *Inherited diff undetermined*; remediation: set the metadata, e.g. `git remote set-head origin
+   <branch>`, and re-run. There is no `--base <ref>` flag: provenance comes from git, not from
+   arguments (D003).
 
-If all six pass, initialize or validate `ORCHESTRATION.md` using the canonical state contract below,
-then enter the autonomous loop. Permission modes and worktree creation remain caller concerns; the
+If every applicable condition passes, initialize or validate `ORCHESTRATION.md` using the canonical
+state contract below, then enter the autonomous loop. Permission modes and worktree creation remain caller concerns; the
 skill never weakens permissions or mutates git history to make the gate pass.
 
 ## Autonomous mode — canonical structured output
@@ -205,6 +241,17 @@ persist `DISPATCHED` immediately before the call. The budget counts
 workers, reviewers, deep-reasoner calls, and structured-output retries. Local commands and
 same-context owning-skill calls are logged but do not consume it.
 
+0. *(adopted runs only, spec 041 D005)* Before the first implementation delegation, compute the
+   fingerprint and review the inherited diff — `<adoption diff base>..<adoption baseline commit>`
+   — with `domain-reviewer`, plus `security-reviewer` when that diff or the SPEC matches the
+   Level-3 triggers of step 3. Each is a counted delegation with its own attempt. Parse and persist
+   their verdicts exactly as in step 4: findings enter the registry and become
+   `(from <finding-id>)` tasks. While an inherited-diff finding of severity `Critical` is open,
+   delegate no new spec task — only its finding task; lower severities interleave under the normal
+   rule. An empty inherited diff skips this step and the run then behaves as a `Ready` entry. An
+   APPROVE here is an approval for that fingerprint and is invalidated by later changes like any
+   other. Checked tasks are never re-implemented: the reviewers judge their diff, and the
+   `Inherited` table records that this run did not observe their `Verify:` clauses.
 1. Delegate the task using the normal full brief and require the completion block.
 2. On response, persist `RESPONDED`, the raw outcome reference, and post-delegation fingerprint
    before acting. On `BLOCKED`, follow the escalation protocol below. On `DONE`, verify the claim
@@ -236,7 +283,11 @@ same-context owning-skill calls are logged but do not consume it.
    for the approved fingerprint; persist that verdict/fingerprint in each row. No worker DONE or
    absence from a later REJECT resolves a finding implicitly.
 6. When no implementation/review task remains, run `final-conformance-reviewer` exactly once on the
-   full evidence chain. Re-run it only if the diff changes after its APPROVE.
+   full evidence chain. For an adopted run the brief includes the `Inherited` table, and the
+   report labels every inherited checked task whose `Verify:` clause this run did not observe as
+   *inherited, verification not observed* — evidence the maintainer supplied by checking the box,
+   stated as such rather than claimed as observed. The label does not block APPROVE by itself; it
+   makes the provenance honest. Re-run the reviewer only if the diff changes after its APPROVE.
 
 The loop continues until the termination or abort contract below fires. Findings are never marked
 resolved merely because a worker says it changed code; only a subsequent structured APPROVE closes
@@ -315,76 +366,21 @@ it only after the entry gate passes. Write it atomically at every phase transiti
 delegation, after each response/verdict, after each escalation change, and before returning to the
 user. Never let more than the currently recorded in-flight action be recoverable only from chat.
 
-Initialize it with this canonical scaffold (replace angle-bracket values; do not leave them):
+Initialize it from `templates/ORCHESTRATION.md`, the canonical scaffold (replace angle-bracket
+values; do not leave them). Its sections, in order: the header (`Feature`, `Mode`, `Entry`, the three
+adoption fields, timestamps, effective caps), `State`, `Attempts`, `Inherited`, `Findings`,
+`Delegation log`, `Escalations`, `Cap changes`, `Closure delta`, `Run result`. The scaffold is the
+shape; every rule about its fields lives in this skill.
 
-```markdown
-# Orchestration: <feature-name>
-
-- Feature: `<feature-path>`
-- Mode: `autonomous`
-- Started at: `<ISO-8601>`
-- Updated at: `<ISO-8601>`
-- Effective max iterations (no-progress streak and per-finding rejects): `<N>`
-- Effective max delegations: `<N>` (`max(25, 6 × <unchecked tasks at first entry>)` unless overridden)
-
-## State
-
-- Phase: `ENTRY | IMPLEMENT | REVIEW | FIX | FINAL | PAUSED | TERMINAL`
-- Current task: `<TNNN | none>`
-- Current attempt: `<A-NNN | none>`
-- Current attempt state: `<PLANNED | DISPATCHED | RESPONDED | VERIFIED | RECOVERED | FAILED | none>`
-- Current task verification: `<Verify: criterion and the result of checking it, or none>`
-- Delegations used: `<N>`
-- Attributed dirty paths: `<sorted paths or none>`
-- Baseline verification: `<commands and PASS evidence>`
-- No-progress streaks (gating): `security=<N>, domain=<N>, final-conformance=<N>`
-- Total invocations (audit only): `security=<N>, domain=<N>, final-conformance=<N>`
-- Approvals: `<reviewer=fingerprint or none>`
-- Frozen implementation fingerprint: `<fingerprint or none>`
-
-## Attempts
-
-| ID | Timestamp | Agent | Task/objective | State | Allowed paths | Pre fingerprint | Post fingerprint | Outcome |
-|---|---|---|---|---|---|---|---|---|
-
-For a task closed on its `Verify:` clause, the `Outcome` cell and the state block's "Current task
-verification" field both record the criterion and the result of checking it, not merely the
-checked box. Checking never means the loop executing the clause itself (FR-010).
-
-## Findings
-
-| Reviewer:finding | Task | Severity | Required action | Status | REJECTs | First seen | Last seen | Resolving verdict/fingerprint |
-|---|---|---|---|---|---|---|---|---|
-
-## Delegation log
-
-| Timestamp | Agent | Objective | Outcome | Evidence |
-|---|---|---|---|---|
-
-## Escalations
-
-| ID | Classification | Status | Question | Affected tasks | Resolution |
-|---|---|---|---|---|---|
-
-## Cap changes
-
-| Timestamp | Invocation | Cap | Old | New | Reason |
-|---|---|---|---|---|---|
-
-## Closure delta
-
-- Frozen fingerprint: `<fingerprint or none>`
-- Allowed lifecycle/evidence changes: `<exact paths and lifecycle-only fields or none>`
-- Observed changes: `<exact paths/fields or none>`
-- Unexpected changes: `<exact paths/fields or none>`
-
-## Run result
-
-- Status: `ACTIVE | PAUSED | DONE | ABORTED`
-- Resumable: `yes | no`
-- Reason: `<reason or next action>`
-- Required remediation: `<command/action or none>`
-```
+`Entry` is `ready` for a run that entered at `Ready` and `adopt` for an adopted one (spec 041). A
+`ready` run writes `n/a` in the three adoption fields and leaves `Inherited` empty. An adopted run
+fills them from gate condition 7 and writes one `Inherited` row per task checked at adoption:
+`Verify clause` copies the task's clause or `none`, and `Verification observed by this run` is `no`
+for every row — the loop did not see it happen and never re-delegates a checked task. Counters and
+the delegation budget start from zero at adoption, the budget computed from the unchecked tasks at
+that moment. The adoption baseline commit is the run's recorded trusted baseline for the recovery
+rule below. On re-entry, a state file with no `Entry` line is read as `ready` (D007); the history
+tables are the only place adoption facts live, so they are never rewritten.
 
 Append attempt, finding, delegation, and cap-change history; never rewrite it to hide a failed
 attempt. State is only the current machine-readable summary. Before any agent call, first evaluate
@@ -424,7 +420,9 @@ The run is **DONE** only when all are simultaneously true:
 2. every PLAN-mandated verification command has just exited 0;
 3. `domain-reviewer` has APPROVE for the current fingerprint;
 4. `security-reviewer`, when triggered, has APPROVE for the current fingerprint;
-5. `final-conformance-reviewer` has APPROVE for the current fingerprint;
+5. `final-conformance-reviewer` has APPROVE for the current fingerprint — for an adopted run, the
+   verdict of a brief that carried the `Inherited` table, whose *inherited, verification not
+   observed* labels are recorded evidence, not a DONE blocker;
 6. no escalation or blocking decision remains open.
 
 Then freeze and persist the fully approved implementation fingerprint. Before invoking lifecycle

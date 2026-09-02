@@ -15,7 +15,7 @@ import subprocess
 import time
 from dataclasses import dataclass, field
 
-from . import blocks, closure as closure_mod, exits, resume as resume_mod, state
+from . import blocks, closure as closure_mod, exits, gate, resume as resume_mod, state
 from . import tasks as tasks_mod
 from .backends import BackendPrecondition
 from .budget import Budget, BudgetExhausted, default_cap
@@ -72,8 +72,11 @@ class Loop:
     def __init__(self, repo, feature_dir, backend, log, max_iterations=3,
                  max_delegations=None, clock=time.time, sleep=lambda s: None,
                  retry_policy=None, notify=None, hostname=None, pid=None,
-                 baseline_cmd=None):
+                 baseline_cmd=None, adopt=False):
         self.repo = repo
+        # spec 041 D007: how this run entered. The runner records it and never
+        # acts on it (D006: gate-level parity only).
+        self.entry = "adopt" if adopt else "ready"
         self.feature_dir = feature_dir
         self.backend = backend
         self.log = log
@@ -136,7 +139,7 @@ class Loop:
         # finding resolves. Counting those writes as an implementation change
         # would invalidate an approval the runner had just been given and force a
         # re-review of a tree nobody touched.
-        excluded = ("ORCHESTRATION.md", "run.jsonl", "PR_DESCRIPTION.md", "TASKS.md")
+        excluded = gate.RUN_ARTIFACTS      # one list of names; see its comment on matching
         for line in sorted(proc.stdout.splitlines()):
             path = line[3:].strip()
             if any(path.endswith(x) for x in excluded):
@@ -173,7 +176,9 @@ class Loop:
             doc = state.new_document(self.feature_dir, "runner", self.clock(),
                                      {"max_iterations": self.counters.max_iterations,
                                       "max_delegations": cap,
-                                      "pid": self.pid, "host": self.hostname})
+                                      "pid": self.pid, "host": self.hostname,
+                                      "entry": self.entry,
+                                      "inherited": self._inherited_record()})
             try:
                 doc.create_exclusive(self.state_path)
             except FileExistsError:
@@ -187,6 +192,24 @@ class Loop:
                                      self.counters.max_iterations, self.hostname)
         return doc, resumed
 
+    def _inherited_record(self):
+        """What an adopted run takes on trust, computed once at state creation.
+
+        The gate already proved it is computable and refused the run otherwise, so
+        this is a re-read, not a second decision. If it disagrees now — a `Loop`
+        built directly, or `origin/HEAD` moved between the two calls — the honest
+        answer is to stop: writing `entry: adopt` with `n/a` adoption fields would
+        produce exactly the document CONF-041-03 was raised about (T021 / NEW-6).
+        """
+        if self.entry != "adopt":
+            return None
+        record = gate.inherited_record(self.repo, self.feature_dir)
+        if isinstance(record, gate.Refusal):
+            raise UnresumableState(
+                "the inherited record is no longer computable: %s" % record.detail,
+                record.remediation)
+        return record
+
     def _adopt(self, resumed):
         """Restore the persisted run. Counters and budget are never reset."""
         self.counters = resumed.counters
@@ -198,6 +221,7 @@ class Loop:
         self.iteration = resumed.iteration
         self.resumed = resumed
         self.closure = resumed.closure
+        self.entry = resumed.entry
 
         cap = resumed.budget_cap
         if self.max_delegations_override is not None:
@@ -218,6 +242,7 @@ class Loop:
     def _state_fields(self, phase, note=""):
         return {
             "writer": "sdd_runner",
+            "entry": self.entry,
             "phase": phase,
             "current task": note or "none",
             "current attempt": "A-%03d" % self.attempt_seq if self.attempt_seq else "none",

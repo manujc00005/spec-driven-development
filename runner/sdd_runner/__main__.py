@@ -11,11 +11,12 @@ string (spec 040 NFR: Security).
 import argparse
 import json
 import os
+import socket
 import subprocess
 import sys
 import time
 
-from . import exits, gate
+from . import exits, gate, resume, state as state_mod
 from .backends import BackendPrecondition, resolve
 from .log import RunLog
 from .loop import Loop
@@ -43,6 +44,10 @@ def build_parser():
                    help="JSON file of scripted responses for --backend stub: a list, or an "
                         "object keyed by agent name. The only way to exercise a full run "
                         "end to end without a provider.")
+    p.add_argument("--adopt", action="store_true",
+                   help="first entry on a feature already In Progress (spec 041): requires a "
+                        "fully clean tree and a computable inherited record; the gate mirrors "
+                        "the skill, and --dry-run prints what would be inherited")
     p.add_argument("--dry-run", action="store_true",
                    help="run the entry gate, print the plan and the budget, dispatch nothing")
     return p
@@ -118,8 +123,46 @@ def main(argv=None):
         print(refusal, file=sys.stderr)
         return exits.GATE_REFUSED
 
+    # `gate.check` has always distinguished first entry from re-entry, and the CLI
+    # never told it which this was — harmless while `In Progress` was a first-entry
+    # status, fatal once spec 041 narrowed first entry to `Ready`: every adopted run
+    # became a one-shot. The state file is what makes a run re-entrant, so it is what
+    # answers the question (spec 041 T015 / CONF-041-01).
+    state_path = os.path.join(feature_dir, "ORCHESTRATION.md")
+    first_entry = not os.path.exists(state_path)
+    if not first_entry and not args.adopt:
+        # Existence is not authentication. 031: "a missing/malformed/mismatched state
+        # file cannot authenticate re-entry and must fail the entry gate rather than
+        # being guessed back into shape." `Loop` enforces that, but a dry run returns
+        # before `Loop` exists, so it used to report a pass for a document that could
+        # never be resumed (spec 041 T020 / CONF-041-02).
+        #
+        # Only for a genuine RE-ENTRY. `--adopt` over an existing document is a
+        # statement about intent, not about that document: the answer is "a run is
+        # resumed, never re-adopted" whether the file is valid, stale or foreign, so
+        # the gate's `already adopted or entered` owns it and authenticating first
+        # would bury that answer under a different condition (T024 / R3-02).
+        try:
+            doc = state_mod.Orchestration.load(state_path)
+        except (OSError, UnicodeDecodeError, ValueError) as exc:
+            # A state file that cannot even be read is still a refusal with a code,
+            # never a traceback: a scheduler branches on the exit code alone (T026).
+            print("[GATE] refused: %s cannot be read: %s\n  remediation: inspect the file, or "
+                  "archive it and start a fresh run" % (state_path, exc), file=sys.stderr)
+            return exits.STATE_UNRESUMABLE
+        try:
+            resume.inspect(doc, state_path, args.max_iterations, socket.gethostname())
+        except resume.ConcurrentRun as exc:
+            print("[GATE] refused: %s" % exc, file=sys.stderr)
+            return exits.CONCURRENT_RUN
+        except resume.UnresumableState as exc:
+            print("[GATE] refused: %s\n  remediation: %s" % (exc.reason, exc.remediation),
+                  file=sys.stderr)
+            return exits.STATE_UNRESUMABLE
+
     refusals = gate.check(repo, feature_dir,
-                          baseline_cmd=args.baseline.split() if args.baseline else None)
+                          baseline_cmd=args.baseline.split() if args.baseline else None,
+                          first_entry=first_entry, adopt=args.adopt)
     if refusals:
         for r in refusals:
             print(r.render(), file=sys.stderr)
@@ -143,6 +186,16 @@ def main(argv=None):
         print("unchecked tasks: %d" % len(pending))
         print("max-iterations:  %d" % args.max_iterations)
         print("max-delegations: %d" % cap)
+        print("entry:           %s" % ("adopt" if args.adopt else "ready"))
+        if args.adopt:
+            record = gate.inherited_record(repo, feature_dir)
+            print("adoption baseline commit: %s" % record.baseline)
+            print("adoption diff base:       %s (against %s)"
+                  % (record.diff_base, record.default_branch))
+            print("inherited tasks: %d (verification not observed by this run)"
+                  % len(record.checked))
+            for task_id, verify in record.checked:
+                print("  %s  inherited  verify: %s" % (task_id, verify[:70]))
         for t in pending:
             print("  %s  %s" % (t.id, t.title[:88]))
         print("dry run: nothing dispatched.")
@@ -171,7 +224,8 @@ def main(argv=None):
     loop = Loop(repo, feature_dir, backend, log,
                 max_iterations=args.max_iterations, max_delegations=args.max_delegations,
                 notify=notify,
-                baseline_cmd=args.baseline.split() if args.baseline else None)
+                baseline_cmd=args.baseline.split() if args.baseline else None,
+                adopt=args.adopt)
     try:
         outcome = loop.run()
     except Exception as exc:                            # never a silent crash

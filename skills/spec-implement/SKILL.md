@@ -122,6 +122,9 @@ After implementation, summarize:
 
 Logic:
 - If there are remaining unchecked tasks: `/spec-implement <path>`
+  - To finish without supervision instead: commit the work so far on a feature branch, then
+    `/sdd-orchestrate --autonomous <path> --adopt` — the loop reviews the inherited diff and runs
+    the remaining tasks through its gates (spec 041).
 - If all tasks are checked: `/spec-review <path>`
 
 ## Context economy

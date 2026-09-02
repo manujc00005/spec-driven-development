@@ -30,10 +30,34 @@ No TTY is required, stdin is never read, and nothing is ever prompted.
 | `--notify` | command run without a shell, event delivered as JSON on stdin |
 | `--stub-script` | JSON responses for `--backend stub`: the way to exercise a full run without a provider |
 | `--dry-run` | gate + plan + budget, dispatching nothing — and needing no usable backend |
+| `--adopt` | first entry on a feature already `In Progress` (spec 041): `Ready` only without it; any dirty path refuses in both modes; `--dry-run --adopt` prints the inherited record (baseline commit, diff base, checked tasks). The runner records the entry and dispatches nothing extra for it (041 D006) |
+
+**A behaviour change from before spec 041.** First entry used to accept `Ready`, `In Progress` and
+`In Review`; it now accepts `Ready` only, or `In Progress` under `--adopt`. A run pointed at an
+`In Progress` feature without the flag gets exit 10 where it used to proceed. That is deliberate
+(spec 041 D004): before adoption existed, accepting a part-implemented feature meant starting a loop
+over work nobody had reviewed. `In Review` is not a first-entry status in either mode — QA and
+closure have owning skills.
+A **detached HEAD** is the other refusal that used to pass: it reported no branch name, so the
+isolation check never fired. It now refuses under `default branch` in both modes.
+
+**Re-entry and the dirty tree.** On first entry any dirty path refuses. On re-entry the gate
+tolerates the four names its own bookkeeping owns inside the feature folder
+(`ORCHESTRATION.md`, `run.jsonl`, `TASKS.md`, and `PR_DESCRIPTION.md` — which this runner never
+writes, see *Finalization* below; the name is carried for fingerprint compatibility, so a dirty one
+is tolerated although no run produced it) plus anything a caller passes as `attributed` — and nothing passes it today (spec 041
+D010). With `--backend stub` that is complete, because the stub writes nothing. With a real backend
+an interrupted run whose worker touched source files cannot be resumed here: reconcile those paths
+by hand. `--adopt` over an existing state file always refuses *already adopted or entered* (exit
+10), whatever that file contains; a re-entry without the flag authenticates it and may exit 15 or 16
+instead.
 
 ### Exit codes
 
-`0` converged · `10` gate refused · `11` human-gated escalation · `12` cap abort
+`0` converged · `10` gate refused (under `--adopt` also *adoption not needed*, *already adopted or
+entered*, *inherited diff undetermined*; and *status unreadable* in either mode, when the line under
+`## Status` states no lifecycle status — this runner reads the framework's own SPEC form and does not
+parse other dialects, while the skill path does) · `11` human-gated escalation · `12` cap abort
 · `13` budget exhausted · `14` backend precondition · `15` concurrent run ·
 `16` state unresumable · `17` processed but not converged ·
 `18` core completion not proven · `70` internal error.

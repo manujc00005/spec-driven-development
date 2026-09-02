@@ -68,7 +68,13 @@ same contract in `skills/sdd-orchestrate/SKILL.md`:
   fail-closed malformed-output behavior, and DONE/PAUSED/ABORTED conditions;
 - the same frozen implementation fingerprint and separately audited lifecycle/PR closure delta;
 - the same prohibition on commit, push, merge, secrets, real migrations, and direct SPEC status
-  edits.
+  edits;
+- the same `--adopt` entry for a feature already `In Progress` (spec 041): the same adoption gate
+  (`In Progress` only, fully clean tree, non-default branch, green baseline, and a computable
+  inherited record — baseline commit, merge-base with the default branch, checked tasks), the same
+  `Inherited` table and adoption header fields in `ORCHESTRATION.md`, and the same inherited-diff
+  review by `domain-reviewer` (and `security-reviewer` on the usual triggers) before any new task,
+  run sequentially in the one context like every other role.
 
 **Where the autonomous evidence actually comes from.** Unusually for this adapter, most of the
 autonomous-mode behavioral evidence is **Codex-only**: the happy path, the entry-gate matrix, the
@@ -84,7 +90,9 @@ There is no parallel fan-out, isolated context, or enforced tool grant. Role swi
 one context, so persisted file state—not conversation memory—is authoritative after compaction or
 resume. A Codex run may preserve protocol behavior, but it cannot claim permission-isolation parity.
 The live smoke result belongs in the active feature's `CALIBRATION.md`; until it passes, autonomous
-Codex support is documented but not closure evidence.
+Codex support is documented but not closure evidence. The adoption entry is held to the same
+standard: spec 041 documents it here and records its Codex smoke run as a pass or as an explicit
+closure blocker, never as an assumed parity.
 
 ## The biggest gap, stated plainly
 
