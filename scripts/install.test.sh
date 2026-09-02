@@ -390,6 +390,51 @@ else
   fail "FR-009 manifest was updated despite the removal failing"
 fi
 
+# --- Spec 039 AC-001: a first install links CLAUDE.md created by the personal
+# import. Regression for BUG-1: the link step ran BEFORE the personal layer that
+# creates <central>/CLAUDE.md, printed "skipped", and never retried - so
+# ~/.claude/CLAUDE.md was missing on every fresh machine and the user's global
+# instructions silently did not load.
+#
+# Hermetic: --claude-home points at a temp dir, so nothing here touches the real
+# ~/.claude.
+C11="$TMP_BASE/firstinstall-central"
+H11="$TMP_BASE/firstinstall-home"
+mkdir -p "$C11/personal/central"
+printf '# personal global instructions\n' > "$C11/personal/central/CLAUDE.md"
+"$REPO_ROOT/install.sh" --central-dir "$C11" --claude-home "$H11" \
+  --link-user-claude --profile python-sql-data >"$TMP_BASE/first.log" 2>&1
+if [ -f "$C11/CLAUDE.md" ]; then
+  pass "AC-001 the personal import creates <central>/CLAUDE.md on a first install"
+else
+  fail "AC-001 the personal import did not create <central>/CLAUDE.md" "$(tail -5 "$TMP_BASE/first.log")"
+fi
+if [ -L "$H11/CLAUDE.md" ] && [ "$(readlink "$H11/CLAUDE.md")" = "$C11/CLAUDE.md" ]; then
+  pass "AC-001 ~/.claude/CLAUDE.md is linked to the central file after a first install"
+else
+  fail "AC-001 ~/.claude/CLAUDE.md was not linked after a first install" \
+       "exists=$([ -e "$H11/CLAUDE.md" ] && echo yes || echo no) target=$(readlink "$H11/CLAUDE.md" 2>/dev/null)"
+fi
+# D002: the deferred message must not appear when the retry succeeded.
+if ! grep -q "CLAUDE.md link skipped" "$TMP_BASE/first.log"; then
+  pass "AC-001 no contradictory 'link skipped' line when the retry linked the file"
+else
+  fail "AC-001 the run reported 'link skipped' for a file it went on to link"
+fi
+
+# --- Spec 039 AC-009: no payload -> the old behaviour, unchanged. The retry
+# must not invent a link, and the skip message must still be reported once.
+C12="$TMP_BASE/nopayload-central"
+H12="$TMP_BASE/nopayload-home"
+"$REPO_ROOT/install.sh" --central-dir "$C12" --claude-home "$H12" \
+  --link-user-claude --profile python-sql-data >"$TMP_BASE/nopayload.log" 2>&1
+if [ ! -e "$H12/CLAUDE.md" ] && [ "$(grep -c "CLAUDE.md link skipped" "$TMP_BASE/nopayload.log")" -eq 1 ]; then
+  pass "AC-009 with no personal payload the skip is reported exactly once and no link is invented"
+else
+  fail "AC-009 payload-free path changed behaviour" \
+       "link=$([ -e "$H12/CLAUDE.md" ] && echo yes || echo no) skips=$(grep -c "CLAUDE.md link skipped" "$TMP_BASE/nopayload.log")"
+fi
+
 # --- Spec 030 AC-006/AC-007/AC-008/AC-017: --all-profiles --------------------
 # A blanket request installs every ENABLED profile, excludes the disabled and
 # the billable ones, and NAMES both exclusions instead of dropping them quietly.

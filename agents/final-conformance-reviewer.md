@@ -32,7 +32,10 @@ diff actually satisfy what the SPEC promised, with real evidence — not a compi
 - In autonomous orchestration, a final fenced YAML verdict block conforming to the canonical
   schema in `skills/sdd-orchestrate/SKILL.md`: `APPROVE` with an empty findings list, or `REJECT`
   with every finding's stable `CONF-*` id, severity, `path:line` evidence, summary, and required
-  action. Prose never substitutes for the block.
+  action. Prose never substitutes for the block. **`severity` inside the block is the closed
+  enum `Critical | High | Medium | Low`** — report vocabulary such as `blocker`, `major` or
+  `minor` belongs in the prose above the block, never inside it, and is never aliased or
+  normalized on your behalf.
 
 ## Skills consumed
 

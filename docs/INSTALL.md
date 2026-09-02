@@ -244,7 +244,11 @@ This step makes Claude Code, running as your Windows user, actually pick up the 
 
 - Agent files (`agents/*.md`) are **copied** into `%USERPROFILE%\.claude\agents\` in this same step — per-file and additive, never a junction (see the agents exception under [Architecture](#architecture)).
 - Junctions do not require Administrator rights on Windows.
-- The `CLAUDE.md` file link **does** require Administrator rights or Developer Mode enabled (`Settings → Privacy & Security → For developers → Developer Mode`). If it fails, the script reports it and continues — everything else still gets installed/linked.
+- A **symbolic link** for `CLAUDE.md` does require Administrator rights or Developer Mode enabled (`Settings → Privacy & Security → For developers → Developer Mode`). Without either, the installer steps down instead of giving up (spec 039), warning at each downgrade:
+  1. **Symbolic link** — the intended result: one file, two names, always in step.
+  2. **Hard link** — no privilege needed, but both paths must be on the **same volume**, and it is *not* a symlink: if the central `CLAUDE.md` is ever replaced by rename (the usual atomic-write pattern) the two names stop being the same file and drift apart with no error.
+  3. **Copy** — a last-resort snapshot. It is **not kept in sync**: after editing the central `CLAUDE.md`, delete `%USERPROFILE%\.claude\CLAUDE.md` and re-run the installer.
+- The `CLAUDE.md` link is attempted **after** the personal layer is restored, because that import is what creates `<central-dir>\CLAUDE.md` on a first install (spec 039). The repo itself only ships `CLAUDE.md.example`.
 - If `~/.claude/skills` or `~/.claude/hooks` already exist as real directories with real content, the script backs them up to `skills.bak-<timestamp>` / `hooks.bak-<timestamp>` before replacing them — and only does so with `-Force`.
 - If they're already linked to the right place, this is a no-op.
 
@@ -437,3 +441,37 @@ This workflow includes **Graphify-aware skills** (`/context-manager`, `/graphify
 1. Run `scripts/setup-graphify.sh --project-dir <your project>` from this repo's checkout (add `--yes` for non-interactive install).
 2. The skills and hook automatically detect `.graphify/GRAPH_REPORT.md` and use it for impact analysis and graph-first context (fewer tokens per plan/review).
 3. Freshness is automatic: the `graphify-stale-reminder` hook (wired on `SessionStart` by both settings templates) refreshes the graph in a detached background run when it is missing or >7 days stale and the CLI is installed. Set `SDD_GRAPHIFY_AUTO=0` to disable auto-refresh (reminder-only).
+
+## Carrying your personal config to a new machine
+
+`install.sh` restores the framework. The **personal layer** — your `CLAUDE.md`, `settings.json`,
+custom agents and per-project memory — travels separately, because this repository is public.
+
+**On the old machine:**
+
+```bash
+bash scripts/export-personal-config.sh --dry-run   # see what would go, and what is refused
+bash scripts/export-personal-config.sh
+```
+
+It writes `~/.claude-config/personal/`. Commit and push that repository — **it must be private**:
+memory files routinely name clients, hosts and infrastructure. The export aborts if it finds a
+credential-shaped value, naming file and line; `--allow-suspicious` proceeds once you have looked.
+`settings.local.json` is never exported, under any name.
+
+**On the new machine:** nothing extra. `install.sh` imports the payload automatically when
+`<central-dir>/personal/` is present. `--no-personal` skips it.
+
+**The import never overwrites.** Per file:
+
+| Situation | What happens |
+|---|---|
+| The file is missing | Copied |
+| The file exists, identical | Skipped |
+| The file exists, different | **Left untouched.** The incoming version lands beside it as `<name>.incoming`, and the run reports a conflict for you to resolve |
+
+Two additive exceptions: a `MEMORY.md` index gains only the lines it lacks, under a dated marker;
+`settings.json` gains only top-level keys it lacks, and a key you already have always wins.
+
+Windows: `.\scripts\personal-config.ps1 -Mode Export|Import`, same semantics.
+

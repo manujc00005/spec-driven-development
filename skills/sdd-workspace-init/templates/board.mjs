@@ -192,6 +192,21 @@ function indexLookup(project, specDir) {
   return null;
 }
 
+/**
+ * Splits a `Blocked-by:` value into a real blocker and a note.
+ *
+ * The convention is that `—` means "no blocker". Specs also write `— (context)` to mean
+ * "not blocked, but worth knowing" — and treating anything other than a bare dash as a
+ * blocker understates real WIP. A dash followed by parentheses is a note, not a blocker.
+ */
+function splitBlocked(raw) {
+  const v = (raw || "").trim();
+  if (!v || v === "—" || v === "-") return { blockedBy: null, note: null };
+  const m = v.match(/^[—-]\s*\(?\s*(.*?)\s*\)?$/);
+  if (m) return { blockedBy: null, note: m[1] || null };
+  return { blockedBy: v, note: null };
+}
+
 function collect() {
   const specs = [];
   for (const project of PROJECTS) {
@@ -209,7 +224,7 @@ function collect() {
         project, name: e.name,
         num: (e.name.match(/^(\d+)/) || [])[1] || "—",
         raw, canon: v?.canon ?? null, bucket: v?.bucket ?? "unknown", legacy: !!v?.legacy,
-        blockedBy: head.blockedBy && head.blockedBy !== "—" ? head.blockedBy : null,
+        ...splitBlocked(head.blockedBy),
         parent: head.parent && head.parent !== "—" ? head.parent : null,
         tasks: parseTasks(join(featDir, e.name, "TASKS.md")),
         path: `${project}/specs/features/${e.name}`,
@@ -317,23 +332,46 @@ mkdirSync(dirname(OUT), { recursive: true });
 writeFileSync(OUT, md, "utf8");
 
 if (list) {
-  const plain = (s) => (s ?? "").replace(/\*\*/g, "").replace(/`/g, "");
+  const W = 78; // target width: anything wider wraps in a chat pane and loses alignment
+  const plain = (s) => (s ?? "").replace(/\*\*/g, "").replace(/`/g, "").replace(/\s+/g, " ").trim();
+
+  /** Truncate on a word boundary. Cutting mid-word reads as a bug, not as elision. */
+  const cut = (s, max) => {
+    const v = plain(s);
+    if (v.length <= max) return v;
+    const slice = v.slice(0, max - 1);
+    const sp = slice.lastIndexOf(" ");
+    return (sp > max * 0.55 ? slice.slice(0, sp) : slice).replace(/[ ,;:—-]+$/, "") + "…";
+  };
+
   const open = specs.filter((s) => s.bucket !== "closed");
   const movable = specs.filter((s) => s.bucket === "active" && !s.blockedBy);
-  const T = { active: "IN PROGRESS", review: "IN REVIEW", merged: "MERGED · verify in production",
-    ready: "READY", draft: "DRAFT · not authorized", blocked: "BLOCKED", parked: "PARKED", unknown: "UNRECOGNIZED" };
+
+  const T = {
+    active: "IN PROGRESS", review: "IN REVIEW", merged: "MERGED · not verified in production",
+    ready: "READY", draft: "DRAFT · not authorized", blocked: "BLOCKED",
+    parked: "PARKED", unknown: "UNRECOGNIZED",
+  };
+
   const L = ["", `  ${specs.length} specs · ${open.length} open · real WIP ${movable.length}`];
+
   for (const b of ["active", "review", "merged", "ready", "draft", "blocked", "parked", "unknown"]) {
     const rows = open.filter((s) => s.bucket === b);
     if (!rows.length) continue;
     L.push("", `  ${T[b]}`);
     for (const s of rows.sort((a, c) => a.project.localeCompare(c.project) || a.num.localeCompare(c.num))) {
-      const t = s.tasks ? `${s.tasks.done}/${s.tasks.total}` : "—";
-      L.push(`    ${s.project.padEnd(15)} ${s.num}  ${s.name.replace(/^\d+-/, "").padEnd(38).slice(0, 38)} ${t.padStart(7)}`);
-      if (s.blockedBy) L.push(`    ${" ".repeat(15)}      └─ ${plain(s.blockedBy).slice(0, 90)}`);
+      const t2 = s.tasks ? `${s.tasks.done}/${s.tasks.total}` : "—";
+      L.push(`    ${s.project.padEnd(14)} ${s.num}  ${cut(s.name.replace(/^\d+-/, ""), 30).padEnd(30)} ${t2.padStart(6)}`);
+      // A blocker stops the work; a note only informs. They must not look alike.
+      if (s.blockedBy) L.push(`      ⏸ ${cut(s.blockedBy, W - 8)}`);
+      else if (s.note) L.push(`      · ${cut(s.note, W - 8)}`);
     }
   }
-  if (w.length) { L.push("", "  WARNINGS"); for (const x of w) L.push(`    • ${plain(x).slice(0, 150)}`); }
+
+  if (w.length) {
+    L.push("", "  WARNINGS");
+    for (const x of w) L.push(`    • ${cut(x, W - 6)}`);
+  }
   L.push("");
   process.stdout.write(L.join("\n") + "\n");
 } else {

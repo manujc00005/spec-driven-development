@@ -121,8 +121,14 @@ param(
     [switch]$DryRun,
     [switch]$SkipLink,
     [switch]$LinkUserClaude,
+    [switch]$NoPersonal,
     [string]$ClaudeHome = "$env:USERPROFILE\.claude"
 )
+
+# The documented PowerShell default for -CentralDir. PowerShell cannot read a
+# param() default from inside param(), so the literal necessarily appears twice;
+# scripts/install.test.ps1 asserts the two agree so they cannot drift (D005).
+$DefaultCentralDir = "C:\ProgramData\ClaudeConfig"
 
 $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -892,6 +898,74 @@ Write-Action "scripts/setup-graphify.ps1 -ProjectDir <path> - it installs the CL
 Write-Action "confirmation, generates .graphify/, and scaffolds the curated docs."
 Write-Host ""
 
+# Spec 039 BUG-1: raised when the CLAUDE.md link could not be made because the
+# central file did not exist yet, and the personal import may still create it.
+$script:ClaudeMdPending = $false
+
+# Spec 039: links $ClaudeHome\CLAUDE.md to the central one. Returns $true when
+# the question is SETTLED (linked now, already correct, or deliberately left
+# alone) and $false ONLY when the central CLAUDE.md does not exist yet, which
+# is the one case the caller can fix by retrying after the personal import.
+#
+# BUG-3: on Windows a file symlink needs Administrator or Developer Mode. When
+# that is unavailable the ladder steps down symlink -> hardlink -> copy rather
+# than giving up, warning at each step about what the weaker mechanism costs.
+# There is no bash counterpart: `ln -s` needs no privilege (D004).
+function Invoke-ClaudeMdLink {
+    $claudeMdLink = Join-Path $ClaudeHome "CLAUDE.md"
+    $claudeMdTarget = Join-Path $CentralDir "CLAUDE.md"
+
+    if (-not (Test-Path $claudeMdTarget)) { return $false }
+
+    if (Test-Path $claudeMdLink) {
+        $item = Get-Item $claudeMdLink -Force
+        if ($item.LinkType -eq "SymbolicLink" -and $item.Target -eq $claudeMdTarget) {
+            Write-Action "CLAUDE.md already correctly linked -> $claudeMdTarget (no-op)"
+        } elseif ($item.LinkType -eq "HardLink" -and (@($item.Target) -contains $claudeMdTarget)) {
+            # Created by this script's own fallback on an earlier unprivileged
+            # run (D006) - report it as linked, not as something to resolve.
+            Write-Action "CLAUDE.md already hard-linked -> $claudeMdTarget (no-op)"
+            Write-Warn2 "  it is a HARD LINK, not a symlink: same content today, but if $claudeMdTarget is ever replaced by rename the two stop being the same file and drift apart with no error."
+        } else {
+            Write-Skip "$claudeMdLink already exists and is not linked to $claudeMdTarget  - resolve manually; this script will not touch an existing real CLAUDE.md without you reviewing it first"
+        }
+        return $true
+    }
+
+    if ($DryRun) {
+        Write-Action "[dry-run] would create file symlink $claudeMdLink -> $claudeMdTarget (falls back to hard link, then copy, without Administrator or Developer Mode)"
+        return $true
+    }
+
+    try {
+        New-Item -ItemType SymbolicLink -Path $claudeMdLink -Target $claudeMdTarget -ErrorAction Stop | Out-Null
+        Write-Action "CLAUDE.md linked -> $claudeMdTarget"
+        return $true
+    } catch {
+        Write-Warn2 "Could not create the CLAUDE.md symlink (needs Administrator or Developer Mode). Error: $($_.Exception.Message)"
+    }
+
+    try {
+        New-Item -ItemType HardLink -Path $claudeMdLink -Target $claudeMdTarget -ErrorAction Stop | Out-Null
+        Write-Warn2 "Fell back to a HARD LINK: $claudeMdLink -> $claudeMdTarget"
+        Write-Warn2 "  edits through either path are visible through both TODAY, but this is not a symlink: if the central file is ever replaced by rename (the usual atomic-write pattern) the two names stop being one file and drift apart silently."
+        Write-Warn2 "  to get a real symlink, enable Developer Mode (Settings > Privacy & Security > For developers) or run elevated, delete $claudeMdLink, and re-run this installer."
+        return $true
+    } catch {
+        Write-Warn2 "Could not create a hard link either (it requires both paths on the SAME volume). Error: $($_.Exception.Message)"
+    }
+
+    try {
+        Copy-Item -LiteralPath $claudeMdTarget -Destination $claudeMdLink -Force -ErrorAction Stop
+        Write-Warn2 "Fell back to a COPY: $claudeMdLink is a snapshot of $claudeMdTarget."
+        Write-Warn2 "  it is NOT kept in sync - editing one does nothing to the other. After changing the central CLAUDE.md, delete $claudeMdLink and re-run this installer."
+        return $true
+    } catch {
+        Write-Warn2 "Could not copy $claudeMdTarget to $claudeMdLink either  - $ClaudeHome has no CLAUDE.md, so your global instructions will not load. Error: $($_.Exception.Message)"
+        return $true
+    }
+}
+
 if ($SkipLink) {
     Write-Action "Skipping ~/.claude linking (-SkipLink)."
 } elseif (-not $LinkUserClaude) {
@@ -918,29 +992,12 @@ if ($SkipLink) {
         Copy-FileSafely $srcAgent (Join-Path (Join-Path $ClaudeHome "agents") "$agentName.md") "~/.claude/agents/$agentName.md" (Join-Path (Join-Path $ClaudeHome "agents") "$agentName.md.bak-$Timestamp")
     }
 
-    $claudeMdLink = Join-Path $ClaudeHome "CLAUDE.md"
-    $claudeMdTarget = Join-Path $CentralDir "CLAUDE.md"
-    if (-not (Test-Path $claudeMdTarget)) {
-        Write-Skip "CLAUDE.md link skipped  - $claudeMdTarget does not exist yet (this repo only ships CLAUDE.md.example)"
-    } elseif (Test-Path $claudeMdLink) {
-        $item = Get-Item $claudeMdLink -Force
-        if ($item.LinkType -eq "SymbolicLink" -and $item.Target -eq $claudeMdTarget) {
-            Write-Action "CLAUDE.md already correctly linked -> $claudeMdTarget (no-op)"
-        } else {
-            Write-Skip "$claudeMdLink already exists and is not linked to $claudeMdTarget  - resolve manually; this script will not touch an existing real CLAUDE.md without you reviewing it first"
-        }
-    } else {
-        if ($DryRun) {
-            Write-Action "[dry-run] would create file symlink $claudeMdLink -> $claudeMdTarget (requires Administrator or Developer Mode)"
-        } else {
-            try {
-                New-Item -ItemType SymbolicLink -Path $claudeMdLink -Target $claudeMdTarget -ErrorAction Stop | Out-Null
-                Write-Action "CLAUDE.md linked -> $claudeMdTarget"
-            } catch {
-                Write-Warn2 "Could not create the CLAUDE.md symlink (needs Administrator or Developer Mode). Skipped. Error: $($_.Exception.Message)"
-            }
-        }
-    }
+    # Spec 039 BUG-1: on a FIRST install the central CLAUDE.md does not exist
+    # yet - the personal layer (imported near the end of this script) is what
+    # creates it. A pending result here is retried after that import; the
+    # "does not exist yet" message is deferred to the retry so the transcript
+    # never says "skipped" and then "linked" about the same file (D002).
+    $script:ClaudeMdPending = -not (Invoke-ClaudeMdLink)
 }
 
 Write-Host ""
@@ -1102,7 +1159,11 @@ function Report-UnrefreshedProfiles {
         $cmd = "$cmd -Profile $name"
     }
     if ($LinkUserClaude) { $cmd = "$cmd -LinkUserClaude" }
-    if ($CentralDir -ne (Join-Path $HOME ".claude-config")) { $cmd = "$cmd -CentralDir $CentralDir" }
+    # Spec 039 BUG-2a: this compared against the BASH default ($HOME/.claude-config),
+    # which is backwards in both directions here - an install at the PowerShell
+    # default got a redundant -CentralDir, and one at $HOME\.claude-config lost the
+    # flag exactly when the command is wrong without it.
+    if ($CentralDir -ne $DefaultCentralDir) { $cmd = "$cmd -CentralDir $CentralDir" }
     Write-Warn2 "  refresh them with:  $cmd"
 }
 
@@ -1110,6 +1171,28 @@ if ($DryRun) {
     Write-Action "[dry-run] would write install manifest $(Join-Path $CentralDir '.sdd-install.json')"
 } else {
     Write-InstallManifest
+}
+
+# --- Personal layer (spec 038) ---------------------------------------------
+# Restores CLAUDE.md, settings.json, agents and memory from <central-dir>\personal\.
+# ADDITIVE ONLY: never overwrites an existing file. Absent payload -> silent no-op.
+if (-not $NoPersonal -and (Test-Path -LiteralPath (Join-Path $CentralDir 'personal'))) {
+    if ($DryRun) {
+        Write-Action "[dry-run] would import the personal layer from $CentralDir\personal"
+    } else {
+        Write-Action "Restoring personal layer from $CentralDir\personal ..."
+        & (Join-Path $PSScriptRoot 'scripts\personal-config.ps1') -Mode Import `
+            -CentralDir $CentralDir -ClaudeHome $ClaudeHome
+    }
+}
+
+# Spec 039 BUG-1: the personal import above is what creates <central>\CLAUDE.md
+# on a first install, so the link attempted earlier must be retried here. Only
+# now, if the file still is not there, is the skip reported (D002).
+if ($script:ClaudeMdPending) {
+    if (-not (Invoke-ClaudeMdLink)) {
+        Write-Skip "CLAUDE.md link skipped  - $(Join-Path $CentralDir 'CLAUDE.md') does not exist yet (this repo only ships CLAUDE.md.example)"
+    }
 }
 
 Write-Action "Done."

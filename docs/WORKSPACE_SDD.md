@@ -1,7 +1,12 @@
 # Workspace SDD
 
 Spec-Driven Development scaled from one project to a **folder of related projects**. Shipped by
-this repo since `specs/features/025-workspace-sdd-graphify-onboarding/`.
+this repo since `specs/features/025-workspace-sdd-graphify-onboarding/`, extended to an end-to-end
+setup flow with generated state in `specs/features/037-workspace-init/`.
+
+**Entry point: [`/sdd-workspace-init`](#setting-up-a-workspace).** It runs the whole sequence —
+detect, map, install the state machinery, link the children. `/sdd-workspace-onboarding` remains
+available on its own when only the map is wanted.
 
 Per-project SDD answers *what are we building here and why*. Workspace SDD answers the question no
 single project can: **how do these projects depend on each other, and what breaks if I change
@@ -68,6 +73,14 @@ inside a project.
 ├── DEPENDENCY_GRAPH.md           # project → project edges, each with evidence and confidence
 ├── INTEGRATION_CONTRACTS.md      # REST, events, webhooks, shared packages, env vars, auth, data ownership
 ├── SHARED_DECISIONS.md           # workspace-wide decisions (seeded with D001–D010)
+├── HOW-TO-WORK.md                # the working guide: what to read first, the cross-repo protocol
+├── BOARD.md                      # GENERATED — never edited. What is active, blocked, and why
+├── BACKLOG.md                    # what no script can close: person-actions only
+├── workspace.json                # the confirmed project list (a decision, not an inference)
+├── scripts/
+│   ├── board.mjs                 # generates BOARD.md · --list for humans · --check for CI
+│   ├── drift.mjs                 # do the documents still match the files they cite?
+│   └── link-workspace.mjs        # writes the SDD-WORKSPACE block into each child project
 ├── guardrails/
 │   └── WORKSPACE_GUARDRAILS.md   # prohibitions and stop conditions
 └── specs/
@@ -83,8 +96,14 @@ inside a project.
             └── VALIDATION.md      # per-project, cross-project and contract validation
 ```
 
-Templates for every one of these files ship in
-[`_templates/`](_templates/), as the ten `WORKSPACE_*.md` files.
+Templates for the map documents ship in [`_templates/`](_templates/) as the ten `WORKSPACE_*.md`
+files; the scripts, the working guide, the two workspace skills (`/sdd-status`,
+`/sdd-workspace-link`) and the `SessionStart` hooks ship in
+[`../skills/sdd-workspace-init/templates/`](../skills/sdd-workspace-init/templates/).
+
+Two of these files are **generated and must not be hand-edited**: `BOARD.md` carries a header
+saying so. The rest is written by people on purpose — rules, decisions and evidence are exactly
+the things a script cannot derive.
 
 **This does not replace per-project specs.** A change confined to one project keeps using that
 project's own `specs/features/**`. The rule is mechanical: more than one project in the impact set
@@ -162,6 +181,103 @@ it when it is not.
 
 The code is always the source of truth. `GRAPH_REPORT.md` and `.sdd-workspace/` narrow where to
 look; where either disagrees with the code, the code wins and the artifact is corrected.
+
+## Setting up a workspace
+
+`/sdd-workspace-init` runs seven phases. Each is skippable when its output already exists, and
+**nothing is ever overwritten** — an existing file is reported as kept, not replaced. Re-running
+the skill fills gaps; it never undoes local adaptation.
+
+| Phase | What happens | Gate |
+|---|---|---|
+| 0 · Preconditions | Confirm the root holds ≥2 projects; announce refresh mode if `.sdd-workspace/` exists | — |
+| 1 · Detect | Find candidates by manifest markers, **present the list and ask** | Explicit confirmation. Which repos participate is a decision, not an inference |
+| 2 · Graphify | `graphify update` per project — local AST extraction, **no token cost** | Consent; a missing Graphify never blocks (records *partial* completeness) |
+| 3 · Map | Delegates to `/sdd-workspace-onboarding` — projects, dependencies, contracts, decisions, guardrails | Its own stop conditions apply |
+| 4 · Machinery | Copy the state scripts, the working guide, two workspace skills, the hooks | Copy-if-absent |
+| 5 · Link | Write the delimited block into each child's instruction file | Idempotent |
+| 6 · Verify | Run all three scripts; report what was written, what was kept, what needs a human | — |
+
+The result is a workspace where **any** later session — root or child — can answer *what is active,
+why, and what may I touch* from three files, without reading a repository.
+
+## Generated state
+
+The layer's organizing rule: **state is generated; rules are written.**
+
+Anything a script can compute by reading files is never typed by hand. This is not a style
+preference — it comes from a measured failure mode. A hand-maintained "active work" register in a
+real workspace spent days declaring open two work streams that had closed, under an identifier
+that existed in no other file. It was not neglect: a register that must be updated manually
+*will* drift, and a governance document that drifts issues false instructions with full authority.
+
+Three scripts, all deterministic and free of model calls:
+
+**`board.mjs`** walks every project's `specs/features/*/` and writes `BOARD.md`: what is in
+progress, in review, merged, ready, draft, blocked or parked — with each spec's blocker and task
+count. It deliberately parses the header formats that already exist in the wild (canonical block,
+`## Status` section, header line, YAML frontmatter, the repo's own index) rather than demanding a
+migration, so adopting it costs nothing on day one.
+
+It raises four warnings, each of which is a finding rather than noise:
+
+- **unblocked WIP > 1** — measured over `In Progress` specs *without* a declared blocker, because
+  a spec waiting on someone else does not compete for attention. Without that distinction, a
+  "one active item" rule forces people to misreport status in order to comply.
+- **closed with open tasks** — a spec cannot be finished while carrying unchecked work.
+- **`Merged` with nothing pending** — it should be `Live`.
+- **unrecognized status** — the spec header is unparseable; the fix belongs in the spec.
+
+**`drift.mjs`** compares what governance documents *claim* against the files that back them:
+version numbers, vendored artifacts, integrity hashes. Contracts are workspace-specific, so it
+ships as a declarative skeleton with a worked example; with no contracts declared it exits 0 and
+says so, because "none declared yet" is a fact worth printing rather than an error.
+
+**`link-workspace.mjs`** writes the delimited `SDD-WORKSPACE` block into each child project's
+instruction file — which workspace it belongs to, what to read first, and the cross-repo rules.
+The text is edited in the script, never in the repositories, and the block is replaced in place on
+re-run. Nothing outside its delimiters is touched.
+
+`BOARD.md` carries a header stating it is generated. If a line in it is false, the defect is in
+the source spec or in the script — editing the board reintroduces exactly the failure mode it
+exists to remove.
+
+## Closure: `Merged` is not `Live`
+
+Workspace SDD splits the final state in two, because one word was carrying three meanings:
+
+| State | Means | Requires |
+|---|---|---|
+| `Merged` | The code is in `main` and the gates passed | **Zero** unchecked tasks. Work that will not be done is marked deferred, with destination and date |
+| `Live` | The behaviour is active in production **and someone verified it** | A date and pasted evidence — a command and its output |
+
+`Merged` is a legitimate resting state. What is not legitimate is calling it *done* and looking
+away: that is how a repository accumulates features that are merged, released, and never switched
+on — including, in the workspace this pattern came from, a documented kill switch whose stated
+cut-off time turned out to be off by an order of magnitude when someone finally measured it.
+
+## Parent spec or sibling specs?
+
+Not every cross-project change deserves a workspace-level spec. One question decides it, answered
+during impact analysis, before anything is opened:
+
+> **Does it move a shared contract, or does the order between repositories matter?**
+
+**No** — the common case. Write **sibling specs**: one per repository, each with its own local
+numbering, linked by a `Blocked-by: <repo>/spec#NNN` field. No parent, no ceremony.
+
+**Yes** — write a **parent spec** under `.sdd-workspace/specs/features/`, holding `SPEC.md` (the
+problem *between* projects) and `IMPACT_MAP.md`. Children live in their repositories and carry
+`Parent: workspace/NNN`. The parent never contains code tasks.
+
+The reason a single global spec with per-repo subtasks is *not* offered: independent repositories
+have independent histories, pipelines and gates, so **no atomic merge exists across them**. A spec
+spanning six repos can never fully close — it ends up permanently half-finished, which is exactly
+the state such specs are found in.
+
+Two ordering rules follow. **The contract owner goes first, always**: the contract is updated and
+documented before any consumer implements against it. And **the parent closes when every child is
+`Live`**, not when they are merged.
 
 ## Cross-project feature workflow
 

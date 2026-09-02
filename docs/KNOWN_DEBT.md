@@ -21,6 +21,8 @@ claims the repo currently makes that nobody has checked.
 | DEBT-006 | Four `plannedHooks` remain planned and unowned | spec 017 | Open |
 | DEBT-007 | `install.ps1` has never been run on real Windows outside CI | spec 016 | Open |
 | DEBT-008 | The scope-keeper hook has never been observed firing in a live session | spec 036 | Open |
+| DEBT-009 | The runner has never executed against a real provider, or from `cron` | spec 040 | Open |
+| DEBT-010 | The adopted loop has never reached a human-gated `PAUSED` outside a fixture | spec 041 | Open (non-blocking) |
 
 ---
 
@@ -49,11 +51,31 @@ this register is renamed or moved, fix the message and that assertion in the sam
 (including `--model` versus `-m`), record it in spec 028's `DECISIONS.md` as D008, and correct the
 provider table row if they differ. This was task T013.
 
+> **2026-09-02 — the premise is dead; two of the three closing steps are done.** The Codex CLI **is**
+> installed on the maintainer's machine (`codex-cli 0.152.1`, `~/.local/bin/codex`), so every
+> sentence above claiming it is not is superseded. Real `codex exec` runs were made during spec 041's
+> T013 and are recorded in
+> [041/CALIBRATION.md](../specs/features/041-autonomous-adopt-in-flight-feature/CALIBRATION.md).
+> Against `codex exec --help` on that version, all three required flags exist with the spellings
+> `PROVIDER_TABLE` uses: `--ignore-user-config`, `--ephemeral`, and `--model` (with `-m` as its short
+> alias, so the long form the table pins is correct). **Nothing in the table needs correcting.**
+> What is still owed before flipping the row's fourth field to `verified` belongs to spec 028, not to
+> 041: a recorded run of `scripts/skill-eval.sh` itself with that runner, and the D008 entry in spec
+> 028's `DECISIONS.md`. Flipping the field from another feature's session would be the silent
+> cross-spec edit this register exists to prevent.
+
 Then flip the row's fourth field from `unverified` to `verified` in `PROVIDER_TABLE`
 ([skill-eval.sh](../scripts/skill-eval.sh)). That field is what drives the caveat in the refusal
 message, so the hedge disappears on its own — and the test
 `claude refusal does not carry the unverified caveat` proves the field is actually load-bearing
 rather than decorative.
+
+**Also load-bearing for spec 040.** The runner's `codex` backend is implemented but refuses to
+run without `--allow-unverified-backend`, and its refusal message names this entry by ID. Spec 040
+D004 accepted that gate rather than shipping a prose-only Codex path — which is how DEBT-002 came
+to exist — so this debt now blocks two features, not one. The runner's test
+`test_the_flags_are_still_unverified` fails if `FLAGS_VERIFIED` is flipped without a recorded real
+run.
 
 **Related:** [[DEBT-002]] — same root cause, different surface. Both close the day someone
 installs the CLI.
@@ -71,8 +93,24 @@ repo is not currently overclaiming — but the label has to stay until someone c
 **Cost if wrong.** `adapters/codex/` ships prompts to a location the CLI may not read. A user
 following `adapters/codex/README.md` gets an adapter that appears installed and does nothing.
 
+> **2026-09-02 — partially advanced, not closed.** The CLI is installed (see [[DEBT-001]]), and
+> `$CODEX_HOME/prompts` — the directory `adapters/codex/install-codex.sh` targets — exists at
+> `~/.codex/prompts` and already holds eight SDD prompt files, so the *write* half of the assumption
+> is real on this version. Three caveats keep this open. First, whether the CLI actually **reads**
+> that directory could not be shown here: custom prompts surface as slash commands in the interactive
+> TUI, and `codex exec` offers no way to demonstrate it non-interactively. Second, the installed
+> copies have drifted from source — `sdd-spec-implement.md`, `sdd-spec-plan.md`, `sdd-spec-analyze.md`
+> and `README.md` differ, and `sdd-workspace-onboarding.md` was never installed — so an operator
+> reading `adapters/codex/README.md` today gets a partial adapter. Third, `config.example.toml` is
+> still unverified against this version's real key names. Closing this needs an interactive Codex
+> session that invokes one installed prompt by name, plus a re-run of the installer.
+
 **What closes it.** Verify against an installed Codex CLI before advertising the adapter as
 verified.
+
+**Also load-bearing for spec 040**, alongside [[DEBT-001]]: the runner's Codex backend cites both
+IDs in the message it refuses with, and spec 040's SPEC forbids claiming multi-backend parity
+anywhere until a real `codex exec` run records the accepted flag spellings.
 
 **Recorded here** because it is the same missing prerequisite as DEBT-001 and was, until now,
 visible only inside spec 019's open questions — where nothing joined it to the identical gap in
@@ -195,3 +233,96 @@ appears; make a second edit, confirm silence. Tick T010 in spec 036 with what wa
 
 **Risk while open:** the wiring could be wrong in a way the tests cannot see — they invoke the hook
 directly rather than through the harness. The hook itself is proven; the delivery path is not.
+
+---
+
+## DEBT-009 — The runner has never executed against a real provider, or from cron
+
+**Origin:** spec 040 (`agent-sdk-runner`), AC-001 and AC-002 downgraded by D030 on 2026-08-31.
+Tasks T018 and T022 are recorded `NOT OBSERVED`.
+
+**The unverified claim.** `runner/` is presented as a phase-2 executor that runs the SDD autonomous
+loop unattended — from CI, from `cron`, overnight. **Every line of that has been demonstrated
+against a deterministic stub backend and nothing else.** Four things nobody has seen work:
+
+1. an `agents/*.md` prompt reaching a real provider through the Claude Agent SDK;
+2. an owning lifecycle skill (`/spec-review`, `/spec-close`, `/pr-description`) actually executing
+   when the runner delegates it;
+3. `PR_DESCRIPTION.md` appearing on disk;
+4. a real `codex exec` invocation — which is [[DEBT-001]] and [[DEBT-002]] seen from this feature.
+
+The cause is environmental, not deferred effort: `import claude_agent_sdk` raises
+`ModuleNotFoundError` and `which codex` finds nothing on the maintainer's machine, both verified
+2026-08-31.
+
+**Narrowed 2026-08-31 (spec 040 D031).** The CLI is now observed converging end to end — a real
+subprocess, stdin closed, two tasks, exit 0, artifacts present, no runner-created commit — against
+a **scripted** stub backend. What that removes from this debt is the question "does the command-line
+entry point work at all". What it leaves untouched is every one of the four items above.
+
+**Cost if wrong.** The failure mode is a first real run that does not work, not a silent
+corruption: the entry gate refuses before touching anything, and every ambiguous path in the runner
+fails closed. What is genuinely unknown is the *shape* of the integration — whether an
+`agents/*.md` file is a usable system prompt for an SDK session, whether a delegated session can
+run a Claude Code skill at all, and whether the lifecycle steps return the canonical verdict block
+the runner requires. If the answer to the second is no, the finalization design needs rethinking,
+not patching. Spec 040's PLAN carries this as R10 and its Assumptions already state that a
+prompt-shape mismatch is a finding, **not** a licence to fork the agent files.
+
+**What this debt is not.** It is not "the runner is untested". 176 tests cover the fail-closed
+parser, the counter arithmetic, the hard budget, idempotent re-entry, the repair cycle and the
+freeze/closure audit, and each control was verified by reverting it and watching the suite go red.
+The gap is the seam between that machinery and a real provider.
+
+**What closes it.** Install `claude-agent-sdk`, run spec 040's T018 (the two E2E scenarios, one
+from a non-interactive shell and one from `cron`) and T022 (one overnight run on a real `Ready`
+spec, with its `ORCHESTRATION.md` and `run.jsonl` read start to finish by hand). Then restore the
+two downgraded clauses in spec 040's `SPEC.md` and close this entry. Until then the spec may reach
+`In Review` and `Implemented`; ~~**it may not reach `Done`**~~.
+**Superseded 2026-09-02 (spec 040's record, corrected while spec 041 was editing this file):**
+spec 040 closed `Done` on 2026-09-01 as EXPERIMENTAL, with T018 and T022 moved out of scope by
+its D034, so that clause read as a live gate the repo contradicts. The debt itself is unchanged
+and still open.
+
+**Related:** [[DEBT-001]] and [[DEBT-002]] — the Codex half of the same gap, and both are now
+load-bearing for spec 040 as well.
+
+---
+
+## DEBT-010 — The adopted loop has never reached a human-gated `PAUSED` outside a fixture
+
+**Origin:** spec 041 (`autonomous-adopt-in-flight-feature`), T014's residual, recorded by D011 on
+2026-09-02.
+
+**The unverified claim.** That a real feature's human-only task — a visual check, a real-world run —
+surfaces as a human-gated escalation and pauses the adopted run with the answers needed, rather than
+failing it. Spec 041's T028 observes exactly that on a **fixture**: a worker returned `BLOCKED` with
+its question verbatim, the classifier called it human-gated, the independent task continued, and the
+run ended `PAUSED` with its remediation. What has never been seen is the same on a real repository
+with a real feature's tasks.
+
+**Why T014 did not close it.** T014 was written to see this on `proyecto-cumbre` feature 030 — the
+case that motivated the whole feature. The replay ran, found two real defects (fixed as T029/T030),
+and then could go no further: 030 had moved to `In Review`, which D002 excludes from adoption on
+purpose. The originating case is permanently past the window adoption serves, so that task's
+criterion is dead rather than pending, and the residual moved here.
+
+**Cost if wrong.** Contained. The escalation classifier and the PAUSED path are spec 031 code that
+this feature did not touch, and the fixture run exercises them end to end; what is unverified is only
+their behavior against the untidier shape of a real feature's task list. The failure mode would be a
+run that aborts where it should pause, which is visible and recoverable, not a silent wrong answer.
+
+**What closes it.** Adopt any real in-flight feature that has at least one human-only task, and
+record the run's `ORCHESTRATION.md` showing a `human-gated` escalation in `waiting` and `Run result:
+PAUSED`. The next feature the maintainer starts by hand is the natural candidate — adoption pays
+there, not on a feature already past `In Review`.
+
+**Blocking status.** Spec 041's D011 first made this a gate on that feature's `Done`. D012 lifted
+it on 2026-09-02: the mechanism is proven end to end by T028's fixture run, what is missing is
+observation on a real feature; the escalation and `PAUSED` code belongs to spec 031 and was not
+touched; and the runner is experimental and `stub`-only, so the failure mode is a visible,
+recoverable abort rather than a silent wrong answer. The entry stays open with its closing condition
+unchanged — it is carried, not dismissed.
+
+**Related:** [[DEBT-009]] — both are about the loop never having met reality; that one is the runner
+against a provider, this one is the protocol against a real feature's human tasks.

@@ -52,6 +52,9 @@ any assumptions.
 Task completed · AC covered · spec status (unchanged / → In Progress) · files changed · tests
 added/updated · tests run + result · decisions added · remaining risks. Recommend the next step:
 implement the next task, or **review** when all tasks are checked.
+When tasks remain and the maintainer wants the rest unattended: commit the work so far on a
+feature branch, then `sdd-orchestrate --autonomous <path> --adopt` (spec 041; sequential on Codex,
+see ../PARITY.md).
 
 ## Guardrails (conventions on Codex — see ../AGENTS.md)
 

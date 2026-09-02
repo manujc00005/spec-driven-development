@@ -347,7 +347,7 @@ Each step is a real skill invoked as a slash command. The core lifecycle:
 | `/spec-close` | Resolve open questions, confirm acceptance-criteria coverage, close the feature | Implementation summary |
 | `/pr-description` | Generate the pull request description from the diff and the spec | PR text |
 
-Specialized reviews are triggered by what the spec declares, not run blindly: `/security-review`, `/database-review`, `/api-review`, `/backend-review`, `/frontend-review`, `/performance-review`, `/seo-review`, `/privacy-compliance-review`. Delivery reviews are the exception — `/deployment-review`, `/container-review` and `/pipeline-review` are triggered by **artifact presence**, not by spec wording, and `/release-readiness` is a release gate run once rather than per diff (see [Profiles](#️-profiles)). Supporting commands cover the rest of the lifecycle: `/sdd-guardrails` (consistency gate), `/spec-status`, `/spec-update`, `/spec-resume`, `/review-all`, `/architect-review`, `/test-engineer`, `/debugger`, `/prototype`, `/decision-mapping`, `/refactor-review`, `/handoff`, `/context-manager`, `/graphify-context`, `/sdd-onboard`, plus the stack-specific reviewers listed under [Profiles](#️-profiles). Every command in this README exists as a `SKILL.md` file in [`skills/`](skills/) — every one of them; none are aspirational.
+Specialized reviews are triggered by what the spec declares, not run blindly: `/security-review`, `/database-review`, `/api-review`, `/backend-review`, `/frontend-review`, `/performance-review`, `/seo-review`, `/privacy-compliance-review`. Delivery reviews are the exception — `/deployment-review`, `/container-review` and `/pipeline-review` are triggered by **artifact presence**, not by spec wording, and `/release-readiness` is a release gate run once rather than per diff (see [Profiles](#️-profiles)). Supporting commands cover the rest of the lifecycle: `/sdd-guardrails` (consistency gate), `/spec-status`, `/spec-update`, `/spec-resume`, `/review-all`, `/architect-review`, `/test-engineer`, `/debugger`, `/prototype`, `/decision-mapping`, `/refactor-review`, `/handoff`, `/context-manager`, `/graphify-context`, `/sdd-onboard`, `/sdd-workspace-init`, plus the stack-specific reviewers listed under [Profiles](#️-profiles). Every command in this README exists as a `SKILL.md` file in [`skills/`](skills/) — every one of them; none are aspirational.
 
 #### Mindset skills
 
@@ -393,13 +393,27 @@ Not every change goes through the full ceremony: typo fixes, small styling tweak
 
 ## 🌐 Workspace SDD
 
-SDD scales from one project to a **folder of related projects** — backend, widget, shared SDK, plugin, admin frontend — where a single feature routinely lands in several of them at once. `/sdd-workspace-onboarding` detects the projects in a workspace folder and writes a `.sdd-workspace/` layer recording what each project owns, how they depend on each other, and which contracts bind them. Every relationship carries evidence and a confidence marker, so an inference is never presented as a fact.
+SDD scales from one project to a **folder of related projects** — backend, widget, shared SDK, admin frontend — where a single feature routinely lands in several of them at once. **`/sdd-workspace-init`** takes such a folder to a fully-wired state in one pass: detect the projects (and confirm the list — which repos participate is a decision, not an inference), refresh each project's Graphify graph, write the `.sdd-workspace/` map, install the state machinery, and link every child project back to the workspace layer.
 
-Token cost is the reason the layer exists: **Graphify runs per project** (optional, as always), and the workspace layer consumes each project's bounded `GRAPH_REPORT.md` instead of reading repositories in full — never the raw graph file. Every cross-project feature then starts with an `IMPACT_MAP.md`, and no project outside that map may be modified.
+**The principle the layer is built on: state is generated; rules are written.** Documentation that *copies* state — versions, spec counts, what is in progress — goes stale within days and then misleads with the authority of a governance document. So the map records structure and evidence, and three deterministic scripts (no model calls, same tree → same output) derive the rest:
+
+| Script | Answers | Guarantee |
+|---|---|---|
+| `board.mjs` | What is active across every project, what is blocked and by whom | Derived from spec headers — it can only be wrong if a spec is wrong |
+| `drift.mjs` | Do the governance documents still match the files they cite? | Compares claims against the data files that own them |
+| `link-workspace.mjs` | Does each child project know it belongs to a workspace? | Idempotent delimited block in each repo's instruction file |
+
+That last one closes a gap worth naming, because it is invisible until it bites: the map alone lives at the workspace root, while most sessions open *inside* a repository — where none of it is visible. Linking is what makes the governance layer reachable from where work actually happens.
+
+**Two rules carry the cross-project workflow.** A feature gets a workspace-level parent spec **only if it moves a shared contract or requires ordering between repos**; otherwise it is sibling specs in each repo, linked by a `Blocked-by:` field, with no ceremony. And closure splits in two: `Merged` means the code is in `main` with every task accounted for; `Live` means someone verified the behaviour in production and pasted the evidence. Conflating them is how a repository accumulates features that are "done" but never switched on.
+
+Token cost is why the layer exists at all: **Graphify runs per project**, and the workspace consumes each project's bounded `GRAPH_REPORT.md` — never the raw graph file, never a repository in full. Every cross-project feature starts with an `IMPACT_MAP.md`, and no project outside that map may be modified.
 
 > Graphify maps code-level dependencies. Workspace SDD maps project-level dependencies.
 
-Full guide: [`docs/WORKSPACE_SDD.md`](docs/WORKSPACE_SDD.md) · templates in [`docs/_templates/`](docs/_templates/).
+The machinery shipped here is an extraction, not a design exercise: it was built, debugged and left running in a six-project workspace before being generalized into templates. `/sdd-workspace-onboarding` remains available on its own for the mapping phase alone.
+
+Full guide: [`docs/WORKSPACE_SDD.md`](docs/WORKSPACE_SDD.md) · templates in [`docs/_templates/`](docs/_templates/) and [`skills/sdd-workspace-init/templates/`](skills/sdd-workspace-init/templates/).
 
 ---
 

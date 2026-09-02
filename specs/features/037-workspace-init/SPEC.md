@@ -6,10 +6,38 @@ Estado: Merged
 Blocked-by: —
 Parent: —
 
-> `Merged` 2026-08-23 — implemented, template scripts syntax-checked and the board template
-> verified against a real six-project workspace (identical output to that workspace's tuned
-> copy: 105 specs, same rows, same real-WIP figure). Becomes `Live` when `/sdd-workspace-init`
-> runs end-to-end on a fresh workspace.
+> `Merged` 2026-08-23, **and it should not have been on that date**. Corrected 2026-08-24 —
+> see *Shipped half-integrated* below. Becomes `Live` when `/sdd-workspace-init` runs end-to-end
+> on a fresh workspace.
+>
+> Verified at close: template scripts syntax-checked, and the board template run against a real
+> six-project workspace producing output identical to that workspace's tuned copy (105 specs,
+> same rows, same real-WIP figure).
+
+### Shipped half-integrated — recorded 2026-08-24
+
+This spec was marked `Merged` while `scripts/check-consistency.sh` was **red**, which its own
+definition forbids: `Merged` requires the gates to have passed. They were never run before the
+commit. A follow-up commit (`fecc644`) had to restore the baseline, fixing **nine errors** in this
+skill's own `SKILL.md` — none of them parser bugs:
+
+- `outputs` was a YAML block list where 71 of 72 skills use a flow list, and one item contained a
+  comma inside braces that a flow list would have split.
+- Six required contract keys were missing: `writes_code`, `writes_specs`, `analysis_only`,
+  `primary_agent`, `profile_scope`, `provider_specific`.
+- `composes` is not in the schema.
+- `category: workspace-lifecycle` is not in the enum (its sibling uses `lifecycle`).
+- The description ran 662 characters against a 400 cap.
+
+**The cost was not cosmetic.** `check-consistency.sh` is entry-gate condition 6 of
+`/sdd-orchestrate`, so while it was red **no `--autonomous` run could start anywhere in this
+repo**, for any spec.
+
+**Root cause: AC-01 was the wrong criterion.** It verified that the *templates* parsed
+(`node --check`, JSON valid) and said nothing about the skill's own contract — so it passed while
+the artifact it shipped was invalid. A criterion that green-lights a broken deliverable is a
+defect in the criterion, not an oversight in the execution. AC-01 is corrected below and AC-07
+added; the durable fix is the pre-push gate (T008) so the suite cannot be skipped by forgetting.
 >
 > **Deliberately absent artifacts:** no PLAN.md (the design was settled in the field: every
 > template here is an extraction of machinery already built, debugged and in daily use in
@@ -53,7 +81,9 @@ overwrites.
 
 - **AC-01** `skills/sdd-workspace-init/` ships SKILL.md + templates: `board.mjs`, `drift.mjs`,
   `link-workspace.mjs`, `HOW-TO-WORK.md`, `settings-hooks.json`, `workspace-skills/{sdd-status,
-  sdd-workspace-link}/SKILL.md`. All `.mjs` pass `node --check`; the JSON parses.
+  sdd-workspace-link}/SKILL.md`. All `.mjs` pass `node --check`; the JSON parses. **And
+  `bash scripts/check-consistency.sh` exits 0** — the templates parsing says nothing about whether
+  the skill itself satisfies the contract schema, which is precisely how this shipped broken.
 - **AC-02** Template scripts hardcode no project list: `.sdd-workspace/workspace.json` if present,
   else marker-based auto-detection. `SDD_WS_ROOT` overrides root for testing.
 - **AC-03** The board template, pointed at a real multi-project workspace, produces the same spec
@@ -63,3 +93,6 @@ overwrites.
 - **AC-05** Onboarding's SKILL.md cross-references init as the end-to-end flow.
 - **AC-06** SKILL.md forbids: overwriting existing files, git operations, whole-project reads,
   `graph.json` loads, unprompted installs. Never-overwrite is stated per phase.
+- **AC-07** A local pre-push gate runs `check-consistency.sh` and the repo's test suite, so the
+  baseline cannot go red on `main` by forgetting to run it. CI already ran it — but only on
+  push-to-`main`, which is the worst place to discover the break.

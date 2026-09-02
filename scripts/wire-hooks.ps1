@@ -19,7 +19,8 @@ Settings template to merge (default: first of $CentralDir\settings.template.json
 <repo>\settings.template.json).
 
 .PARAMETER CentralDir
-Central SDD config directory (default: C:\ProgramData\ClaudeConfig).
+Central SDD config directory (default: C:\ProgramData\ClaudeConfig, falling
+back to $HOME\.claude-config when that default does not exist).
 
 .PARAMETER DryRun
 Preview the merge without writing anything.
@@ -38,15 +39,27 @@ function Warn($msg) { Write-Host "[warn]       $msg" }
 
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 
+# Spec 039 BUG-2b: search the $HOME\.claude-config fallback as well as the
+# C:\ProgramData\ClaudeConfig default, so an install that is not at the Windows
+# default is still found. The fallback applies to the DEFAULT only - an explicit
+# -CentralDir is honoured as given (D003).
+$templateRoots = @($CentralDir)
+if (-not $PSBoundParameters.ContainsKey('CentralDir')) {
+  $templateRoots += (Join-Path $HOME ".claude-config")
+}
+$templateRoots += $RepoRoot
+
 if (-not $Template) {
-  if (Test-Path (Join-Path $CentralDir "settings.template.json")) {
-    $Template = Join-Path $CentralDir "settings.template.json"
-  } elseif (Test-Path (Join-Path $RepoRoot "settings.template.json")) {
-    $Template = Join-Path $RepoRoot "settings.template.json"
+  foreach ($root in $templateRoots) {
+    # [IO.Path]::Combine, not Join-Path: Join-Path resolves the drive qualifier
+    # and throws on a candidate like C:\... when there is no C drive, which is
+    # every non-Windows host now that this iterates a list of candidates.
+    $candidate = [System.IO.Path]::Combine($root, "settings.template.json")
+    if (Test-Path $candidate) { $Template = $candidate; break }
   }
 }
 if (-not $Template -or -not (Test-Path $Template)) {
-  Warn "settings.template.json not found (looked in $CentralDir and $RepoRoot)."
+  Warn "settings.template.json not found. Checked: $(($templateRoots | ForEach-Object { [System.IO.Path]::Combine($_, 'settings.template.json') }) -join ', ')"
   Warn "Run install.ps1 first, or pass -Template <path>."
   exit 1
 }

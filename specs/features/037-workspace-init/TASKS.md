@@ -18,3 +18,7 @@
   cross-reference note to onboarding's Purpose. Covers: AC-04, AC-05.
 - [x] T007 — Sync the new/changed skills into `~/.claude-config/skills/` by direct copy — a full
   `install.sh` run would re-add the 7 deliberately-pruned Java reviewers. Covers: —.
+- [x] T008 — Close the gap that let this ship broken: `.githooks/pre-push` running the fast gate
+  (`check-consistency.sh` + the two quick suites, ~6s measured), documented in `CONTRIBUTING.md`
+  with the enable command and with why the slow suites stay in CI. Timings measured, not
+  guessed: the gate itself is 0.18s, the checker's mutation suite 86s. Covers: AC-07.

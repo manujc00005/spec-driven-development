@@ -22,7 +22,8 @@
 
 .PARAMETER CentralDir
   The central SDD configuration directory. Defaults to
-  C:\ProgramData\ClaudeConfig.
+  C:\ProgramData\ClaudeConfig, falling back to $HOME\.claude-config when that
+  default does not exist. A value passed explicitly is used as given.
 
 .PARAMETER Force
   Overwrite an existing link pointing elsewhere, or back up and replace a real
@@ -48,9 +49,27 @@ function Write-Action([string]$msg) { Write-Host "[link-project] $msg" }
 function Write-Skip([string]$msg)   { Write-Host "[skip]         $msg" -ForegroundColor DarkYellow }
 function Write-Warn2([string]$msg)  { Write-Host "[warn]         $msg" -ForegroundColor Yellow }
 
-if (-not (Test-Path $CentralDir)) {
-    Write-Warn2 "Central directory $CentralDir does not exist. Run install.ps1 first."
+# Spec 039 BUG-2b: the default is C:\ProgramData\ClaudeConfig, but a perfectly
+# valid install may sit at $HOME\.claude-config (the bash default, and what a
+# non-admin Windows install tends to use). Falling back to it beats exiting 1
+# with "Run install.ps1 first" about an installer that already succeeded.
+#
+# The fallback applies to the DEFAULT only: an explicitly passed -CentralDir is
+# an instruction, not a hint, and is never silently swapped for somewhere else
+# (D003).
+$centralCandidates = @($CentralDir)
+if (-not $PSBoundParameters.ContainsKey('CentralDir')) {
+    $centralCandidates += (Join-Path $HOME ".claude-config")
+}
+$resolvedCentral = $centralCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+if (-not $resolvedCentral) {
+    Write-Warn2 "No central SDD configuration directory found. Checked: $($centralCandidates -join ', ')"
+    Write-Warn2 "Run install.ps1 first, or point this script at an existing install with -CentralDir <path>."
     exit 1
+}
+if ($resolvedCentral -ne $CentralDir) {
+    Write-Action "Central directory $CentralDir not found; using $resolvedCentral instead."
+    $CentralDir = $resolvedCentral
 }
 
 $claudeDir = Join-Path $ProjectDir ".claude"
