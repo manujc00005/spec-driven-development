@@ -397,7 +397,7 @@ done
 if [ "$MANIFEST_OK" != "1" ]; then
   log "New profiles: cannot compare  - no readable install manifest at $MANIFEST. Re-run install.sh to write one; until then this run cannot tell which profiles you already have."
 else
-  NEW_PROFILES="$(python3 - "$REPO_ROOT/profiles.json" "$MANIFEST_PROFILES" <<'PYEOF'
+  if NEW_PROFILES="$(python3 - "$REPO_ROOT/profiles.json" "$MANIFEST_PROFILES" <<'PYEOF'
 import json
 import sys
 
@@ -418,8 +418,14 @@ for name, pdef in data.get("profiles", {}).items():
         # recommends a separately-billed service as if it were free is misleading.
         print(name + ("\tbillable" if pdef.get("billable") is True else ""))
 PYEOF
-  )" || NEW_PROFILES=""
-  if [ -n "$NEW_PROFILES" ]; then
+  )"; then
+    NEW_PROFILES_OK=1
+  else
+    NEW_PROFILES_OK=0
+  fi
+  if [ "$NEW_PROFILES_OK" != "1" ]; then
+    warn "New profiles: cannot compare  - $REPO_ROOT/profiles.json could not be read. This run cannot tell which profiles exist."
+  elif [ -n "$NEW_PROFILES" ]; then
     warn "Profiles available but NOT installed here (this update did not add them):"
     while IFS= read -r _p; do
       [ -z "$_p" ] && continue
@@ -429,7 +435,8 @@ PYEOF
         *)              echo "    $_name  ->  ./install.sh --profile $_name" ;;
       esac
     done <<< "$NEW_PROFILES"
-    warn "  update never installs a profile you did not ask for. Add one with the command above, or every enabled profile with: ./install.sh --all-profiles"
+    warn "  update never installs a profile you did not ask for. Add one with the command above."
+    warn "  './install.sh --all-profiles' adds every enabled profile at once  - including any you removed on purpose, which it would silently re-add."
   else
     log "New profiles: none  - every enabled profile in profiles.json is already recorded for this install."
   fi

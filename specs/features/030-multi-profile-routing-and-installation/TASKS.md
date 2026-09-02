@@ -161,6 +161,16 @@ the two halves as separate commits — they share only `profiles.json` and the s
 
 ## Phase 4: Review
 
+- [x] T029 - **Found by `/qa-review`:** an unreadable `profiles.json` fell into the "no new
+  profiles" branch, reporting every profile as already recorded — a false reassurance on an error,
+  AC-010's failure mode on the other input. Fixed in both updaters. Covers: AC-010 (extended).
+  Verify: with a corrupt `profiles.json`, the run says it cannot compare and never says "none";
+  regression case in `update.test.sh`.
+- [x] T030 - **Found by `/qa-review`:** the report pointed at `--all-profiles` without saying it
+  re-adds profiles the adopter removed on purpose — the trap D011's error message names for the
+  combined-flag case. Warning added in both updaters. Covers: FR-011, FR-012. Verify: the report's
+  suggestion carries the re-add warning; regression case in `update.test.sh`.
+
 - [x] T027 - **Found by `/spec-review`:** refuse `--all-profiles` combined with `--remove-profile`
   in both installers, and cover it in `install.test.sh`. Covers: FR-009 (regression against spec 034
   D010). Verify: the combination exits 1 changing nothing, plain `--remove-profile` still removes,

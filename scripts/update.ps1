@@ -341,6 +341,7 @@ if (-not $manifestOk) {
 } else {
     $profilesPath = Join-Path $RepoRoot "profiles.json"
     $newProfiles = @()
+    $profilesReadable = $true
     try {
         $pd = Get-Content $profilesPath -Raw | ConvertFrom-Json
         foreach ($prop in $pd.profiles.PSObject.Properties) {
@@ -352,15 +353,22 @@ if (-not $manifestOk) {
             $newProfiles += ,@($pName, ($pDef.billable -eq $true))
         }
     } catch {
-        $newProfiles = @()   # unreadable profiles.json: stay quiet rather than guess
+        # An unreadable profiles.json must not be reported as "no new profiles":
+        # that is a false reassurance on an error, the same failure mode AC-010
+        # guards against on the manifest side.
+        $newProfiles = @()
+        $profilesReadable = $false
     }
-    if ($newProfiles.Count -gt 0) {
+    if (-not $profilesReadable) {
+        Write-Warn2 "New profiles: cannot compare  - $profilesPath could not be read. This run cannot tell which profiles exist."
+    } elseif ($newProfiles.Count -gt 0) {
         Write-Warn2 "Profiles available but NOT installed here (this update did not add them):"
         foreach ($np in $newProfiles) {
             $tag = if ($np[1]) { "  (billable add-on)" } else { "" }
             Write-Host "    $($np[0])$tag  ->  .\install.ps1 -Profile $($np[0])"
         }
-        Write-Warn2 "  update never installs a profile you did not ask for. Add one with the command above, or every enabled profile with: .\install.ps1 -AllProfiles"
+        Write-Warn2 "  update never installs a profile you did not ask for. Add one with the command above."
+        Write-Warn2 "  '.\install.ps1 -AllProfiles' adds every enabled profile at once  - including any you removed on purpose, which it would silently re-add."
     } else {
         Write-Action "New profiles: none  - every enabled profile in profiles.json is already recorded for this install."
     }

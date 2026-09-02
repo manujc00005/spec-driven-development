@@ -264,6 +264,29 @@ elif grep -q "Profiles available but NOT installed here" <<< "$out"; then
   fail "AC-010b missing manifest listed profiles as new" "$out"
 else pass "AC-010b missing manifest cannot compare"; fi
 
+# Found by /qa-review: an unreadable profiles.json used to fall into the "none"
+# branch, reporting "every enabled profile is already recorded" - a false
+# reassurance on an error, which is AC-010's failure mode on the other input.
+build_env spec030_qa_badprofiles
+bash "$CLONE/install.sh" --central-dir "$CENTRAL" --skip-link --profile java-spring-backend >/dev/null 2>&1
+cp "$CLONE/profiles.json" "$CLONE/profiles.json.bak"
+echo "{ not valid json" > "$CLONE/profiles.json"
+out="$(bash "$CLONE/scripts/update.sh" --central-dir "$CENTRAL" 2>&1)" || true
+mv "$CLONE/profiles.json.bak" "$CLONE/profiles.json"
+if grep -q "New profiles: none" <<< "$out"; then
+  fail "QA: unreadable profiles.json reported as 'no new profiles'" "$out"
+else pass "QA: unreadable profiles.json is never reported as 'none'"; fi
+
+# The report must warn that --all-profiles re-adds deliberately removed profiles.
+build_env spec030_qa_readdwarning
+bash "$CLONE/install.sh" --central-dir "$CENTRAL" --skip-link --profile java-spring-backend >/dev/null 2>&1
+out="$(bash "$CLONE/scripts/update.sh" --central-dir "$CENTRAL" 2>&1)"
+if ! grep -q "Profiles available but NOT installed here" <<< "$out"; then
+  fail "QA setup: expected the new-profile report to fire" "$out"
+elif ! grep -q "removed on purpose" <<< "$out"; then
+  fail "QA: the report suggests --all-profiles without warning it re-adds removed profiles" "$out"
+else pass "QA: --all-profiles suggestion carries the re-add warning"; fi
+
 echo ""
 echo "$PASS passed, $FAIL failed."
 [ "$FAIL" -eq 0 ]
