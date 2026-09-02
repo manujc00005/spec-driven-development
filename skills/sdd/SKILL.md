@@ -70,6 +70,8 @@ Stack/profile reviewers (detect only if the skill is installed — they extend t
 2. `/spec-plan`
 3. `/spec-analyze`
 4. `/spec-implement` — repeat until all tasks done
+   (or hand the rest to the loop: commit the work so far on a feature branch, then
+   `/sdd-orchestrate --autonomous <path> --adopt`)
 5. `/spec-review`
 6. `/qa-review`
 7. `/spec-close`
@@ -81,6 +83,8 @@ Stack/profile reviewers (detect only if the skill is installed — they extend t
 2. `/spec-plan`
 3. `/spec-analyze`
 4. `/spec-implement` — repeat until all tasks done
+   (or hand the rest to the loop: commit the work so far on a feature branch, then
+   `/sdd-orchestrate --autonomous <path> --adopt`)
 5. `/spec-review`
 6. `/qa-review`
 7. Specialized reviews as detected (database, security, performance, api, backend, frontend)

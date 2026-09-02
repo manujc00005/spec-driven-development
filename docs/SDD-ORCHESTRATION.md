@@ -184,7 +184,7 @@ implement → review → fix circuit on an already-approved feature and only com
 finished or genuinely stuck:
 
 ```
-/sdd-orchestrate --autonomous specs/features/<nnn>-<name> [--max-iterations N] [--max-delegations N]
+/sdd-orchestrate --autonomous specs/features/<nnn>-<name> [--adopt] [--max-iterations N] [--max-delegations N]
 ```
 
 It starts only if six conditions hold: the spec is `Ready` (or the run is a validated resume), no
@@ -192,6 +192,23 @@ open decision blocks a task, `TASKS.md` has runnable work, you are **not** on th
 the working tree is clean, and the PLAN's verification suite passes at baseline without dirtying
 the tree. A refusal names the exact condition and the command that fixes it, so an unmet gate is a
 one-line fix rather than a mystery.
+
+**Adopting a feature you started by hand.** A feature that is already `In Progress` through the
+manual chain (`/spec-implement` task by task) is refused by the gate above, because it is not
+`Ready` and has no state file. `--adopt` is the explicit way in (spec 041): commit the work so far
+on a feature branch, then run `/sdd-orchestrate --autonomous <path> --adopt`. The gate then
+requires exactly `In Progress`, a fully clean tree (nothing pre-existing is ever attributed to the
+run — your commit is the attribution), and a computable inherited record: the baseline commit, the
+merge-base with the default branch as resolved from git metadata, and the tasks already checked.
+Three refusals are specific to adoption: *Adoption not needed* (the spec is `Ready`; run without
+the flag), *Already adopted or entered* (a state file exists; re-enter without the flag — a run is
+resumed, never re-adopted), and *Inherited diff undetermined* (no default-branch metadata; set
+`origin/HEAD`). When you are on the default branch with uncommitted work, both refusals are listed
+branch first, tree second, so following them in order lands the commit on the feature branch.
+Before touching any new task, the loop reviews the inherited diff with `domain-reviewer` (and
+`security-reviewer` on the usual triggers); a `Critical` finding there is fixed before new work
+starts. Checked tasks are never re-implemented; `ORCHESTRATION.md` records them in an `Inherited`
+table as *verification not observed by this run*, and the final conformance report says so.
 
 Inside the loop, workers and reviewers communicate through structured blocks rather than prose, and
 every decision, delegation, verdict, and escalation is written to `ORCHESTRATION.md` in the feature
@@ -330,6 +347,7 @@ the whole point: `cron`, CI and overnight runs work.
 | `--allow-unverified-backend` | opt-in required by the gated Codex backend |
 | `--stub-script` | JSON responses for `--backend stub` — the only way to exercise a full run without a provider |
 | `--dry-run` | entry gate, plan and budget; dispatches nothing, and needs no usable backend |
+| `--adopt` | first entry on an `In Progress` feature; prints the inherited record under `--dry-run` (spec 041) |
 
 ### Exit codes
 
@@ -338,7 +356,7 @@ A scheduler branches on the code alone.
 | Code | Meaning |
 |---|---|
 | `0` | converged and closed |
-| `10` | entry gate refused (status, open questions, missing `TASKS.md`, default branch, dirty tree, red baseline) |
+| `10` | entry gate refused (status, open questions, missing `TASKS.md`, default branch, dirty tree, red baseline; under `--adopt` also adoption not needed, already adopted or entered, inherited diff undetermined) |
 | `11` | human-gated escalation — a person must answer |
 | `12` | cap abort — a reviewer or a finding failed to converge |
 | `13` | delegation budget exhausted |
