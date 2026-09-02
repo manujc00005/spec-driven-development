@@ -356,7 +356,7 @@ A scheduler branches on the code alone.
 | Code | Meaning |
 |---|---|
 | `0` | converged and closed |
-| `10` | entry gate refused (status, open questions, missing `TASKS.md`, default branch, dirty tree, red baseline; under `--adopt` also adoption not needed, already adopted or entered, inherited diff undetermined) |
+| `10` | entry gate refused (status, open questions, missing `TASKS.md`, default branch, dirty tree, red baseline; under `--adopt` also adoption not needed, already adopted or entered, inherited diff undetermined; and status unreadable in either mode, when the line under `## Status` names no lifecycle status) |
 | `11` | human-gated escalation — a person must answer |
 | `12` | cap abort — a reviewer or a finding failed to converge |
 | `13` | delegation budget exhausted |

@@ -133,8 +133,11 @@ Do not read: other specs, `evals/`, hooks, agents, installers, `graph.json`.
 
 - Git metadata for the default branch (`origin/HEAD` or equivalent) in the target repo; the gate
   refuses rather than assuming `main` (D003).
-- Codex CLI for T013 — not installed on the maintainer's Mac; the task is written so that its
-  absence is an explicit blocker, not a silent pass.
+- Codex CLI for T013. **Corrected 2026-09-02:** this plan assumed it was not installed on the
+  maintainer's Mac and wrote T013 so its absence would be an explicit blocker rather than a silent
+  pass. The assumption was wrong — `codex-cli 0.152.1` is installed at `~/.local/bin/codex` — and
+  T013 passed against it. The fail-closed shape of the task is what let the correction be a pass
+  instead of a surprise.
 - Python 3 stdlib for the runner suite (`unittest`, no pytest).
 - `scripts/check-consistency.sh` green before any skill edit is committed.
 
@@ -150,10 +153,15 @@ Do not read: other specs, `evals/`, hooks, agents, installers, `graph.json`.
   `diff-base..baseline`; for a feature adopted late this is the biggest review of the run.
   Accepted: it is exactly the review debt adoption exists to pay; the delegation budget scales
   with unchecked tasks, so `max(25, …)` leaves room for two reviewers plus fixes.
-- **Codex evidence unavailable.** T013 may end as a `/spec-close` blocker on this Mac. That is the
-  standing rule's intended outcome (D001), not a plan failure.
-- **Maintainer's replay (T014) depends on a repo not on this machine.** If not performed it is
-  DEFERRED with a DEBT id, never ticked.
+- ~~**Codex evidence unavailable.** T013 may end as a `/spec-close` blocker on this Mac.~~
+  **Did not materialize (2026-09-02):** the CLI is installed and T013 passed with two recorded runs.
+  The risk was correctly framed — D001's rule gates `Done`, not `Ready` — it simply did not fire.
+- ~~**Maintainer's replay (T014) depends on a repo not on this machine.** If not performed it is
+  DEFERRED with a DEBT id, never ticked.~~
+  **Materialized differently (2026-09-02):** the maintainer supplied the live path and the replay was
+  performed. It did not pass — it found two runner defects, fixed as T029/T030 — and its criterion
+  then turned out unsatisfiable because `030` had moved to `In Review`. Closed on its result under
+  D011, with the residual as [[DEBT-010]] rather than as a deferral of the replay itself.
 
 ## Test strategy
 

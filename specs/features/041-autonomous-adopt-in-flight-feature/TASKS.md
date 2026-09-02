@@ -392,7 +392,37 @@
   `SPEC.md`; D011 and DEBT-010 exist; `bash scripts/check-consistency.sh` exits 0 and the suite stays
   at 275.
 
-  **[OBSERVED 2026-09-02]** All six clauses hold. Every note now sits under its own task (T004, T009,
-  T012, T013, T014, T017, T021, T023, T028, T029); the only remaining "blocks `/spec-close`" is this
-  task's own description of what it removed; `status unreadable` is in both documents; D011 and
-  DEBT-010 exist; consistency exit 0; suite 275.
+  **[VERIFY AMENDED 2026-09-02 — from R6-03]** The clause asked that
+  `grep -c "blocks .spec-close" TASKS.md` return **0**. It cannot: the clause quotes that pattern, so
+  the pattern matches its own line. The corrected criterion is that no *task body* asserts T014 is
+  open — checked by reading, and by the pattern matching only lines belonging to T031 and T032.
+
+  **[OBSERVED 2026-09-02]** Every note sits under its own task (T004, T009, T012, T013, T014, T017,
+  T021, T023, T028, T029, T031); no task body says T014 blocks `/spec-close`; `status unreadable` is
+  in `runner/README.md` and `SPEC.md`; D011 and DEBT-010 exist; consistency exit 0; suite 275. The
+  earlier note claimed "all six clauses hold" while one returned the opposite, and attributed the
+  survivor to the wrong line — corrected here rather than left standing.
+
+## Phase 12: Review findings, round 6
+
+- [x] T032 - Sweep, do not patch instances. Rounds 3, 4 and 6 each found the same defect class one
+  document further along, because each repair fixed the instance it was shown: a misplaced test guard,
+  then a task ticked while its own text called it open, then that same contradiction surviving in
+  `CALIBRATION.md`. Sweep all four feature documents for every assertion about the environment that
+  T013 and T014 disproved — "the Codex CLI is not installed", "that repository is not on this
+  machine", "T014 stays open" — and supersede each in place, dated, rather than deleting the record
+  or fixing only the one that was reported. Also correct T031's own `Verify:` clause, which asked a
+  grep to return 0 on a pattern that matches its own line, and add `status unreadable` to the
+  exit-code table in `docs/SDD-ORCHESTRATION.md`, which was the one runner-facing document still
+  disagreeing with `runner/README.md` (from R6-01…R6-04). Covers: AC-011, AC-013.
+  Verify: every hit of those phrases across the feature folder sits inside a struck-through or dated
+  superseding note, or is a conditional clause that was always one of two acceptable outcomes
+  (T013's) or a historical record of a removed note (T014's); `grep -c "status unreadable"
+  docs/SDD-ORCHESTRATION.md` returns at least 1; the suite stays at 275 and
+  `bash scripts/check-consistency.sh` exits 0.
+
+  **[OBSERVED 2026-09-02]** Five assertions superseded in place: `PLAN.md` dependencies and two
+  risks, D001's reasoning, and the `CALIBRATION.md` paragraph round 6 rejected. The two remaining
+  hits are the legitimate ones the clause allows: T013's clause naming the literal blocker as its
+  alternative branch, and T014's record that an earlier note was removed. No document now asserts a
+  premise T013 or T014 disproved. Suite 275, consistency exit 0.

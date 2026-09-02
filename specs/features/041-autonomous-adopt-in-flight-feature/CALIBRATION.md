@@ -301,9 +301,14 @@ T003 stays unchecked and T004 is checked, which is the point: the run neither gu
 answer nor treated the block as a failure.
 
 **This does not replace T014.** It observes the mechanism on a fixture; T014 observes it on the case
-that started this feature, `proyecto-cumbre` 030, with its two real human-only tasks. That repository
-is not on this machine — the only copy here is a directory of age-encrypted archives whose key this
-session does not have — so T014 stays open and is the maintainer's.
+that started this feature, `proyecto-cumbre` 030, with its two real human-only tasks.
+
+~~That repository is not on this machine — the only copy here is a directory of age-encrypted
+archives whose key this session does not have — so T014 stays open and is the maintainer's.~~
+**Superseded 2026-09-02, in place rather than deleted:** the maintainer then supplied the live path
+and the replay was performed; see *T014 — the originating case, replayed* below. T014 is closed on
+its result under D011, and what this fixture run does not cover is tracked as [[DEBT-010]] — a
+human-gated `PAUSED` on a real repository — not as an open task.
 
 ## T014 — the originating case, replayed (2026-09-02)
 
@@ -416,3 +421,30 @@ CLI callers had no test. Round 4 found no regression, two documentation defects.
 code defect at all — only that the record of the work disagreed with itself. The defect curve moved
 from behavior to prose, which is what convergence looks like; and the last two rounds were both
 caught by review rather than by 275 green tests, which is what the review gate is for.
+
+## Review findings, round 6 (2026-09-02)
+
+No code defect, no regression, fourteen criteria met. What round 6 found was the same contradiction
+round 5 rejected, surviving one document over — and that is the finding worth recording, more than
+the four instances.
+
+| Finding | Repair (T032) |
+|---|---|
+| R6-01 | `CALIBRATION.md` still said "that repository is not on this machine … so T014 stays open", forty lines above the section that opens with the maintainer supplying the live path. Superseded in place, struck through, pointing at the replay and at DEBT-010 |
+| R6-02 | This feature's own `PLAN.md` and D001 still carried the dead "the Codex CLI is not installed" premise — the very premise it had gone and corrected in another spec's debt register. Three PLAN entries and D001's reasoning superseded in place; D001's decision is unchanged and was vindicated, not weakened |
+| R6-03 | T031's `Verify:` asked a grep to return 0 on a pattern quoting itself, and its `[OBSERVED]` note claimed six of six while one clause returned the opposite. Clause amended to a criterion that can hold; the note corrected rather than left standing |
+| R6-04 | `docs/SDD-ORCHESTRATION.md`'s exit-code table was the last runner-facing document not listing `status unreadable`, so two documents gave different answers to what exit 10 can mean |
+
+### The defect class, named
+
+Three rounds found the same shape: a repair applied to the instance that was reported rather than to
+the class. Round 3, a misplaced `__main__` guard fixed in one file and reintroduced in the next.
+Round 5, a task ticked while its own text called it open, fixed in `TASKS.md`. Round 6, that same
+contradiction alive in `CALIBRATION.md`, plus the dead Codex premise in this feature's own plan and
+decision — corrected for someone else's document but not for its own.
+
+T032 is a sweep rather than four edits, and the difference is the point: every assertion the two
+provider tasks disproved was found by pattern across all four documents and superseded in place with
+a date, not deleted and not fixed one at a time. Two hits remain and are meant to: T013's clause
+naming the literal blocker as its alternative branch, and T014's record that an earlier note was
+removed.

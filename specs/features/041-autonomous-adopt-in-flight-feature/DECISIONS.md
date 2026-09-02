@@ -24,9 +24,15 @@ explicit closure blocker, never as a pass and never omitted.
 
 **Reasoning:** The protocol's state lives in files and is provider-neutral by design; adoption adds
 header fields and a review step, nothing provider-specific. Documenting it for Codex costs one
-section; not documenting it creates parity debt nobody schedules. The Codex CLI is not installed on
-the maintainer's Mac, so T013 will most likely end as a blocker on this machine — that is the rule's
-intended outcome, and it blocks `Done`, not `Ready`.
+section; not documenting it creates parity debt nobody schedules. This reasoning assumed the Codex
+CLI was not installed on the maintainer's Mac, so that T013 would most likely end as a blocker — the
+rule's intended outcome, gating `Done` and not `Ready`.
+
+**Superseded 2026-09-02 (T013):** that assumption was false. `codex-cli 0.152.1` is installed, and
+T013 **passed**: two recorded `codex exec` runs produced the correct gate refusal and, under
+`--adopt`, a state file whose adoption shas match git exactly plus a valid `REJECT` verdict block.
+The decision itself is unchanged and was vindicated rather than weakened — covering Codex was right,
+and the coverage turned out to be verifiable instead of deferred.
 
 **Consequences:** `adapters/codex/` is in scope. `Done` may be blocked by a missing CLI; the
 blocker is visible in `CALIBRATION.md`. No claim of permission-isolation parity is made for Codex,
