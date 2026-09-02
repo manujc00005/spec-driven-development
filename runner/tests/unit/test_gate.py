@@ -276,6 +276,69 @@ class ReEntryTreeRule(unittest.TestCase):
                                   self._conditions(repo, feature_dir, adopt=adopt))
 
 
+class HonestRefusals(unittest.TestCase):
+    """Spec 041 T029/T030, from the T014 replay against a real adopter project.
+
+    Its specs write the status inside a fenced block and carry questions marked
+    non-blocking. Both refusals were right to fire and wrong about why.
+    """
+
+    FENCED = SPEC.replace("## Status\n\nReady\n",
+                          "## Status\n\n```\nEstado: In Review\nBlocked-by: —\n```\n")
+
+    def _refusals(self, repo, feature_dir, **kw):
+        return {r.condition: r for r in gate.check(repo, feature_dir, **kw)}
+
+    def test_a_fenced_status_refuses_as_unreadable_not_as_a_quoted_fence(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, feature_dir = make_repo(tmp, spec=self.FENCED)
+            found = self._refusals(repo, feature_dir)
+            self.assertIn(gate.STATUS_UNREADABLE, found)
+            self.assertNotIn("lifecycle status", found,
+                             "an unreadable status must not also be reported as the wrong status")
+            r = found[gate.STATUS_UNREADABLE]
+            self.assertIn("states no lifecycle status", r.detail)
+            for word in ("Draft", "Ready", "In Progress"):
+                self.assertIn(word, r.remediation)
+            self.assertIn("the skill path reads it", r.remediation)
+
+    def test_a_missing_status_section_says_so(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, feature_dir = make_repo(tmp, spec="# Feature Spec: x\n\n## Problem\n\nNone.\n")
+            r = self._refusals(repo, feature_dir)[gate.STATUS_UNREADABLE]
+            self.assertIn("no `## Status` section", r.detail)
+
+    def test_a_decorated_status_is_still_read_not_refused_as_unreadable(self):
+        """Generous on purpose: `**Done — 2026-08-22.**` is a status, not a fence."""
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, feature_dir = make_repo(
+                tmp, spec=SPEC.replace("## Status\n\nReady\n",
+                                       "## Status\n\n**Done — 2026-08-22.**\n"))
+            found = self._refusals(repo, feature_dir)
+            self.assertNotIn(gate.STATUS_UNREADABLE, found)
+            self.assertIn("lifecycle status", found)
+
+    def test_a_normal_status_is_unaffected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, feature_dir = make_repo(tmp)
+            self.assertEqual(gate.check(repo, feature_dir), [])
+
+    def test_the_open_questions_refusal_names_them_and_admits_it_cannot_judge(self):
+        spec = SPEC.replace(
+            "- ~~OQ-1~~ **Resolved.**",
+            "- ~~OQ-1~~ **Resolved.**\n"
+            "- **Q1 (non-blocking)**: whether the slug stays in the URL.\n"
+            "- **Q2 (non-blocking)**: whether the insurance defect stays as debt.")
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, feature_dir = make_repo(tmp, spec=spec)
+            r = self._refusals(repo, feature_dir)["open questions"]
+            self.assertIn("2 unresolved", r.detail)
+            self.assertIn("cannot judge as blocking or not", r.detail)
+            self.assertIn("Q1", r.detail)
+            self.assertIn("Q2", r.detail)
+            self.assertIn("blocks an unchecked task", r.remediation)
+
+
 class RefusalRendering(unittest.TestCase):
     def test_refusal_names_condition_detail_and_remediation(self):
         r = gate.Refusal("open questions", "2 unresolved", "answer them")

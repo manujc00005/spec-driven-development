@@ -26,6 +26,14 @@ REENTRY_STATUSES = ("Ready", "In Progress", "In Review")
 ADOPTION_NOT_NEEDED = "adoption not needed"
 ALREADY_ENTERED = "already adopted or entered"
 INHERITED_UNDETERMINED = "inherited diff undetermined"
+STATUS_UNREADABLE = "status unreadable"
+
+# The lifecycle words this framework's own template uses. The gate does NOT try to
+# parse an adopter's dialect — that surface is unbounded, and the skill path reads
+# any of them because a model reads them. This list exists only to tell "a status
+# the gate could not read" apart from "a status it read and rejected", so the
+# refusal can say which (spec 041 T029, from the T014 replay).
+KNOWN_STATUS_WORDS = ("Draft", "Ready", "In Progress", "In Review", "Done", "Archived")
 
 # The names this runner's own bookkeeping owns inside the feature folder, so on
 # re-entry they are in-flight work rather than an unaccounted-for change. Three of
@@ -82,6 +90,19 @@ def _status_line(spec_text):
     return None
 
 
+def _looks_like_a_status(line):
+    """True when the line plausibly states a lifecycle status.
+
+    Deliberately generous: any known word appearing anywhere counts, so a decorated
+    line (`**Done — 2026-08-22.**`) is read rather than refused as unreadable. What
+    it catches is the line that carries no status at all — a code fence, a table
+    border, a heading — where quoting it back at the maintainer explains nothing.
+    """
+    if not line:
+        return False
+    return any(word.lower() in line.lower() for word in KNOWN_STATUS_WORDS)
+
+
 def _open_questions(spec_text):
     m = re.search(r"^##\s+Open questions\s*$", spec_text, re.MULTILINE)
     if not m:
@@ -89,7 +110,7 @@ def _open_questions(spec_text):
     tail = spec_text[m.end():]
     nxt = re.search(r"^##\s+", tail, re.MULTILINE)
     body = tail[: nxt.start()] if nxt else tail
-    count = 0
+    questions = []
     for line in body.splitlines():
         s = line.strip()
         if not s.startswith("- "):
@@ -97,8 +118,8 @@ def _open_questions(spec_text):
         # A resolved question is struck through (~~OQ-n~~) or marked Resolved.
         if s.startswith("- ~~") or "**Resolved" in s or "Resolved " in s:
             continue
-        count += 1
-    return count
+        questions.append(s[2:].strip())
+    return questions
 
 
 def _default_branch(repo):
@@ -176,11 +197,24 @@ def check(repo, feature_dir, baseline_cmd=None, first_entry=True, adopt=False,
         spec_text = fh.read()
 
     status = _status_line(spec_text)
+    status_readable = _looks_like_a_status(status)
     if adopt and os.path.exists(state_path):
         refusals.append(Refusal(
             ALREADY_ENTERED, "%s already exists" % state_path,
             "a run is resumed, never re-adopted: re-enter without --adopt"))
-    if first_entry and adopt:
+    if not status_readable:
+        # Quoting back a code fence explains nothing. Say what happened instead, and
+        # do not guess at the dialect: the gate reads this framework's own template
+        # form, and says so (T029).
+        refusals.append(Refusal(
+            STATUS_UNREADABLE,
+            ("SPEC.md has no `## Status` section" if status is None else
+             "the first line under `## Status` is %r, which states no lifecycle status" % status),
+            "the gate reads the framework's own form — `## Status`, then a line naming one of "
+            "%s. A spec written in another dialect (a fenced block, a table) is not parsed here; "
+            "the skill path reads it, this runner does not."
+            % ", ".join(KNOWN_STATUS_WORDS)))
+    elif first_entry and adopt:
         if status in READY_STATUSES:
             refusals.append(Refusal(
                 ADOPTION_NOT_NEEDED, "SPEC.md Status is %r" % (status,),
@@ -202,9 +236,17 @@ def check(repo, feature_dir, baseline_cmd=None, first_entry=True, adopt=False,
 
     open_q = _open_questions(spec_text)
     if open_q:
+        # Condition 2 forbids a question that BLOCKS an unchecked task. This gate
+        # cannot judge that, so it refuses on any and says so, naming them, rather
+        # than implying it weighed them (T030).
+        shown = "; ".join(q[:80] for q in open_q[:3])
         refusals.append(Refusal(
-            "open questions", "%d unresolved question(s) in SPEC.md" % open_q,
-            "answer them and record the resolution, or run /spec-clarify"))
+            "open questions",
+            "%d unresolved question(s) in SPEC.md, which this gate cannot judge as blocking or "
+            "not: %s%s" % (len(open_q), shown, " …" if len(open_q) > 3 else ""),
+            "condition 2 forbids a question that blocks an unchecked task, and the gate cannot "
+            "tell which do. Resolve them, strike them through, or mark them Resolved so the "
+            "answer is recorded rather than inferred; or run /spec-clarify"))
 
     code, branch, _ = _git(repo, "rev-parse", "--abbrev-ref", "HEAD")
     if code != 0:

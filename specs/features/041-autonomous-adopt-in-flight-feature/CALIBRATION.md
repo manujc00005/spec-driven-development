@@ -373,3 +373,19 @@ be its own test.
 Performed, not passed. Its `Verify:` clause expects two human-gated escalations and `Run result:
 PAUSED`; the run never reached the loop, so that outcome was not observed and cannot be until the two
 defects are resolved. The escalation mechanism itself is observed on a fixture by T028.
+
+## What the T014 replay changed (T029, T030)
+
+The replay's two defects were fixed by making the refusals honest, not by teaching the gate to read
+other people's SPEC dialects. That was a deliberate choice: the dialect surface is unbounded — the
+project that exposed it uses three forms across its own specs — the runner is experimental and drives
+nothing, and the skill path already reads any of them because a model reads them.
+
+| Before | After |
+|---|---|
+| `lifecycle status` / `SPEC.md Status is '```'` | `status unreadable` / "the first line under `## Status` is '```', which states no lifecycle status", with a remediation naming the form the gate reads and saying plainly that the skill path reads other dialects and this runner does not |
+| `open questions` / `2 unresolved question(s) in SPEC.md` | the same fail-closed refusal, now naming the questions it counted and stating that the gate cannot judge whether they block an unchecked task, which is what condition 2 actually forbids |
+
+A decorated status like `**Done — 2026-08-22.**` is still read rather than refused as unreadable: the
+detector is generous on purpose, and catches only the line that carries no status at all. Suite
+270 -> 275.

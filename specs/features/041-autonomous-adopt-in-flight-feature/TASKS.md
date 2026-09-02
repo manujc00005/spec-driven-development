@@ -165,7 +165,7 @@
   inspecting the real repo) and the adopt path through state initialization to a valid `REJECT`
   verdict block naming the seeded defect. Caveat recorded there: condition 6 was assumed, not run.
 
-- [ ] T014 - Manual replay of the originating case on a copy of `proyecto-cumbre` feature 030:
+- [x] T014 - Manual replay of the originating case on a copy of `proyecto-cumbre` feature 030:
   branch off `main`, commit the pending work, run `--autonomous <path> --adopt`, and observe that
   the two human-only tasks (visual review, real-world run) surface as human-gated escalations and
   the run ends `PAUSED` with the answers needed, not as a loop failure. Covers: AC-001, AC-014.
@@ -343,3 +343,34 @@
   clause's expected outcome (two human-gated escalations, `Run result: PAUSED`) was therefore not
   observed. Also noted: feature 030 has since moved to `In Review`, which D002 excludes from adoption
   by design, so the originating case is now past the window adoption serves. This task stays open.
+
+## Phase 10: Honest refusals over dialect parsing (from the T014 replay)
+
+- [x] T029 - Say "I could not read a status" instead of quoting whatever the first line happened to
+  be. `gate._status_line` returns the first non-empty, non-quote line under `## Status`, so a spec
+  that writes its status inside a fenced block yields the fence and the refusal reads
+  `Status is '```'`. Recognize an unreadable status and refuse under its own condition naming the
+  form the gate expects. Do NOT parse adopter dialects: that surface is unbounded, the runner is
+  experimental, and the skill path reads them fine because a model reads them (from the T014
+  replay). Covers: AC-002, AC-009.
+  Verify: on a SPEC whose status sits in a fenced block, the refusal names condition
+  `status unreadable`, quotes no fence, and its remediation states the expected form; a normal SPEC
+  is unaffected.
+
+- [x] T030 - Make the open-questions refusal admit what it cannot judge. Gate condition 2 forbids an
+  unresolved question **that blocks an unchecked task**; the parser counts every bullet that is not
+  struck through or marked Resolved, so it refuses on questions a spec deliberately carries as
+  non-blocking. Keep the count and the fail-closed refusal, but say in the message that the gate
+  cannot tell blocking from non-blocking and name the questions so the maintainer can. Do not parse
+  non-blocking markers, for the same reason as T029 (from the T014 replay). Covers: AC-002, AC-009.
+  Verify: the refusal names the questions it counted and states that it cannot judge whether they
+  block; a spec with no open questions is unaffected.
+
+  **[PERFORMED 2026-09-02 — clause unsatisfiable, closed on its result]** The replay ran against the
+  real repository and produced a better result than a pass: it found two defects, now fixed by T029
+  and T030. Its written criterion — two human-gated escalations and `Run result: PAUSED` — can no
+  longer be met by this feature, and not because of those defects: `030-join-us-landing-aditiva` has
+  moved to `In Review`, which D002 excludes from adoption on purpose. The originating case is past
+  the window adoption serves, so the criterion is unsatisfiable rather than unmet. The mechanism it
+  was written to observe is observed by **T028** on a fixture. Closed with the finding as the
+  deliverable; no DEBT id, because nothing is pending. The full replay is in `CALIBRATION.md`.
