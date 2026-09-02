@@ -39,6 +39,23 @@ the second one takes the system down.
 `performance-review` (generic). Runs **after** `sql-query-reviewer`: a wrong query does not deserve
 an index.
 
+## Coexisting with `java-performance-reviewer`
+
+Both skills are installed whenever a repository is both Java and database-backed, and both name
+**N+1** and **connection pools**. That overlap is intended — they ask different questions about the
+same symptom, and neither drops its coverage. The division is by *where the fix lands*:
+
+| Symptom | This skill asks | `java-performance-reviewer` asks |
+|---|---|---|
+| N+1 | Is the access pattern itself wrong — a query in a loop, a missing join, an index that would make the repeated query cheap? | Is this an ORM mapping defect — a lazy association walked outside a `JOIN FETCH` / `@EntityGraph`? |
+| Connection pool | Is the pool exhausted because transactions are held open too long, or batches are too large? | Is the pool *sized* wrong for the thread pool and the workload? |
+
+So a JPA lazy-loading N+1 in `OrderService.java` is `java-performance-reviewer`'s finding; a
+query-in-a-loop in a Python ETL script or a raw-SQL repository method is this skill's. **Report the
+finding once, from the skill whose fix the developer would actually apply**, and cross-reference the
+other rather than restating it. If both genuinely apply to one line, say so explicitly in one
+finding instead of filing two.
+
 ## The honest limit of a static review
 
 This skill reads SQL, schema and code. **It does not have a query plan, table statistics, or row

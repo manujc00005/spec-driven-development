@@ -1,6 +1,6 @@
 ---
 name: release-readiness
-description: Release gate asking what was actually rehearsed — executed rollback, restored backup, observability that would catch a silent failure, a stated perimeter, and one runbook a second person could follow. Produces a Go/No-go, not file:line findings. Not a review of deployment artifacts — that is /deployment-review. Not logging-code quality — that is /observability-reviewer.
+description: Release gate for a tagged release or deploy plan, asking what was actually rehearsed — executed rollback, restored backup, observability that would catch a silent failure, a stated perimeter, and one runbook a second person could follow. Produces a Go/No-go, not file:line findings. Not deployment artifacts — that is /deployment-review. Not logging-code quality — that is /observability-reviewer.
 triggers:
   - Before a first production deployment, or a first paying-customer deployment
   - Before a release that changes deployment, data or perimeter

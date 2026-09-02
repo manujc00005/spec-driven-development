@@ -25,7 +25,8 @@ flag the personal-data compliance risks it introduces.
 
 - The current git diff.
 - `SPEC.md` / `PLAN.md` for the feature, when available (to know what the change is supposed to do).
-- The active profile (to know which stack-specific security skills apply).
+- The changed files in the diff (they select which stack-specific security skills apply) and
+  the security skills installed on this machine.
 
 ## Outputs
 
@@ -59,7 +60,8 @@ flag the personal-data compliance risks it introduces.
    actually defeats.
 4. **Walk the vulnerability taxonomy** (below) against the diff. State which classes apply,
    which were checked, and what was found.
-5. **Run the stack-specific reviewer(s)** the active profile ships, and the payment
+5. **Run the stack-specific reviewer(s)** the changed files call for — more than one stack in
+   one diff is normal, not an ambiguity — and the payment
    idempotency/double-charge checks on any money movement, regardless of processor.
 6. **Apply `privacy-compliance-review`** if the diff or spec touches user accounts, PII
    fields, analytics/cookies, special-category data, exports/deletion/retention, or consent.

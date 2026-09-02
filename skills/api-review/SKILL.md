@@ -1,6 +1,6 @@
 ---
 name: api-review
-description: Review API changes for contract correctness, backward compatibility, versioning, DTOs, error semantics, and consistency with existing API conventions.
+description: Review REST/GraphQL API changes — controllers, route handlers, DTOs and OpenAPI specs — for contract correctness, backward compatibility, versioning, error semantics, and consistency with existing API conventions.
 ---
 
 ## SDD Contract

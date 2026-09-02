@@ -457,6 +457,68 @@ else
   PASS=$((PASS + 1))
 fi
 
+# ---------------------------------------------------------------------------
+# Spec 030 FR-006/FR-007 (AC-004, AC-005): routing must agree with the routed
+# skill's own contract. Before this rule, routing a skill under one agent while
+# its SDD Contract named another passed GREEN - verified by mutation, and that
+# is the defect the rule closes. Both directions are asserted: the mutation
+# must fail, and an unmutated tree must report nothing from this rule.
+# ---------------------------------------------------------------------------
+
+# Negative: move a domain-reviewer-owned skill under security-reviewer in the
+# routing map, leaving its contract untouched. This is the exact mutation that
+# used to pass.
+dir="$(fresh_copy routing-primary-agent-mismatch)"
+python3 - "$dir/profiles.json" <<'PYEOF'
+import collections
+import json
+import sys
+
+path = sys.argv[1]
+with open(path, encoding="utf-8") as f:
+    data = json.load(f, object_pairs_hook=collections.OrderedDict)
+routing = data["profiles"]["java-spring-backend"]["agentRouting"]
+routing["domain-reviewer"]["skills"].remove("java-spring-reviewer")
+routing["security-reviewer"]["skills"].append("java-spring-reviewer")
+with open(path, "w", encoding="utf-8") as f:
+    json.dump(data, f, indent=2, ensure_ascii=False)
+PYEOF
+assert_case "routing-primary-agent-mismatch" 1 "agentRouting['security-reviewer'] claims skill 'java-spring-reviewer'" "$dir"
+
+# Negative, the other direction: leave the routing alone and mutate the skill's
+# contract instead. Same defect, same error - it must not matter which side
+# drifted.
+dir="$(fresh_copy routing-contract-drifted)"
+sed_inplace 's/^primary_agent: domain-reviewer$/primary_agent: security-reviewer/' "$dir/skills/java-spring-reviewer/SKILL.md"
+assert_case "routing-contract-drifted" 1 "SDD Contract declares primary_agent: 'security-reviewer'" "$dir"
+
+# Positive: the repository as shipped reports nothing from this rule. Asserted
+# specifically rather than relying on the clean-repo control, so a future
+# mis-route is attributed to this rule instead of drowning in a generic failure.
+dir="$(fresh_copy routing-primary-agent-clean)"
+out="$("$CHECKER" "$dir" 2>&1)"
+if grep -q "Routing is an ownership claim" <<< "$out"; then
+  echo "[FAIL] routing-primary-agent-clean: unmutated tree reported a routing/contract mismatch"
+  echo "       output: $out"
+  FAIL=$((FAIL + 1))
+else
+  echo "[PASS] routing-primary-agent-clean"
+  PASS=$((PASS + 1))
+fi
+
+# secondary_agents must stay usable: a skill legitimately consumed by a second
+# agent is not a mismatch, because only the PRIMARY claim is validated.
+dir="$(fresh_copy routing-secondary-agents-untouched)"
+sed_inplace 's/^secondary_agents: \[final-conformance-reviewer\]$/secondary_agents: [final-conformance-reviewer, security-reviewer]/' "$dir/skills/java-spring-reviewer/SKILL.md"
+# Guard: a sed that silently matches nothing would make this case pass while
+# asserting nothing at all. Confirm the mutation actually landed before judging.
+if ! grep -q "^secondary_agents: \[final-conformance-reviewer, security-reviewer\]$" "$dir/skills/java-spring-reviewer/SKILL.md"; then
+  echo "[FAIL] routing-secondary-agents-untouched: the mutation did not apply - the case would have passed vacuously"
+  FAIL=$((FAIL + 1))
+else
+  assert_case "routing-secondary-agents-untouched" 0 "Consistency check passed" "$dir"
+fi
+
 echo ""
 echo "$PASS passed, $FAIL failed."
 [ "$FAIL" -eq 0 ]

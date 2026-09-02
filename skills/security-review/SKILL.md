@@ -34,7 +34,7 @@ profile):
   authN/authZ and tenant isolation, SSRF/CSRF, deserialization, file handling, race conditions,
   secrets/crypto, supply chain, information exposure, abuse resistance), anticipates attacks by
   enumerating abuse cases per entry point, and applies the stack-specific reviewer skills the
-  active profile ships.
+  changed files call for.
 - **Personal data:** if the diff or spec touches any of the following, instruct the same
   `security-reviewer` run to also apply the `privacy-compliance-review` skill (RGPD, LOPDGDD,
   AEPD guidance, Spanish age-of-consent 14):

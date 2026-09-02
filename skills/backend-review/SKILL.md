@@ -1,6 +1,6 @@
 ---
 name: backend-review
-description: Backend-focused code review covering API design, data access patterns, business logic correctness, error handling, and service layer quality. Use after qa-review for backend-heavy features.
+description: Backend code review — services, controllers, repositories and data-access code in any language — covering API design, data access patterns, business logic correctness, error handling, and service layer quality. Use after qa-review for backend-heavy features.
 ---
 
 ## SDD Contract

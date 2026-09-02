@@ -400,6 +400,10 @@ def parse_contract_block(block):
     return data, perrs
 
 
+# Spec 030 FR-006: the routing loop below needs each skill's declared primary_agent, and
+# this loop is the only place contracts are parsed. Keep the claim rather than discarding it.
+skill_primary_agent = {}
+
 # Rule 1: every SKILL.md has a valid '## SDD Contract' block.
 for skill_name in sorted(disk_skills):
     path = os.path.join(skills_dir, skill_name, "SKILL.md")
@@ -435,6 +439,7 @@ for skill_name in sorted(disk_skills):
     # Rule 2: primary_agent resolves to one of the six lifecycle agents,
     # 'orchestration-context', 'any', or 'human'.
     primary_agent = contract_data.get("primary_agent")
+    skill_primary_agent[skill_name] = primary_agent
     if primary_agent not in PRIMARY_AGENT_ENUM:
         err("agent-routing", skill_name, f"primary_agent {primary_agent!r} does not resolve (must be one of the six lifecycle agents, 'orchestration-context', 'any', or 'human')")
 
@@ -495,6 +500,19 @@ for pname, pdef in profiles.items():
             # Rule 5: every routed skill exists under skills/.
             if not has_skill(routed_skill):
                 err("agent-routing", f"profile '{pname}'", f"agentRouting['{agent_name}'] references skill '{routed_skill}' but skills/{routed_skill}/SKILL.md does not exist")
+            # Rule 11 (spec 030 FR-006): routing is an OWNERSHIP claim, and the skill's own
+            # contract is where ownership is declared. Spec 029 D002 chose "an agentRouting
+            # entry means ownership" and rejected dual-listing on that basis - but nothing
+            # defended it: routing a skill under one agent while its contract named another
+            # passed green. This is that defence. Only the PRIMARY claim is validated;
+            # 'secondary_agents' stays free, so a skill consumed by two agents is unaffected.
+            elif skill_primary_agent.get(routed_skill) != agent_name:
+                declared = skill_primary_agent.get(routed_skill)
+                err("agent-routing", f"profile '{pname}'",
+                    f"agentRouting['{agent_name}'] claims skill '{routed_skill}', but that skill's "
+                    f"SDD Contract declares primary_agent: {declared!r}. Routing is an ownership "
+                    f"claim - make the contract and the routing agree (change one of them), or "
+                    f"consume the skill via 'secondary_agents' instead of routing it here.")
 
     # Rule 7: every non-core profile skill meant for lifecycle-agent consumption
     # is covered by agentRouting, unless listed in the profile's optional

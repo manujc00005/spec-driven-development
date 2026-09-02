@@ -1,6 +1,6 @@
 ---
 name: frontend-review
-description: Frontend-focused code review covering component design, render performance, state management, loading/error/empty states, and accessibility. Use after qa-review for frontend-heavy features.
+description: Frontend code review — components, pages, hooks, templates and styles (.tsx/.jsx/.vue/.css) — covering component design, render performance, state management, loading/error/empty states, and accessibility. Use after qa-review for frontend-heavy features.
 ---
 
 ## SDD Contract
