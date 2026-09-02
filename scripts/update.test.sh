@@ -209,6 +209,84 @@ elif [ -d "$CENTRAL/skills/java-spring-reviewer" ]; then
   fail "AC-006b defaults.profile re-added the removed profile through update.sh" "$(grep -i 'recorded profiles\|default profile' <<< "$out")"
 else pass "AC-006b removing the last non-core profile does not fall back to defaults.profile"; fi
 
+# ---------------------------------------------------------------------------
+# Spec 030 AC-009: a profile the adopter never installed is REPORTED with the
+# command that adds it, and is NOT installed. This is defect (3) of the spec:
+# update replays the recorded profile list, so a profile added after the last
+# install.sh run silently never arrives and nothing says it exists.
+# ---------------------------------------------------------------------------
+build_env spec030_ac009
+# Record an install of core + java-spring-backend only. python-sql-data exists
+# in profiles.json but was never asked for.
+bash "$CLONE/install.sh" --central-dir "$CENTRAL" --skip-link --profile java-spring-backend >/dev/null 2>&1
+out="$(bash "$CLONE/scripts/update.sh" --central-dir "$CENTRAL" 2>&1)"; rc=$?
+if [ $rc -ne 0 ]; then fail "AC-009 exit" "expected 0, got $rc: $out"
+elif ! grep -q "Profiles available but NOT installed here" <<< "$out"; then
+  fail "AC-009 no report emitted" "$out"
+elif ! grep -q "python-sql-data" <<< "$out"; then
+  fail "AC-009 does not name the missing profile" "$out"
+elif ! grep -qF -- "--profile python-sql-data" <<< "$out"; then
+  fail "AC-009 does not name the command that would add it" "$out"
+elif [ -d "$CENTRAL/skills/python-reviewer" ]; then
+  fail "AC-009/FR-012 update INSTALLED the reported profile - it must only report"
+elif ! grep -q "billable add-on" <<< "$out"; then
+  fail "AC-009 seo-geo-addon reported without naming it as billable" "$out"
+else pass "AC-009 unrecorded profile reported, not installed"; fi
+
+# A disabled profile must never be advertised, however the report is built.
+if grep -q "blockchain-crypto" <<< "$out"; then
+  fail "AC-009 a disabled profile was advertised as available"
+else pass "AC-009 disabled profile not advertised"; fi
+
+# ---------------------------------------------------------------------------
+# Spec 030 AC-010: with a missing or corrupt manifest the recorded list is
+# empty. An ungated comparison would then announce EVERY profile as new, which
+# is the confidently wrong answer. It must say it cannot compare instead.
+# ---------------------------------------------------------------------------
+build_env spec030_ac010
+echo "{ this is not valid json" > "$CENTRAL/.sdd-install.json"
+out="$(bash "$CLONE/scripts/update.sh" --central-dir "$CENTRAL" 2>&1)"; rc=$?
+if [ $rc -ne 0 ]; then fail "AC-010 exit" "expected 0, got $rc: $out"
+elif ! grep -q "New profiles: cannot compare" <<< "$out"; then
+  fail "AC-010 corrupt manifest did not degrade to 'cannot compare'" "$out"
+elif grep -q "Profiles available but NOT installed here" <<< "$out"; then
+  fail "AC-010 corrupt manifest listed profiles as new instead of refusing to compare" "$out"
+else pass "AC-010 corrupt manifest cannot compare"; fi
+
+# Same requirement with no manifest at all.
+build_env spec030_ac010b
+rm -f "$CENTRAL/.sdd-install.json"
+out="$(bash "$CLONE/scripts/update.sh" --central-dir "$CENTRAL" 2>&1)"; rc=$?
+if [ $rc -ne 0 ]; then fail "AC-010b exit" "expected 0, got $rc: $out"
+elif ! grep -q "New profiles: cannot compare" <<< "$out"; then
+  fail "AC-010b missing manifest did not degrade to 'cannot compare'" "$out"
+elif grep -q "Profiles available but NOT installed here" <<< "$out"; then
+  fail "AC-010b missing manifest listed profiles as new" "$out"
+else pass "AC-010b missing manifest cannot compare"; fi
+
+# Found by /qa-review: an unreadable profiles.json used to fall into the "none"
+# branch, reporting "every enabled profile is already recorded" - a false
+# reassurance on an error, which is AC-010's failure mode on the other input.
+build_env spec030_qa_badprofiles
+bash "$CLONE/install.sh" --central-dir "$CENTRAL" --skip-link --profile java-spring-backend >/dev/null 2>&1
+cp "$CLONE/profiles.json" "$CLONE/profiles.json.bak"
+echo "{ not valid json" > "$CLONE/profiles.json"
+out="$(bash "$CLONE/scripts/update.sh" --central-dir "$CENTRAL" 2>&1)" || true
+mv "$CLONE/profiles.json.bak" "$CLONE/profiles.json"
+if grep -q "New profiles: none" <<< "$out"; then
+  fail "QA: unreadable profiles.json reported as 'no new profiles'" "$out"
+else pass "QA: unreadable profiles.json is never reported as 'none'"; fi
+
+# The report must warn that --all-profiles re-adds deliberately removed profiles.
+build_env spec030_qa_readdwarning
+bash "$CLONE/install.sh" --central-dir "$CENTRAL" --skip-link --profile java-spring-backend >/dev/null 2>&1
+out="$(bash "$CLONE/scripts/update.sh" --central-dir "$CENTRAL" 2>&1)"
+if ! grep -q "Profiles available but NOT installed here" <<< "$out"; then
+  fail "QA setup: expected the new-profile report to fire" "$out"
+elif ! grep -q "removed on purpose" <<< "$out"; then
+  fail "QA: the report suggests --all-profiles without warning it re-adds removed profiles" "$out"
+else pass "QA: --all-profiles suggestion carries the re-add warning"; fi
+
 echo ""
 echo "$PASS passed, $FAIL failed."
 [ "$FAIL" -eq 0 ]

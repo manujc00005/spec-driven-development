@@ -124,22 +124,36 @@ are in each agent's own file; this is the summary.
 
 ### `domain-reviewer`
 
-- **Responsibility:** load and apply the stack/domain reviewer skills the active profile
-  ships (Java/Spring, event-driven/microservices, payment processor idioms, Next.js/Prisma,
-  SEO/GEO); own domain-specific test expectations; the single owner of record for domain
-  reviewer skills, replacing any ad-hoc or externally-coupled subagent routing those skills
-  used to name.
+- **Responsibility:** load and apply the stack/domain reviewer skills **the changed files
+  call for** (Java/Spring, event-driven/microservices, payment processor idioms,
+  Next.js/Prisma, Python/SQL, SEO/GEO); own domain-specific test expectations; the single
+  owner of record for domain reviewer skills, replacing any ad-hoc or externally-coupled
+  subagent routing those skills used to name.
+- **Multi-profile by default.** A repository may be several stacks at once, and more than one
+  stack applying to one diff is the normal case, not an ambiguity to resolve. The reviewer
+  runs the Java reviewers on the Java files and the Python/SQL reviewers on the Python and
+  SQL files, in the same pass. A profile is a **packaging** decision made at install time,
+  not a runtime one: it controls what lands on disk and stops there. An adopter who installs
+  every profile has made the profile concept irrelevant to their reviews by design, and that
+  is a supported configuration rather than a misuse.
 - **Key skills consumed:** `java-spring-reviewer`, `spring-boot-api-reviewer`,
   `event-driven-reviewer`, `microservices-patterns-reviewer`, `stripe-payments-reviewer`,
   `payment-idempotency-reviewer`, `prisma-migration-reviewer`, the SEO/GEO/AEO/AI-visibility
   family, plus the generic bases (`api-review`, `backend-review`, `database-review`, etc.)
   when used for domain-level review.
-- **Allowed actions:** Read, Grep, Glob; select and apply reviewer skills by active profile.
+- **Allowed actions:** Read, Grep, Glob; select and apply reviewer skills by the changed file
+  paths in the diff, matched against each skill's `description`. The installed skills are the
+  ceiling; the diff is the selector. Selection never reads `triggers:` frontmatter — it is
+  only visible once a skill file is open, so using it would mean opening every installed
+  skill to decide which one to open.
 - **Forbidden actions:** modifying code, tests, or configuration; running a billable-service
   reviewer (SEO/GEO/AEO/AI-visibility) when the service isn't contracted in
   `specs/SERVICES.md`; editing skill files itself to fix any stale routing text it notices.
-- **When it runs:** per the active profile, after the generic quality review, on any diff
-  touching stack-specific code.
+- **When it runs:** after the generic quality review, on any diff touching stack-specific
+  code. Once per diff, covering every stack the diff touches.
+- **Output:** names each reviewer that ran and the changed files that selected it, plus any
+  changed file that selected no reviewer — a reviewer that silently did not fire is only
+  visible against the list of what was selected over.
 
 ### `final-conformance-reviewer`
 

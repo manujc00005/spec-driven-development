@@ -119,6 +119,69 @@ Both scripts read [`profiles.json`](../profiles.json) to decide **which** skills
 .\install.ps1 -Profile java-spring-backend,messaging-event-driven   # Windows equivalent
 ```
 
+### A repository with more than one stack
+
+A repository that is genuinely Java **and** Python does not have to pick a winner. Install both
+profiles; they accumulate, and the installer never deletes:
+
+```bash
+./install.sh --profile java-spring-backend,python-sql-data
+.\install.ps1 -Profile java-spring-backend,python-sql-data          # Windows equivalent
+```
+
+Reviews then select reviewers **by the files a diff changes**, not by a profile: the Java reviewers
+run on the `.java` files and the Python/SQL reviewers on the `.py` and `.sql` files, in the same
+pass. Nothing asks you which profile applies, because at review time that question no longer
+exists — a profile is a **packaging** decision that controls what lands on disk at install time and
+stops there. Installing every profile is a supported configuration, not a misuse; it simply makes
+the profile concept irrelevant to your reviews, which is the point.
+
+### `--all-profiles` — everything enabled, in one request
+
+```bash
+./install.sh --all-profiles
+.\install.ps1 -AllProfiles                                          # Windows equivalent
+```
+
+"Enabled" means simply **not marked `disabled`** in `profiles.json`. Two things a blanket request
+never installs, and it names both rather than dropping them silently:
+
+- **Disabled profiles** (`blockchain-crypto` today). Naming one with `--profile` still fails hard,
+  exactly as before — the blanket flag does not soften that.
+- **Billable add-ons** (`"billable": true` — `seo-geo-addon` today). These are separately-billed
+  services, so a blanket request must not switch one on. Install it explicitly when the client has
+  contracted it: `./install.sh --profile seo-geo-addon`, or combine the two —
+  `./install.sh --all-profiles --profile seo-geo-addon` installs the union.
+
+You will see the exclusions in the output:
+
+```
+[install] Active profiles: core java-spring-backend messaging-event-driven payments-fintech next-prisma-web delivery-operations python-sql-data
+[install] Skipped (billable add-on, not installed by --all-profiles): seo-geo-addon
+[install] Skipped (disabled in profiles.json): blockchain-crypto
+```
+
+One consequence worth knowing: a profile added to `profiles.json` later is picked up by
+`--all-profiles` by default, because silence means enabled. If you want a fixed set, name the
+profiles explicitly instead.
+
+### What `update.sh` does — and does not — do afterwards
+
+`scripts/update.sh` re-installs exactly the profiles recorded in
+`<central-dir>/.sdd-install.json`. It **never adds a profile you did not ask for**. So a profile
+added to the framework after your last `install.sh` run does not arrive on an update — it is
+reported instead, with the command that would add it:
+
+```
+[warn]   Profiles available but NOT installed here (this update did not add them):
+    python-sql-data  ->  ./install.sh --profile python-sql-data
+    seo-geo-addon  (billable add-on)  ->  ./install.sh --profile seo-geo-addon
+```
+
+Adding one is your decision and takes one command. If the manifest is missing or unreadable, the
+update says it **cannot compare** rather than listing every profile as new — an empty manifest is
+not the same as an empty install.
+
 **What you'll see for planned items** — `messaging-event-driven` now ships 2 review skills
 (`event-driven-reviewer`, `microservices-patterns-reviewer`) and 2 templates (`MESSAGING.md`,
 `MICROSERVICES_PATTERNS.md`) as of Phase 3; only its hook (`messaging-review-reminder`) is still a

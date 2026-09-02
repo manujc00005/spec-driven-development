@@ -41,6 +41,16 @@
 #                            --profile java-spring-backend,messaging-event-driven
 #                          An unknown or disabled profile name aborts immediately with a
 #                          clear error - it is never silently dropped.
+#   --all-profiles         Install every ENABLED profile in one explicit request, instead of
+#                          naming them one by one. "Enabled" means simply "not marked
+#                          disabled" in profiles.json. Two exclusions, both reported by name
+#                          rather than dropped silently:
+#                            * disabled profiles  - never installed by a blanket request;
+#                              naming one with --profile still fails hard, as before.
+#                            * billable add-ons ("billable": true, e.g. seo-geo-addon) - a
+#                              blanket request must not switch on a service the adopter has
+#                              not contracted. Name it with --profile to install it.
+#                          Combines with --profile: the union is installed.
 #   --remove-profile <name>  Remove a profile: delete the items ONLY it owns and drop it
 #                          from the install manifest, so scripts/update.sh stops
 #                          re-installing it. Repeatable. Items still shipped by another
@@ -76,6 +86,7 @@ LINK_USER_CLAUDE=0
 NO_PERSONAL=0
 PROFILE_ARGS=()
 REMOVE_PROFILE_ARGS=()
+ALL_PROFILES=0
 
 usage() {
   # Print the leading comment block (line 2 to the first non-comment line)
@@ -90,6 +101,7 @@ while [ $# -gt 0 ]; do
     --central-dir) CENTRAL_DIR="$2"; shift 2 ;;
     --claude-home) CLAUDE_HOME="$2"; shift 2 ;;
     --profile) PROFILE_ARGS+=("$2"); shift 2 ;;
+    --all-profiles) ALL_PROFILES=1; shift ;;
     --remove-profile) REMOVE_PROFILE_ARGS+=("$2"); shift 2 ;;
     --force) FORCE=1; shift ;;
     --dry-run) DRY_RUN=1; shift ;;
@@ -110,6 +122,22 @@ TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 # in profiles.json is checked later, in remove_profiles(), once the file has
 # been parsed - but still before any deletion (FR-008, AC-010).
 # ---------------------------------------------------------------------------
+# Spec 030: --all-profiles expands to every enabled profile, which necessarily
+# includes the one --remove-profile is deleting. Left unguarded, the run deletes
+# the profile's files, backs them up as removed, re-installs them in the same
+# pass, and records the profile in the manifest - so an explicitly destructive
+# command silently does nothing and the manifest lies about it.
+#
+# This is spec 034 D010's invariant reached through a different door: D010
+# guards the defaults.profile fallback by checking PROFILE_ARGS, which
+# --all-profiles never populates. Refuse rather than guess, exactly as the
+# both-lists check below does for the equivalent collision.
+if [ "$ALL_PROFILES" = "1" ] && [ ${#REMOVE_PROFILE_ARGS[@]} -gt 0 ]; then
+  echo "[ERROR]   --all-profiles and --remove-profile cannot be combined: the blanket request would re-install the very profile you are removing, in the same run. Refusing to guess which you meant. Nothing was changed."
+  echo "[ERROR]   Remove first, then install: './install.sh --remove-profile <name>' followed by './install.sh --all-profiles' (which would re-add it), or name the profiles you want with --profile."
+  exit 1
+fi
+
 for _rp in ${REMOVE_PROFILE_ARGS[@]+"${REMOVE_PROFILE_ARGS[@]}"}; do
   if [ -z "${_rp// /}" ]; then
     echo "[ERROR]   --remove-profile needs a profile name. Nothing was changed."
@@ -190,12 +218,13 @@ if [ ${#REMOVE_PROFILE_ARGS[@]} -gt 0 ] && [ ${#PROFILE_ARGS[@]} -eq 0 ]; then
   SUPPRESS_DEFAULT_PROFILE=1
 fi
 
-if PY_OUTPUT="$(python3 - "$PROFILES_FILE" "$REQUESTED_CSV" "$SUPPRESS_DEFAULT_PROFILE" <<'PYEOF'
+if PY_OUTPUT="$(python3 - "$PROFILES_FILE" "$REQUESTED_CSV" "$SUPPRESS_DEFAULT_PROFILE" "$ALL_PROFILES" <<'PYEOF'
 import json
 import sys
 
 profiles_file, requested_csv = sys.argv[1], sys.argv[2]
 suppress_default = len(sys.argv) > 3 and sys.argv[3] == "1"
+all_profiles = len(sys.argv) > 4 and sys.argv[4] == "1"
 
 try:
     with open(profiles_file, "r", encoding="utf-8") as f:
@@ -205,6 +234,34 @@ except Exception as e:
     sys.exit(1)
 
 requested = [p.strip() for p in requested_csv.split(",") if p.strip()]
+
+# Spec 030 FR-008..FR-010: --all-profiles is an EXPLICIT request for every enabled profile.
+# It expands here, in the one place that knows what a profile is, so it inherits the same
+# unknown-name and disabled-name handling as an explicit --profile.
+#
+# Two exclusions, and both are reported rather than silently applied:
+#   * disabled: true  - a blanket request must not resurrect a profile that was switched off
+#     (FR-009). Naming one with --profile still fails hard; that path is untouched.
+#   * billable: true  - a blanket request must not switch on a service the adopter has not
+#     contracted (FR-010). seo-geo-addon is the only one today. Naming it with --profile
+#     still installs it, which is the adopter opting in explicitly.
+# --all-profiles UNIONS with any --profile given in the same run: the adopter who wants
+# everything plus the billable add-on writes "--all-profiles --profile seo-geo-addon".
+skipped_disabled, skipped_billable = [], []
+if all_profiles:
+    for name, pdef in data.get("profiles", {}).items():
+        if name in requested:
+            # Explicitly named in the same run: the adopter opted in, so it is neither
+            # expanded nor reported as skipped. Reporting it as skipped while installing
+            # it would make the output contradict itself.
+            continue
+        if pdef.get("disabled") is True:
+            skipped_disabled.append(name)
+        elif pdef.get("billable") is True:
+            skipped_billable.append(name)
+        else:
+            requested.append(name)
+
 if not requested and suppress_default:
     pass  # removal-only run (D010): core alone, no default-profile fallback
 elif not requested:
@@ -275,6 +332,11 @@ for name in active_profiles:
     planned_agents.update(pdef.get("plannedAgents", []))
 
 print("ACTIVE_PROFILES:" + ",".join(active_profiles))
+# AC-017: name what a blanket request left out, so the exclusion is visible and reversible.
+for name in sorted(skipped_billable):
+    print("SKIPPED_BILLABLE:" + name)
+for name in sorted(skipped_disabled):
+    print("SKIPPED_DISABLED:" + name)
 for s in sorted(shipped_skills):
     print(f"SKILL:{s}")
 for s in sorted(planned_skills):
@@ -311,6 +373,8 @@ if [ "$PY_EXIT" -ne 0 ]; then
 fi
 
 ACTIVE_PROFILES=()
+SKIPPED_BILLABLE=()
+SKIPPED_DISABLED=()
 while IFS= read -r line; do
   line="${line%$'\r'}"  # defensive: strip a trailing CR in case python3's stdout is CRLF-translated (native Windows Python)
   case "$line" in
@@ -325,6 +389,8 @@ while IFS= read -r line; do
     PLANNED_TEMPLATE:*) PLANNED_TEMPLATES+=("${line#PLANNED_TEMPLATE:}") ;;
     AGENT:*) ACTIVE_AGENTS+=("${line#AGENT:}") ;;
     PLANNED_AGENT:*) PLANNED_AGENTS+=("${line#PLANNED_AGENT:}") ;;
+    SKIPPED_BILLABLE:*) SKIPPED_BILLABLE+=("${line#SKIPPED_BILLABLE:}") ;;
+    SKIPPED_DISABLED:*) SKIPPED_DISABLED+=("${line#SKIPPED_DISABLED:}") ;;
   esac
 done <<< "$PY_OUTPUT"
 
@@ -355,6 +421,16 @@ if [ ${#MISSING_SHIPPED[@]} -gt 0 ]; then
 fi
 
 log "Active profiles: ${ACTIVE_PROFILES[*]}"
+
+# Spec 030 AC-017: a blanket request states what it left out, by name. Omitting these
+# silently is how an adopter ends up believing they installed everything.
+if [ ${#SKIPPED_BILLABLE[@]} -gt 0 ]; then
+  log "Skipped (billable add-on, not installed by --all-profiles): ${SKIPPED_BILLABLE[*]}"
+  log "  These are separately-billed services. Install one explicitly with: --profile <name>"
+fi
+if [ ${#SKIPPED_DISABLED[@]} -gt 0 ]; then
+  log "Skipped (disabled in profiles.json): ${SKIPPED_DISABLED[*]}"
+fi
 log "Shipped  - skills: ${#ACTIVE_SKILLS[@]} | hooks: ${#ACTIVE_HOOKS[@]} | templates: ${#ACTIVE_TEMPLATES[@]} | agents: ${#ACTIVE_AGENTS[@]}"
 log "Planned  - skills: ${#PLANNED_SKILLS[@]} | hooks: ${#PLANNED_HOOKS[@]} | templates: ${#PLANNED_TEMPLATES[@]} | agents: ${#PLANNED_AGENTS[@]}"
 for s in ${PLANNED_SKILLS[@]+"${PLANNED_SKILLS[@]}"}; do echo "[planned] skill '$s'  - not installed (planned for a future phase)"; done

@@ -1,6 +1,6 @@
 ---
 name: payment-idempotency-reviewer
-description: Processor-agnostic review of money-movement flows for exactly-once effects — idempotency keys and dedup stores, retry storms, concurrent double-submission, DB constraints as the last line of defense, and outbox/event consistency. Extends backend-review and database-review.
+description: Processor-agnostic review of payment handlers, webhook consumers and charge/refund code paths for exactly-once effects — idempotency keys and dedup stores, retry storms, concurrent double-submission, DB constraints as the last line of defense, and outbox/event consistency. Extends backend-review and database-review.
 triggers:
   - After `/backend-review` on any flow that moves money, credits balances, or grants paid entitlements
   - When retry logic, queues, webhooks, or scheduled jobs touch a payment or ledger table

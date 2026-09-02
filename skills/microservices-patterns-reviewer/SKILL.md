@@ -1,6 +1,6 @@
 ---
 name: microservices-patterns-reviewer
-description: Review cross-service architectural decisions in a microservices system — service boundaries, sync vs async communication, data ownership, distributed transactions, resilience patterns, deployment coupling, API ownership, and cross-service contract compatibility. Extends architect-review, api-review, database-review, and security-review.
+description: Review cross-service decisions across service manifests, inter-service clients and shared API contracts — service boundaries, sync vs async communication, data ownership, distributed transactions, resilience patterns, deployment coupling, API ownership, and cross-service contract compatibility. Extends architect-review, api-review, database-review, and security-review.
 triggers:
   - After `/architect-review` on a change spanning multiple services
   - When the user asks to "review our service boundaries", "check for a shared database", "review the circuit breaker config", or "check contract compatibility between services"

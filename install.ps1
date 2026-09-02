@@ -47,6 +47,17 @@
   An unknown profile name or a disabled profile (e.g. blockchain-crypto)
   aborts immediately with a clear error  - it is never silently dropped.
 
+.PARAMETER AllProfiles
+  Install every ENABLED profile in one explicit request, instead of naming them
+  one by one. "Enabled" means simply "not marked disabled" in profiles.json.
+  Two exclusions, both reported by name rather than dropped silently:
+    * disabled profiles  - never installed by a blanket request; naming one with
+      -Profile still fails hard, as before.
+    * billable add-ons ("billable": true, e.g. seo-geo-addon) - a blanket request
+      must not switch on a service the adopter has not contracted. Name it with
+      -Profile to install it.
+  Combines with -Profile: the union is installed.
+
 .PARAMETER RemoveProfile
   Remove a profile: delete the items ONLY it owns and drop it from the install
   manifest, so scripts/update.ps1 stops re-installing it. Repeatable. Items
@@ -104,6 +115,7 @@
 param(
     [string]$CentralDir = "C:\ProgramData\ClaudeConfig",
     [string[]]$Profile,
+    [switch]$AllProfiles,
     [string[]]$RemoveProfile,
     [switch]$Force,
     [switch]$DryRun,
@@ -129,6 +141,18 @@ $Timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 # is truthy even when the switch was never passed. Normalise once, use everywhere.
 $RemoveProfileList = @()
 if ($null -ne $RemoveProfile) { $RemoveProfileList = @($RemoveProfile | Where-Object { $null -ne $_ }) }
+
+# Spec 030: -AllProfiles expands to every enabled profile, necessarily including
+# the one -RemoveProfile is deleting. Unguarded, the run deletes the profile,
+# backs it up as removed, re-installs it in the same pass and records it in the
+# manifest - an explicitly destructive command that silently does nothing while
+# the manifest lies about it. Spec 034 D010's invariant through a door its own
+# guard does not cover (it checks -Profile, which -AllProfiles never populates).
+if ($AllProfiles -and $RemoveProfileList.Count -gt 0) {
+    Write-Host "[ERROR]   -AllProfiles and -RemoveProfile cannot be combined: the blanket request would re-install the very profile you are removing, in the same run. Refusing to guess which you meant. Nothing was changed." -ForegroundColor Red
+    Write-Host "[ERROR]   Remove first, then install: '.\install.ps1 -RemoveProfile <name>' followed by '.\install.ps1 -AllProfiles' (which would re-add it), or name the profiles you want with -Profile." -ForegroundColor Red
+    exit 1
+}
 
 foreach ($rp in $RemoveProfileList) {
     if ([string]::IsNullOrWhiteSpace($rp)) {
@@ -205,6 +229,28 @@ if (Test-Path $ProfilesFile) {
         exit 1
     }
 
+    # Spec 030 FR-008..FR-010: -AllProfiles is an EXPLICIT request for every enabled
+    # profile. It expands here, before validation, so it inherits the same unknown-name and
+    # disabled-name handling as an explicit -Profile. Two exclusions, both reported by name:
+    #   * disabled: true  - never installed by a blanket request (FR-009); naming one with
+    #     -Profile still fails hard, and that path is untouched.
+    #   * billable: true  - a blanket request must not switch on an uncontracted service
+    #     (FR-010). Naming it with -Profile still installs it - the adopter opting in.
+    # -AllProfiles unions with -Profile, and a profile named explicitly is never also
+    # reported as skipped, which would make the output contradict itself.
+    $skippedBillable = @()
+    $skippedDisabled = @()
+    if ($AllProfiles) {
+        foreach ($prop in $profilesData.profiles.PSObject.Properties) {
+            $pName = $prop.Name
+            if ($requestedProfiles -contains $pName) { continue }
+            $pDef = $prop.Value
+            if ($pDef.disabled -eq $true) { $skippedDisabled += $pName }
+            elseif ($pDef.billable -eq $true) { $skippedBillable += $pName }
+            else { $requestedProfiles += $pName }
+        }
+    }
+
     # --- Hard validation: unknown profile name or explicit disabled request ---
     $validProfileNames = @($profilesData.profiles.PSObject.Properties.Name)
     $fatalErrors = @()
@@ -227,6 +273,15 @@ if (Test-Path $ProfilesFile) {
 
     # Core is always installed
     $activeProfileNames = @("core") + $requestedProfiles | Select-Object -Unique
+
+    # Spec 030 AC-017: a blanket request states what it left out, by name.
+    if ($skippedBillable.Count -gt 0) {
+        Write-Host "[install] Skipped (billable add-on, not installed by -AllProfiles): $($skippedBillable -join ' ')"
+        Write-Host "[install]   These are separately-billed services. Install one explicitly with: -Profile <name>"
+    }
+    if ($skippedDisabled.Count -gt 0) {
+        Write-Host "[install] Skipped (disabled in profiles.json): $($skippedDisabled -join ' ')"
+    }
 
     # --- Collect shipped + planned skills/hooks/templates from active profiles ---
     foreach ($pName in $activeProfileNames) {
