@@ -161,7 +161,7 @@ the two halves as separate commits — they share only `profiles.json` and the s
 
 ## Phase 4: Review
 
-- [ ] T023 - Execute a real `domain-reviewer` run against a diff containing both a `.java` and a
+- [x] T023 - Execute a real `domain-reviewer` run against a diff containing both a `.java` and a
   `.py` file, in a repository with both profiles installed, and attach the transcript. Building the
   fixture repository and diff is part of this task. Covers: AC-003, FR-016. Verify: the transcript
   shows findings from both stacks' reviewers in one pass, a `Reviewers applied` section naming each
