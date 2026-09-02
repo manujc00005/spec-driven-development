@@ -391,3 +391,8 @@
   "blocks .spec-close" TASKS.md` returns 0; `status unreadable` appears in `runner/README.md` and
   `SPEC.md`; D011 and DEBT-010 exist; `bash scripts/check-consistency.sh` exits 0 and the suite stays
   at 275.
+
+  **[OBSERVED 2026-09-02]** All six clauses hold. Every note now sits under its own task (T004, T009,
+  T012, T013, T014, T017, T021, T023, T028, T029); the only remaining "blocks `/spec-close`" is this
+  task's own description of what it removed; `status unreadable` is in both documents; D011 and
+  DEBT-010 exist; consistency exit 0; suite 275.
