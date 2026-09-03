@@ -39,36 +39,36 @@ pin the pre-refactor shape).
   refuses fail-closed naming both the version read and the version supported. Covers: AC-004.
   Verify: three unit tests — absent → resumes; `99` → exit 16 with both versions in the message;
   `abc` and empty → same path, no traceback.
-- [ ] T006 - Introduce `RunRequest` in `sdd_runner/protocol.py` and move request validation out of
+- [x] T006 - Introduce `RunRequest` in `sdd_runner/protocol.py` and move request validation out of
   `__main__.py`: feature-path containment through resolved real paths, contradictory fields, cap
   overrides, backend options. Covers: AC-002, AC-003. Verify: the existing containment tests
   (symlink, `features-old`, features root) pass with their assertions unchanged, and
   `grep -n "realpath\|commonpath" runner/sdd_runner/__main__.py` returns nothing.
-- [ ] T007 - Introduce `GateResult`, `Refusal` and `RunPlan` value types; `gate.check` returns a
+- [x] T007 - Introduce `GateResult`, `Refusal` and `RunPlan` value types; `gate.check` returns a
   `GateResult`. Covers: AC-002, AC-005. Verify: every refusal condition name and the order in which
   refusals are reported match T001's golden transcripts exactly.
-- [ ] T008 - Implement `run(RunRequest) -> RunOutcome`, absorbing first-entry determination, resume
+- [x] T008 - Implement `run(RunRequest) -> RunOutcome`, absorbing first-entry determination, resume
   authentication and its ordering against the gate, budget computation and backend resolution from
   `__main__.py`. Covers: AC-002, AC-003. Verify: `__main__.py` contains argv parsing, rendering and
   the exit call only, and a test asserts it imports no `sdd_runner` name outside `__all__`.
-- [ ] T009 - Define `__init__.__all__` as the public surface; stop re-exporting internals. Covers:
+- [x] T009 - Define `__init__.__all__` as the public surface; stop re-exporting internals. Covers:
   AC-011. Verify: a test reads `__all__`, asserts `len(__all__) <= 12`, and asserts every name the
   CLI imports from the package is in it.
-- [ ] T010 - Guarantee `RunOutcome` and `GateResult` leak no internal object. Covers: AC-002.
+- [x] T010 - Guarantee `RunOutcome` and `GateResult` leak no internal object. Covers: AC-002.
   Verify: a test walks both dataclasses' fields recursively and fails on any `Loop`,
   `Orchestration`, `Backend`, `CounterState`, file handle or mutable shared reference.
-- [ ] T011 - Move dry-run computation into the core as a `RunPlan`; the CLI only renders it. Covers:
+- [x] T011 - Move dry-run computation into the core as a `RunPlan`; the CLI only renders it. Covers:
   AC-007, AC-008. Verify: the `dry run` and `dry-run adopt` golden transcripts from T001 match byte
   for byte.
-- [ ] T012 - Correct the authority statement in `runner/README.md`, `sdd_runner/__init__.py` and
+- [x] T012 - Correct the authority statement in `runner/README.md`, `sdd_runner/__init__.py` and
   `skills/sdd-orchestrate/SKILL.md` per D004. Covers: AC-012. Verify: a test asserts no file among
   the nine FR-012 surfaces contains a sentence stating the runner is wrong when it disagrees with
   the skill, and that `SKILL.md` states the executable contract is the source of truth.
-- [ ] T013 - Declare the three seams in `sdd_runner/seams.py`, each naming its future owner, with no
+- [x] T013 - Declare the three seams in `sdd_runner/seams.py`, each naming its future owner, with no
   implementation. Covers: AC-010. Verify: a test asserts no `Backend` other than `stub` is reachable
   without `--allow-unverified-backend`, no autonomous entry point exists, and no lifecycle skill is
   dispatched after `CORE-COMPLETE`.
-- [ ] T014 - Local packaging per D006: `pyproject` declares the package, no runtime dependency
+- [x] T014 - Local packaging per D006: `pyproject` declares the package, no runtime dependency
   outside the stdlib, no import reaching outside the package. Covers: AC-009. Verify:
   `python3 -m sdd_runner --help` exits 0 on a checkout with neither the Agent SDK nor the Codex CLI,
   and a test asserts every top-level import in the package resolves to the stdlib or to
@@ -76,23 +76,23 @@ pin the pre-refactor shape).
 
 ## Phase 3: Tests
 
-- [ ] T015 - Write one contract test per FR-012 surface (nine), each reading the enumerated surface
+- [x] T015 - Write one contract test per FR-012 surface (nine), each reading the enumerated surface
   list. Covers: AC-006. Verify: nine tests exist, each named for its surface; each is demonstrated
   failing under a deliberate mutation of that surface, and the mutation and its revert are recorded
   in `evidence/CONTRACT_MUTATIONS.md`.
-- [ ] T016 - Add the over-reach guard of FR-012a. Covers: AC-006. Verify: the suite is green while
+- [x] T016 - Add the over-reach guard of FR-012a. Covers: AC-006. Verify: the suite is green while
   the twelve review skills are untouched, and a test asserts each contract test consumes the surface
   list rather than walking the repository.
-- [ ] T017 - Drive start, pause, abort, resume and core-complete through the public interface alone
+- [x] T017 - Drive start, pause, abort, resume and core-complete through the public interface alone
   with a scripted `stub`. Covers: AC-007. Verify: the test module imports only `run` and
   `RunRequest` from `sdd_runner`, and asserts the five terminal states with their exit codes.
-- [ ] T018 - Update `PROTOCOL_TRANSCRIPTION.md` module references to survive the move, without
+- [x] T018 - Update `PROTOCOL_TRANSCRIPTION.md` module references to survive the move, without
   widening the `MODULES` hole D002 names. Covers: AC-006. Verify: `test_transcription.py` is green
   and every row's module attribute resolves — checked by temporarily asserting zero rows are skipped.
-- [ ] T019 - Add the golden CLI comparison test replaying T001's transcripts. Covers: AC-008.
+- [x] T019 - Add the golden CLI comparison test replaying T001's transcripts. Covers: AC-008.
   Verify: all ten scenarios match byte for byte except the `Protocol version` line of FR-009, and the
   test names that line as the sole permitted difference.
-- [ ] T020 - Run the full suite and confirm the test diff is import-only. Covers: AC-005. Verify:
+- [x] T020 - Run the full suite and confirm the test diff is import-only. Covers: AC-005. Verify:
   `Ran N tests` with `N >= 276` and `OK` on a machine with neither the Agent SDK nor the Codex CLI,
   and `git diff main -- runner/tests` shows no changed line inside an `assert*` call.
 

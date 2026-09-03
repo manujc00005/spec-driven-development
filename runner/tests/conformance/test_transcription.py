@@ -22,7 +22,8 @@ import os
 import re
 import unittest
 
-from sdd_runner import blocks, budget, closure, counters, escalation, gate, loop, state, tasks
+from sdd_runner import (blocks, budget, closure, counters, escalation, gate, loop, policy,
+                        protocol, resume, retry, state, tasks)
 from tests.support import REPO_ROOT
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -38,7 +39,8 @@ REAL_ARTIFACTS = [
 # the table for a day after the method was deleted (D046). Add the module here
 # when you add its first row.
 MODULES = {"blocks": blocks, "budget": budget, "closure": closure, "counters": counters,
-           "escalation": escalation, "gate": gate, "loop": loop, "state": state,
+           "escalation": escalation, "gate": gate, "loop": loop, "policy": policy,
+           "protocol": protocol, "resume": resume, "retry": retry, "state": state,
            "tasks": tasks}
 
 
@@ -61,6 +63,25 @@ def _table_rows():
 class TableIsHonest(unittest.TestCase):
     def test_the_table_is_not_empty(self):
         self.assertGreaterEqual(len(_table_rows()), 20)
+
+    def test_no_row_is_silently_unchecked(self):
+        """The hole D046 fell through, closed — spec 042 T018.
+
+        A module absent from `MODULES` makes its rows UNCHECKED rather than
+        failing, which is how `loop.Loop._lifecycle_step` survived in this table
+        for a day after the method was deleted. `retry` was the last module
+        missing from the map, so exactly one row was unverified. Every module the
+        table may name is now mapped, and this asserts it stays that way: adding a
+        row for a new module without registering the module fails here instead of
+        passing vacuously.
+        """
+        unchecked = []
+        for _clause, module_ref, _test in _table_rows():
+            ref = module_ref.split("(")[0].strip().strip("`").strip()
+            if ref.split(".")[0] not in MODULES:
+                unchecked.append(ref)
+        self.assertEqual(unchecked, [],
+                         "these rows are asserted about nothing: %s" % unchecked)
 
     def test_every_named_module_attribute_exists(self):
         missing = []

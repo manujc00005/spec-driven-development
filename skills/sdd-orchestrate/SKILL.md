@@ -61,6 +61,20 @@ Classify what the user is asking FOR, not just what it touches:
 - **Specify** → stop after SPEC. **Plan** → stop after PLAN/TASKS.
 - **Implement / Fix** → run the full flow below.
 
+## Autonomous mode — where the protocol is defined
+
+**The executable contract is the source of truth: `runner/sdd_runner/` (spec 042).** This section
+and the ones below are its human-readable projection — the same rules, written for the person or
+model that has to follow them. Where this prose and the core disagree, **this prose is wrong**, and
+the fix is a `/spec-update` against spec 031 that changes both.
+
+That inverts spec 040 D007, which said the opposite. D007 was correct while this skill was the only
+complete definition and the runner transcribed part of it. It stopped being correct once contract
+tests began checking every normative value stated here against `sdd_runner.policy`: a cap, status,
+severity, trigger or exit code edited here and not there now turns the suite red instead of drifting
+quietly. Keep editing this file — it is what a reviewer and a model actually read — and expect the
+suite to hold you to the core.
+
 ## Autonomous mode — entry gate
 
 Run these checks in order and stop before any delegation or state write if one fails. Report every
@@ -138,7 +152,7 @@ skill never weakens permissions or mutates git history to make the gate pass.
 
 ## Autonomous mode — canonical structured output
 
-These schemas are the single source of truth. Delegation briefs must require the relevant block as
+These schemas are normative. Delegation briefs must require the relevant block as
 the final content in the agent response. Human-readable prose remains above it; control flow reads
 only the final fenced YAML block and never infers success from prose.
 
