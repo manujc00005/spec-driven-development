@@ -118,6 +118,25 @@ pin the pre-refactor shape).
 - [ ] T027 - `/spec-close` then `/pr-description`. Covers: AC-001…AC-013. Verify: `/spec-close` sets
   `Done` and `PR_DESCRIPTION.md` exists with acceptance-criterion-to-evidence traceability.
 
+## Phase 5: Repairs from review
+
+- [ ] T028 - Make `Protocol version` readable by the core wherever a surface states it, and replace
+  the substring guard with one that parses (from security:SEC-001). Covers: AC-004, AC-006.
+  Verify: `state.Orchestration.loads(<the template's text>).protocol_version()` returns
+  `policy.PROTOCOL_VERSION`, and mutating the template's value to `2` fails the guard.
+- [ ] T029 - Pass `resumable` explicitly on every pre-loop refusal (from security:SEC-002). Covers:
+  AC-002. Verify: a test asserts `RunOutcome.resumable is False` for exit 16 via **both** routes —
+  `_authenticate_reentry` and `loop.run` — and for the internal-error path.
+- [ ] T030 - Add the sibling-prefix containment test (from security:SEC-003). Covers: AC-002.
+  Verify: a feature folder planted at `specs/features-old/900-fixture` is refused, and the test
+  fails when `protocol.resolve_feature`'s `commonpath` check is mutated to `startswith`.
+- [ ] T031 - Redact the internal-error diagnostic and guard its log write (from security:SEC-004).
+  Covers: AC-002. Verify: a test asserts a secret in an exception message reaches neither stderr nor
+  `run.jsonl`, and that a failing `log.emit` still exits 70 rather than raising.
+- [ ] T032 - Define `REFUSED` and `PLANNED` in `policy` (raised adjacent to security:SEC-002).
+  Covers: AC-001. Verify: `test_policy.SingleDefinition` sees them, and `protocol.py` assigns
+  neither at module level.
+
 ## Coverage map
 
 | AC | Tasks |
