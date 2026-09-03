@@ -27,6 +27,3 @@ __pycache__/
 # ORCHESTRATION.md is the durable, human-readable record and IS committed;
 # run.jsonl is the transcript of one invocation and is not.
 specs/features/*/run.jsonl
-
-# The maintainer's own scratch prompt for this feature. Never versioned.
-docs/AUTONOMOUS_SDD_FEATURE_PROMPT.md
