@@ -11,13 +11,23 @@ Done
 This runner is a deterministic core with a stub backend, and that is what it should be trusted as.
 It is **not** a supported way to run unattended work against a real provider. D034 accepts the
 architecture review's option A: 040 owns the core controls through the `_finalize` seam; a
-follow-up owns real providers, writer-scope enforcement, lifecycle delegation and closure. D035–D038
-record partial implementation progress and its reconciliation, but T028…T032 remain open against
-their current Verify clauses, so final conformance remains **PARTIAL**, not PASS.
+follow-up owns real providers, writer-scope enforcement, lifecycle delegation and closure.
 
-The lifecycle `Status` above stays `In Review` because only `/spec-review` may move it, and this
-update is not that gate. A re-run of `/spec-review` against the findings below would not return
-`Pass`.
+> **Superseded 2026-09-01 — the two quoted paragraphs below were written on 2026-08-31 and are kept
+> as the record of that moment, not as the current state.** T028…T032 all closed against their
+> `Verify:` clauses; `FINAL_CONFORMANCE_REPORT.md` returned **PASS** on 040's corrected scope (T033,
+> re-verified by a second review on `codex/fix-040-conformance`); `/spec-review` returned **Pass**
+> and `/spec-close` moved the lifecycle `Status` to `Done` on 2026-09-01. The **EXPERIMENTAL**
+> classification above is untouched by that — it is about maturity, not conformance, and it still
+> holds: `stub` remains the only supported backend.
+>
+> *2026-08-31:* “D035–D038 record partial implementation progress and its reconciliation, but
+> T028…T032 remain open against their current Verify clauses, so final conformance remains
+> **PARTIAL**, not PASS.”
+>
+> *2026-08-31:* “The lifecycle `Status` above stays `In Review` because only `/spec-review` may move
+> it, and this update is not that gate. A re-run of `/spec-review` against the findings below would
+> not return `Pass`.”
 
 > **Historical lifecycle record; the 2026-08-31 Pass is superseded by D033/D034.**
 >

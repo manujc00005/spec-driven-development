@@ -2,7 +2,7 @@
 
 ## Status
 
-Estado: Merged
+Merged
 Blocked-by: —
 Parent: —
 
