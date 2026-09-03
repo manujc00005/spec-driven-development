@@ -194,3 +194,64 @@ this first is the whole value, which is why it is T001 and why no implementation
 **Consequences:** If a scenario turns out not to be reproducible deterministically, that is a finding
 about the CLI's testability, recorded as such — not a reason to drop the scenario or to weaken
 AC-008.
+
+---
+
+### D008 - Diagnostics keep their exact wording instead of being decomposed
+
+**Date:** 2026-09-03
+
+**Status:** Accepted
+
+**Context:** `GateResult` carries `Refusal` values with `condition`, `detail` and `remediation` —
+structured, as FR-005 requires. But four messages the core must emit are not gate refusals: the
+feature-path containment failure, an unreadable state file, a concurrent run, and a backend
+precondition. Each has a bespoke multi-line format that predates this feature and is pinned
+byte-for-byte by T001's golden transcripts.
+
+Decomposing them into `condition`/`observed`/`remediation` and re-rendering through
+`Refusal.render()` would produce better-structured output and **different bytes**.
+
+**Decision:** They become `Diagnostic(channel, text)` — structured enough to route (`GATE`,
+`BACKEND`, `INTERNAL` decide the stream and the prefix), with the message text carried verbatim.
+The docstring says so, and points here.
+
+**Reasoning:** AC-008 is this feature's central promise: no observable change. Spending it on a
+cosmetic improvement to four error messages would be the "ya que estoy" that turns a reviewable
+refactor into a diff nobody can check. The structure that matters for control flow — which stream,
+which exit code — is present; the structure that would only improve reading is deferred.
+
+**Consequences:** A caller that wants `remediation` as a field gets it for gate refusals and not for
+these four. That asymmetry is real and is the cost. It closes in whatever spec next changes the
+CLI's output deliberately, where the transcripts get re-recorded on purpose rather than as a side
+effect.
+
+---
+
+### D009 - Closing D046's hole was in scope; widening it was what T018 forbade
+
+**Date:** 2026-09-03
+
+**Status:** Accepted
+
+**Context:** T018 was written as "update `PROTOCOL_TRANSCRIPTION.md` references **without widening**
+the `MODULES` hole D002 names". Running it revealed the hole was live: `retry` had never been
+registered, so the row for `retry.call_with_retry` was asserted about nothing. One of 36 rows was
+decorative.
+
+**Decision:** Register every module the table may name (`policy`, `protocol`, `resume`, `retry`
+added) and add `test_no_row_is_silently_unchecked`, which fails when a row names an unregistered
+module instead of skipping it.
+
+**Reasoning:** This is the exact defect D046 recorded — `loop.Loop._lifecycle_step` survived in the
+table for a day after the method was deleted, because its rows were unchecked rather than failing.
+Leaving a known-live instance of a known defect untouched while editing the very file it lives in
+would be the "found dead code" rule applied where it does not fit: A-010 protects code nobody is
+touching, not a guard this task is required to modify. The task said do not *widen* the hole; a
+one-line map addition that closes it is the smallest change that satisfies the task's own
+verification criterion ("every row's module attribute resolves — checked by asserting zero rows are
+skipped").
+
+**Consequences:** The transcription guard now verifies 36 of 36 rows. A new row for an unregistered
+module is a failure rather than a silent pass. No row's content changed, so the clause→module
+provenance D002 preserved is untouched.
