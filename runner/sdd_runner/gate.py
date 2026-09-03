@@ -15,45 +15,9 @@ import os
 import re
 import subprocess
 from dataclasses import dataclass, field
-
-# First-entry statuses. `In Review` left both tuples with spec 041: its owning
-# skills are /qa-review and /spec-close, never this loop.
-READY_STATUSES = ("Ready",)
-ADOPT_STATUSES = ("In Progress",)
-REENTRY_STATUSES = ("Ready", "In Progress", "In Review")
-
-# Stable condition names. The first three mirror skills/sdd-orchestrate/SKILL.md.
-ADOPTION_NOT_NEEDED = "adoption not needed"
-ALREADY_ENTERED = "already adopted or entered"
-INHERITED_UNDETERMINED = "inherited diff undetermined"
-# The fourth is the runner's alone, and deliberately so (spec 041 D011): the skill
-# path is model-mediated and reads any SPEC dialect, so it never needs to say it
-# could not read one. This parser does. Documented in runner/README.md and in the
-# feature's SPEC so an operator who hits it on exit 10 finds it written down.
-STATUS_UNREADABLE = "status unreadable"
-
-# The lifecycle words this framework's own template uses. The gate does NOT try to
-# parse an adopter's dialect — that surface is unbounded, and the skill path reads
-# any of them because a model reads them. This list exists only to tell "a status
-# the gate could not read" apart from "a status it read and rejected", so the
-# refusal can say which (spec 041 T029, from the T014 replay).
-KNOWN_STATUS_WORDS = ("Draft", "Ready", "In Progress", "In Review", "Done", "Archived")
-
-# The names this runner's own bookkeeping owns inside the feature folder, so on
-# re-entry they are in-flight work rather than an unaccounted-for change. Three of
-# them the runner writes; `PR_DESCRIPTION.md` it does not — that belongs to the
-# hand-off a follow-up owns (040 D034), and the name stays here only because
-# `Loop._fingerprint` has excluded it since before spec 041 and dropping it would
-# change fingerprints nobody asked to change. The cost is small and worth naming:
-# on re-entry a dirty `PR_DESCRIPTION.md` is tolerated although no run produced it.
-# `Loop._fingerprint` excludes
-# the same NAMES for the same reason and imports this tuple so the two lists cannot
-# drift apart. The names are shared, the matching rule is not: the fingerprint uses
-# `endswith`, this gate compares exact repo-relative paths under the feature folder,
-# which is the stricter of the two. Those paths are built with `os.path.relpath`
-# while git porcelain always emits forward slashes, so the comparison assumes a
-# POSIX checkout; the runner has never been exercised on Windows (040, experimental).
-RUN_ARTIFACTS = ("ORCHESTRATION.md", "run.jsonl", "PR_DESCRIPTION.md", "TASKS.md")
+from .policy import (ADOPT_STATUSES, ADOPTION_NOT_NEEDED, ALREADY_ENTERED,  # noqa: F401
+                     INHERITED_UNDETERMINED, KNOWN_STATUS_WORDS, READY_STATUSES,
+                     REENTRY_STATUSES, RUN_ARTIFACTS, STATUS_UNREADABLE)
 
 
 @dataclass

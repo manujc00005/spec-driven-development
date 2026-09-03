@@ -1,0 +1,5 @@
+exit: 16
+--- stdout ---
+--- stderr ---
+[GATE] refused: <REPO>/specs/features/900-fixture/ORCHESTRATION.md was not written by this runner (State 'writer' is None)
+  remediation: the phase-1 executor owns that document. Finish the run with the executor that started it, or archive the file and start a fresh runner run.

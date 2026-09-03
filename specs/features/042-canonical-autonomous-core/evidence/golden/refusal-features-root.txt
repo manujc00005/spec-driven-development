@@ -1,0 +1,8 @@
+exit: 10
+--- stdout ---
+--- stderr ---
+[GATE] refused: --feature must resolve to a directory inside specs/features
+  requested: specs/features
+  resolves to: <REPO>/specs/features
+  detail: that is the features root itself, not a feature
+  remediation: pass a feature folder under specs/features, or set --repo to the repository that contains it

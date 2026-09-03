@@ -1,0 +1,6 @@
+exit: 10
+--- stdout ---
+--- stderr ---
+[GATE] refused: default branch
+  detail: HEAD is on 'main'
+  remediation: check out a dedicated feature branch or worktree before running

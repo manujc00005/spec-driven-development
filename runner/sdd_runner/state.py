@@ -19,10 +19,18 @@ import re
 import tempfile
 
 from .log import redact, secret_values
+from .policy import (ATTEMPT_COLUMNS, FINDING_COLUMNS, INHERITED_COLUMNS,  # noqa: F401
+                     LIFECYCLE, PROTOCOL_VERSION, RUN_RESULTS)
 
 _HEADING = re.compile(r"^##[ \t]+(?P<title>.+?)[ \t]*$", re.MULTILINE)
 
-RUN_RESULTS = ("ACTIVE", "PAUSED", "DONE", "ABORTED")
+
+class UnknownProtocolVersion(ValueError):
+    """The `Protocol version` field is present but unreadable — spec 042 FR-010."""
+
+    def __init__(self, raw):
+        self.raw = raw
+        super().__init__("unreadable protocol version %r" % (raw,))
 
 
 class Section:
@@ -164,6 +172,25 @@ class Orchestration:
         return s
 
     # -- the few fields the driver must read back -------------------------
+    def protocol_version(self):
+        """The protocol contract version this document was written under.
+
+        **Absent means 1** (spec 042 D003). That mirrors spec 041 D007 — a state
+        file with no `Entry` line is read as `ready` — so the repository has one
+        compatibility idiom rather than two, and every run started before the
+        field existed stays resumable.
+
+        A value that is not a positive integer is NOT guessed back into shape:
+        it raises, and the caller fails closed. 031's standing rule about state
+        files applies to this field like any other.
+        """
+        raw = parse_fields(self.body("State")).get("protocol version", "").strip()
+        if not raw:
+            return 1
+        if not raw.isdigit() or int(raw) < 1:
+            raise UnknownProtocolVersion(raw)
+        return int(raw)
+
     def run_result(self):
         body = self.body("Run result")
         for token in RUN_RESULTS:
@@ -178,19 +205,6 @@ class Orchestration:
         return self.run_result() == "ACTIVE"
 
 
-
-# The runner recognizes its OWN documents by these exact table headers. A
-# document written by the phase-1 executor uses different columns; resume must
-# BLOCK on it rather than guess (spec 040 T013, "no inventes estado").
-INHERITED_COLUMNS = ["Task", "Checked before adoption", "Verify clause",
-                     "Verification observed by this run"]
-ATTEMPT_COLUMNS = ["Attempt", "Task", "Agent", "Objective", "Lifecycle",
-                   "Allowed paths", "Pre", "Post", "Outcome", "Timestamp"]
-FINDING_COLUMNS = ["Reviewer:finding", "Task", "Repair task", "Severity", "Required action",
-                   "Status", "REJECTs", "Repair done", "Synthetic", "First seen", "Last seen",
-                   "Resolving verdict/fingerprint"]
-
-LIFECYCLE = ("PLANNED", "DISPATCHED", "RESPONDED", "VERIFIED", "RECOVERED", "FAILED")
 
 
 def parse_fields(body):
@@ -251,6 +265,9 @@ def new_document(feature_path, mode, started_at, caps):
     inherited = caps.get("inherited")          # gate.Inherited, or None for a ready entry
     doc.set_body("State", render_fields({
         "writer": "sdd_runner",
+        # spec 042 FR-009. Additive: a reader that predates the field ignores an
+        # unknown State line, and a document without it reads as version 1.
+        "protocol version": str(PROTOCOL_VERSION),
         "entry": str(caps.get("entry", "ready")),
         "adoption baseline commit": inherited.baseline if inherited else "n/a",
         "adoption diff base": ("%s (against %s)" % (inherited.diff_base,

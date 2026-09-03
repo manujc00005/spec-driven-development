@@ -20,6 +20,7 @@ from . import exits, gate, resume, state as state_mod
 from .backends import BackendPrecondition, resolve
 from .log import RunLog
 from .loop import Loop
+from .policy import FEATURES_ROOT  # noqa: F401
 
 
 def build_parser():
@@ -52,8 +53,6 @@ def build_parser():
                    help="run the entry gate, print the plan and the budget, dispatch nothing")
     return p
 
-
-FEATURES_ROOT = os.path.join("specs", "features")
 
 
 def _resolve_feature(repo, requested):

@@ -1,0 +1,6 @@
+exit: 10
+--- stdout ---
+--- stderr ---
+[GATE] refused: lifecycle status
+  detail: SPEC.md Status is 'Draft'
+  remediation: promote the spec with /spec-plan; first entry requires Ready (an In Progress feature started by hand is adopted with --adopt)

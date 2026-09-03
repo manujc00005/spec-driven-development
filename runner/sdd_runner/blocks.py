@@ -16,9 +16,7 @@ import re
 from dataclasses import dataclass, field
 
 from ._miniyaml import MiniYamlError, parse
-
-SEVERITIES = ("Critical", "High", "Medium", "Low")
-FINDING_KEYS = {"id", "severity", "evidence", "summary", "required_action"}
+from .policy import FINDING_KEYS, SEVERITIES  # noqa: F401 - re-exported (spec 042 AC-001)
 
 _FENCE = re.compile(r"^[ \t]*```[ \t]*(?P<lang>[A-Za-z0-9_-]*)[ \t]*$")
 

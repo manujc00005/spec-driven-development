@@ -1,0 +1,5 @@
+exit: 0
+--- stdout ---
+run result: DONE (ok)
+reason:     core complete: frozen at <SHA>, verification PASS, 3 path(s) recorded for the finalization hand-off. Lifecycle closure is outside this runner's scope.
+--- stderr ---

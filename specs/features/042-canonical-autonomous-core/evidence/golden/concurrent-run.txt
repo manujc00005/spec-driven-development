@@ -1,0 +1,4 @@
+exit: 15
+--- stdout ---
+--- stderr ---
+[GATE] refused: an ACTIVE run (pid=<PID> on <HOST>) already owns <REPO>/specs/features/900-fixture/ORCHESTRATION.md; refusing to start a second runner

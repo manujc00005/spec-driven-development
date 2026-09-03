@@ -1,0 +1,5 @@
+exit: 16
+--- stdout ---
+--- stderr ---
+[GATE] refused: <REPO>/specs/features/900-fixture/ORCHESTRATION.md records a completed run (Run result: DONE)
+  remediation: there is nothing to resume. Archive the state file if you want to run this feature again.

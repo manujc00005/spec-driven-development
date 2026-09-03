@@ -23,31 +23,8 @@ from .counters import CounterState
 from .escalation import classify_all
 from .resume import ConcurrentRun, UnresumableState
 from .retry import DelegationFailedClosed, RetryPolicy, call_with_retry
-
-REVIEWERS = ("domain", "security", "final-conformance")
-
-# Agents whose own contracts say "Read-only - it never modifies code". Their
-# recorded allowed-path scope is therefore EMPTY, and any change to the tree
-# during their delegation is an out-of-scope write (031 FR-008, SEC-002). The
-# worker legitimately writes, so it keeps the repo scope.
-READ_ONLY_AGENTS = REVIEWERS
-
-# The terminal phase of the closure record on 040's side of the `_finalize` seam.
-# It is NOT "CLOSED": the feature lifecycle is not closed by this runner, and a
-# phase word that implied otherwise would be the claim D034 removed.
-CORE_COMPLETE = "CORE-COMPLETE"
-
-AGENT_FILES = {
-    "worker": "agents/implementer.md",
-    "domain": "agents/domain-reviewer.md",
-    "security": "agents/security-reviewer.md",
-    "final-conformance": "agents/final-conformance-reviewer.md",
-    "deep-reasoner": "agents/deep-reasoner.md",
-}
-
-# Level-3 triggers for security review. Do not invent a second trigger list.
-SECURITY_TRIGGERS = ("auth", "authorization", "personal data", "payment", "migration",
-                     "upload", "secret", "public api", "schema", "persistence")
+from .policy import (AGENT_FILES, CORE_COMPLETE, PROTOCOL_VERSION,  # noqa: F401
+                     READ_ONLY_AGENTS, REVIEWERS, SECURITY_TRIGGERS)
 
 
 class UnattributedWrite(RuntimeError):
@@ -242,6 +219,10 @@ class Loop:
     def _state_fields(self, phase, note=""):
         return {
             "writer": "sdd_runner",
+            # spec 042 FR-009: written on create by `state.new_document` and
+            # PRESERVED here. This dict replaces the whole State body on every
+            # persist, so a field that is not restated is a field that is lost.
+            "protocol version": str(PROTOCOL_VERSION),
             "entry": self.entry,
             "phase": phase,
             "current task": note or "none",
