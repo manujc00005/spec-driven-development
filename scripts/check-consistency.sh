@@ -2,7 +2,8 @@
 #
 # Consistency checker: verifies that profiles.json, the on-disk artifacts
 # (skills/, hooks/, specs/_templates/, docs/_templates/, agents/), the hook
-# wiring in settings.template.json / settings.template.sh.json, and the
+# wiring in settings.template.json / settings.template.sh.json / hooks/hooks.json
+# (the plugin wiring, spec 044), and the
 # count claims in README.md all agree with each other.
 #
 # Exit codes: 0 = consistent, 1 = drift found (or profiles.json invalid),
@@ -288,6 +289,54 @@ def check_settings_wiring(filename):
 
 check_settings_wiring("settings.template.json")
 check_settings_wiring("settings.template.sh.json")
+check_settings_wiring("hooks/hooks.json")
+
+
+# ---------------------------------------------------------------------------
+# Spec 044 FR-010 (D002/D005): hooks/hooks.json is the plugin wiring and must
+# stay equivalent to settings.template.sh.json — same multiset of
+# (event, matcher, hook name, timeout). Reference existence is covered above;
+# this catches a hook silently dropped from, or added to, one side only.
+# ---------------------------------------------------------------------------
+def _wiring_tuples(path):
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    out = []
+    for event, groups in data.get("hooks", {}).items():
+        for group in groups:
+            for h in group.get("hooks", []):
+                m = HOOK_REF_RE.search(h.get("command", ""))
+                name = m.group(1) if m else h.get("command", "")
+                out.append((event, group.get("matcher", ""), name, h.get("timeout")))
+    return sorted(out, key=lambda t: (t[0], t[1], t[2], str(t[3])))
+
+
+def check_plugin_wiring():
+    plugin_path = os.path.join(repo_root, "hooks", "hooks.json")
+    template_path = os.path.join(repo_root, "settings.template.sh.json")
+    if not os.path.isfile(plugin_path):
+        err("plugin-wiring", "hooks/hooks.json", "plugin hook wiring not found (spec 044 FR-004)")
+        return
+    if not os.path.isfile(template_path):
+        return  # already reported by check_settings_wiring
+    try:
+        plugin, template = _wiring_tuples(plugin_path), _wiring_tuples(template_path)
+    except (OSError, ValueError) as exc:
+        err("plugin-wiring", "hooks/hooks.json", f"could not parse wiring: {exc}")
+        return
+    if plugin != template:
+        missing = [t for t in template if t not in plugin]
+        extra = [t for t in plugin if t not in template]
+        first = (missing or extra)[0]
+        where = "missing from hooks/hooks.json" if missing else "present only in hooks/hooks.json"
+        err(
+            "plugin-wiring",
+            "hooks/hooks.json",
+            f"differs from settings.template.sh.json — first difference {first!r} ({where}); the plugin wiring and the bash template must stay equivalent (spec 044 D005)",
+        )
+
+
+check_plugin_wiring()
 
 
 # ---------------------------------------------------------------------------

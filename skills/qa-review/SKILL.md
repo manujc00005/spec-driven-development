@@ -54,6 +54,7 @@ Check:
 - Are assertions strong enough?
 - Are there flaky test risks?
 - Is manual testing needed?
+- Does any new `TODO` or `FIXME` lack a reference to a spec, task, or ticket?
 
 ## Output format
 

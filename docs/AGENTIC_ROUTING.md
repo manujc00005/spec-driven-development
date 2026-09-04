@@ -183,7 +183,7 @@ review flavors), independent of which model runs them.
 
 The two systems can be used independently or together — nothing about the lifecycle agents
 requires `/sdd-orchestrate`, and nothing about `/sdd-orchestrate` requires the six lifecycle
-agents. `agents/README.md` documents both families side by side.
+agents. `AGENTS.md` (this folder) documents both families side by side.
 
 ## Routing model
 

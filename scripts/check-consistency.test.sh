@@ -519,6 +519,30 @@ else
   assert_case "routing-secondary-agents-untouched" 0 "Consistency check passed" "$dir"
 fi
 
+# --- spec 044 FR-010 / D005: plugin wiring (hooks/hooks.json) must stay equivalent ---
+# to settings.template.sh.json. One hook removed from the plugin side must fail.
+dir="$(fresh_copy plugin-wiring-hook-removed)"
+python3 - "$dir/hooks/hooks.json" <<'PYEOF'
+import json, sys
+p = sys.argv[1]
+d = json.load(open(p))
+# drop the first PostToolUse hook entry (ts-check) from the plugin wiring only
+d["hooks"]["PostToolUse"][0]["hooks"].pop(0)
+json.dump(d, open(p, "w"), indent=2)
+PYEOF
+# Guard: confirm the mutation landed so the case cannot pass vacuously.
+if grep -q 'ts-check.sh' "$dir/hooks/hooks.json"; then
+  echo "[FAIL] plugin-wiring-hook-removed: the mutation did not apply - the case would have passed vacuously"
+  FAIL=$((FAIL + 1))
+else
+  assert_case "plugin-wiring-hook-removed" 1 "[plugin-wiring] hooks/hooks.json" "$dir"
+fi
+
+# --- spec 044 FR-004: the plugin wiring file must exist ---
+dir="$(fresh_copy plugin-wiring-missing-file)"
+rm -f "$dir/hooks/hooks.json"
+assert_case "plugin-wiring-missing-file" 1 "[plugin-wiring] hooks/hooks.json" "$dir"
+
 echo ""
 echo "$PASS passed, $FAIL failed."
 [ "$FAIL" -eq 0 ]

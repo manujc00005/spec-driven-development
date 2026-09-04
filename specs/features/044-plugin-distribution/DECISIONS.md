@@ -29,7 +29,15 @@ through the plugin yet; the installer still can. The two assumptions this decisi
 (conventional discovery of `agents/`; nothing outside `skills/`, `agents/`, `hooks/` loaded) are
 answered by T001 and recorded below.
 
-**Observed (T001):** _pending — filled by T001 with the inventory lines quoted._
+**Observed (T001, 2026-09-04, Claude Code 2.1.259):** both assumptions hold, with one defect.
+`claude plugin marketplace add <checkout>` and `claude plugin install sdd@spec-driven-development
+--scope local` exited 0 with the minimal manifests (`source: "./"` accepted). `claude plugin
+details sdd` reported `Skills (72)` by convention with no `skills` key in `plugin.json`, `Agents
+(9)`, `Hooks (0)` (no `hooks/hooks.json` yet), and no component from `runner/`, `scripts/`,
+`specs/`, `evals/`, `adapters/` or `docs/`. Projected cost: `Always-on: ~8,341 tok added to every
+session`. The ninth agent is `README`: the loader registers every `.md` under `agents/`, including
+`agents/README.md`, which the installer and the consistency gate both treat as documentation. That
+is D009. Full transcript: `evidence/SPIKE.md`.
 
 ### D002 - `hooks/hooks.json` is a transcription of `settings.template.sh.json`, bash only
 
@@ -233,3 +241,65 @@ and "`hooks/README.md` names `hooks/hooks.json` as the plugin wiring". T010 cove
 **Reasoning:** Smaller than a new AC, and the three edits are one documentation task.
 
 **Consequences:** None beyond the spec text.
+
+### D009 - `agents/README.md` moves to `docs/AGENTS.md` so the loader does not ship a `README` agent
+
+**Date:** 2026-09-04
+
+**Status:** Accepted
+
+**Context:** T001 showed the plugin loader registers every `.md` file under `agents/` as an agent,
+so `agents/README.md` became a ninth agent named `README` in the inventory. The installer copies
+that file as documentation (`install.sh:931-935`, guarded by `[ -f agents/README.md ]`), the
+consistency gate skips it by name, `README.md` line 714 links to it, and no official plugin on this
+machine keeps a README inside `agents/`.
+
+**Decision:** `git mv agents/README.md docs/AGENTS.md`, fix its relative links, and repoint the
+one link in `README.md`. No installer edit: the guarded copy block becomes a no-op and stays as it
+is (AC-012). No `agents` key in `plugin.json`: listing eight files would make every future agent a
+manifest edit and would violate AC-001's rule.
+
+**Reasoning:** The only alternatives were an explicit agent list (rejected above) or leaving a
+bogus `README` agent that a session could try to delegate to. Moving one documentation file is the
+smallest change that makes the inventory true, and it matches the convention every official plugin
+follows.
+
+**Consequences:** `docs/AGENTS.md` is the agents reference from now on. The installer's
+"always copy agents/README.md" branch is dead code kept deliberately, named here so the retirement
+spec removes it. Historical references in closed specs and `CHANGELOG.md` are left as written.
+AC-004's expected agent count is 8, matching `count:agents-total`.
+AC-009's "only additions" reading applies to the checklist lines; `skills/security-review/SKILL.md`
+also carries one modified line from this repoint, visible in the diff and named in T007.
+
+### D010 - AC-006's hook observation needs a `specs/` directory, and print mode needs `--output-format stream-json`
+
+**Date:** 2026-09-04
+
+**Status:** Accepted
+
+**Context:** T014's first two print-mode sessions in the disposable project resolved `/sdd` and
+`/spec-create` as themselves but showed no `project-init-check` message. Two causes, both
+observed: (1) `hooks/project-init-check.sh` exits silently when the project has no `specs/`
+directory — its first guard — so a bare `git init` project is outside the hook's scope by design;
+the spec's edge case ("no `specs/CONSTITUTION.md`") was written assuming `specs/` exists. (2) Plain
+`claude -p` prints only the assistant text; hook output is visible as `hook_response` events in
+`--output-format stream-json --verbose` and in a `--debug-file` log.
+
+A first attempt at this decision was written before the corrected run was read, and claimed the
+hook commands would appear under `~/.claude/plugins/cache/…`. They do not: for a directory-sourced
+marketplace the plugin root **is** the checkout, and the debug log says so
+(`Read hooks.json for plugin sdd (enabled=true): /Users/manu/Proyectos/spec-driven-development/hooks/hooks.json`).
+The paragraph was rewritten from the evidence; this note stays so the mistake is visible.
+
+**Decision:** AC-006 is satisfied by the stream-json run recorded at the end of
+`evidence/E2E_SESSION.md`: the `[SDD] specs/CONSTITUTION.md not found` message appears in a
+`SessionStart` `hook_response`, the debug log shows the harness loading `hooks/hooks.json` for
+plugin `sdd` and the hook succeeding, and no user- or project-level wiring on this machine runs
+that hook. No human check was needed. The first two sessions remain as the skill-resolution proof.
+
+**Reasoning:** Attribution matters because a user-level copy of the same hook would print the same
+message; the debug log is what ties the message to the plugin.
+
+**Consequences:** The spec's edge-case wording is imprecise and stays as written; this decision is
+the correction. `docs/INSTALL.md` does not need to change: adopters' projects have `specs/`. The
+`.graphify/` directory seen after the first session is not claimed as evidence of anything.

@@ -40,7 +40,7 @@ consumes this skill:
 
 **Fallback:** only apply the checklist below yourself if the `security-reviewer` agent is
 unavailable in the session (agents require an installed registry plus a new session — see
-`agents/README.md`). Never delegate to agents this framework does not ship.
+`docs/AGENTS.md`). Never delegate to agents this framework does not ship.
 
 ## Core rules
 
