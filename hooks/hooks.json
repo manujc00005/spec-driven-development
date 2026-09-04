@@ -1,0 +1,100 @@
+{
+  "description": "SDD guardrail hooks \u2014 the plugin wiring. Transcribed from settings.template.sh.json (same events, matchers, timeouts and status messages; only the path prefix differs). Kept equivalent by scripts/check-consistency.sh (spec 044, D002/D005).",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/git-guardrails.sh\"",
+            "timeout": 5,
+            "statusMessage": "Git guardrails check..."
+          }
+        ]
+      },
+      {
+        "matcher": "Grep|Glob",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/graphify-scan-reminder.sh\"",
+            "timeout": 5,
+            "statusMessage": "Graphify graph-first nudge..."
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/scope-keeper-reminder.sh\"",
+            "timeout": 5,
+            "statusMessage": "Scope-keeper reminder..."
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/ts-check.sh\"",
+            "timeout": 30,
+            "statusMessage": "TypeScript check..."
+          },
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/eslint-fix.sh\"",
+            "timeout": 30,
+            "statusMessage": "ESLint fix..."
+          },
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/java-build-test-guard.sh\"",
+            "timeout": 60,
+            "statusMessage": "Java build guard..."
+          },
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/prettier-format.sh\"",
+            "timeout": 15,
+            "statusMessage": "Prettier format..."
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/sdd-status-banner.sh\"",
+            "timeout": 5,
+            "statusMessage": "SDD status..."
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/project-init-check.sh\"",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/graphify-stale-reminder.sh\"",
+            "timeout": 5,
+            "statusMessage": "Graphify freshness check..."
+          }
+        ]
+      }
+    ]
+  }
+}

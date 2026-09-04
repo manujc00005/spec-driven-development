@@ -233,6 +233,8 @@ It also addresses a cost shift. AI coding tools are moving from seat-based to us
 
 ## 🚀 Quickstart
 
+**Shortest path — install as a plugin** (Claude Code or Codex, two commands, nothing copied into your project): see [Install as a plugin](docs/INSTALL.md#install-as-a-plugin). The installer below remains the path for profiles and Windows.
+
 ```bash
 git clone https://github.com/manujc00005/spec-driven-development.git
 cd spec-driven-development
@@ -570,6 +572,8 @@ own for that stack (e.g. `java-spring-backend` routes `spring-security-reviewer`
 
 ## ⚙️ Installation
 
+**Prefer the plugin.** `claude plugin marketplace add <this repo>` then `claude plugin install sdd@spec-driven-development` — details, the Codex equivalent and two caveats in [Install as a plugin](docs/INSTALL.md#install-as-a-plugin). The installer below is the alternative.
+
 Installation is split across a few small, single-purpose scripts — full guide in [`docs/INSTALL.md`](docs/INSTALL.md):
 
 | Concern | Script | Touches |
@@ -711,7 +715,7 @@ Counted from this repository, not aspirational:
 | Hook families | **<!-- count:hook-families-total -->13<!-- /count -->** (<!-- count:hook-scripts-total -->26<!-- /count --> scripts) | Each ships as a `.ps1` + `.sh` pair; shared bash JSON helper in `hooks/lib/` |
 | SDD lifecycle templates | **<!-- count:specs-templates-total -->12<!-- /count -->** | `specs/_templates/` |
 | Project-context templates | **<!-- count:docs-templates-total -->21<!-- /count -->** | `docs/_templates/` |
-| Agents | **<!-- count:agents-total -->8<!-- /count -->** | 6 lifecycle agents (`codebase-researcher`, `solution-architect`, `implementer`, `security-reviewer`, `domain-reviewer`, `final-conformance-reviewer`) + 2 model-tier agents (`deep-reasoner` Opus read-only, `fast-worker` Sonnet bounded) — see [`agents/README.md`](agents/README.md) |
+| Agents | **<!-- count:agents-total -->8<!-- /count -->** | 6 lifecycle agents (`codebase-researcher`, `solution-architect`, `implementer`, `security-reviewer`, `domain-reviewer`, `final-conformance-reviewer`) + 2 model-tier agents (`deep-reasoner` Opus read-only, `fast-worker` Sonnet bounded) — see [`docs/AGENTS.md`](docs/AGENTS.md) |
 | Profiles | **<!-- count:profiles-total -->9<!-- /count -->** | `core`, `java-spring-backend` (default), `messaging-event-driven`, `next-prisma-web`, `seo-geo-addon` (billable overlay), `payments-fintech` (payments overlay), `delivery-operations` (deploy/containers/CI overlay), `python-sql-data` (Python/SQL/data review overlay), `blockchain-crypto` (disabled) |
 | Docs | **7 guides** | `INSTALL.md`, `SDD-ORCHESTRATION.md`, `AGENTIC_ROUTING.md`, `PROVIDER_ADAPTERS.md`, `TOKEN_ECONOMY.md`, `WORKSPACE_SDD.md`, `hooks/README.md` + per-directory READMEs |
 | Installers | **4 scripts** | `install.ps1/.sh`, `link-project.ps1/.sh` — dry-run, backups, profile-aware |

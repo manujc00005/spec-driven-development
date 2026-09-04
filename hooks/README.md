@@ -1,6 +1,6 @@
 # Hooks
 
-Twelve hook families (24 scripts — all ship as a `.ps1`/`.sh` pair). Each hook is a small, single-purpose script invoked by Claude Code at a specific lifecycle point, configured in `.claude/settings.json` — start from [`settings.template.json`](../settings.template.json) (Windows/PowerShell) or [`settings.template.sh.json`](../settings.template.sh.json) (macOS/Linux/bash) at the repo root; both wire the same hook set.
+Twelve hook families (24 scripts — all ship as a `.ps1`/`.sh` pair). Each hook is a small, single-purpose script invoked by Claude Code at a specific lifecycle point, configured in `.claude/settings.json` — start from [`settings.template.json`](../settings.template.json) (Windows/PowerShell) or [`settings.template.sh.json`](../settings.template.sh.json) (macOS/Linux/bash) at the repo root; both wire the same hook set. A third wiring, [`hooks.json`](hooks.json), is the plugin's: it carries the same default set with `${CLAUDE_PLUGIN_ROOT}` paths, and `scripts/check-consistency.sh` keeps it equivalent to the bash template (spec 044).
 
 None of these hooks call out to the network. All of them read local files or shell input and either allow, block, or annotate an action.
 

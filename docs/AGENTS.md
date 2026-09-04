@@ -2,7 +2,7 @@
 
 This repo ships two families of agents. They are independent of each other — neither
 supersedes the other, and a project can use one, both, or neither. This file is the
-concise reference; [`docs/AGENTIC_ROUTING.md`](../docs/AGENTIC_ROUTING.md) is the full
+concise reference; [`docs/AGENTIC_ROUTING.md`](AGENTIC_ROUTING.md) is the full
 explainer (per-agent skills consumed/when-to-run detail, the routing model, testing
 responsibility, and provider positioning).
 

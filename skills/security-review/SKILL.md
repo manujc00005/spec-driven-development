@@ -49,7 +49,7 @@ Consolidate the agent's output as the final review result.
 
 **Fallback:** only apply the generic checklist below yourself if the `security-reviewer` agent is
 unavailable in the session (agents require an installed registry — `install --link-user-claude` or
-`link-project` — plus a new session; see `agents/README.md`). Never delegate to agents this
+`link-project` — plus a new session; see `docs/AGENTS.md`). Never delegate to agents this
 framework does not ship.
 
 ## Core rules
@@ -83,6 +83,8 @@ Check:
 - Rate limiting or abuse prevention is considered for sensitive flows.
 - Audit logging exists for sensitive actions where relevant.
 - Dependencies or config changes do not introduce obvious risks.
+- A dependency that is added or bumped has been run through the ecosystem's audit (`npm audit`, `pip-audit`, `mvn dependency-check` or equivalent) and the lockfile is committed with it.
+- A newly integrated library's licence is compatible with how the project is distributed.
 
 ## Output format
 

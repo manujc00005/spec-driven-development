@@ -1,0 +1,37 @@
+{
+  "name": "sdd",
+  "version": "0.1.0",
+  "description": "Spec-Driven Development for Claude Code and Codex: lifecycle skills, review gates, agents and guardrail hooks.",
+  "author": {
+    "name": "Manuel",
+    "url": "https://github.com/manujc00005"
+  },
+  "homepage": "https://github.com/manujc00005/spec-driven-development",
+  "repository": "https://github.com/manujc00005/spec-driven-development",
+  "license": "MIT",
+  "keywords": [
+    "spec-driven-development",
+    "sdd",
+    "lifecycle",
+    "review-gates",
+    "agents",
+    "hooks",
+    "codex"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Spec-Driven Development",
+    "shortDescription": "Spec, plan, implement and review through gates",
+    "longDescription": "Run features through the SDD lifecycle: SPEC, PLAN, TASKS and DECISIONS, implementation from tasks, and review gates before closing. Same skills as the Claude Code plugin.",
+    "developerName": "Manuel",
+    "category": "Productivity",
+    "capabilities": [
+      "Instructions"
+    ],
+    "defaultPrompt": [
+      "Use /sdd to run this feature through the SDD lifecycle.",
+      "Use /spec-create to write the spec for this feature."
+    ],
+    "websiteURL": "https://github.com/manujc00005/spec-driven-development"
+  }
+}

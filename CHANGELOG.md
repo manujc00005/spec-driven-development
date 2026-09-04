@@ -11,6 +11,7 @@ under `specs/features/` — the framework is developed with its own workflow.
 
 ## [Unreleased]
 
+Spec 044 · Plugin distribution — the repository root becomes the `sdd` plugin and its own marketplace; the installer stays, for now.
 Runner frozen at spec 042 — the autonomous path is the prompt again, until real use says otherwise.
 Spec 040 · Agent SDK runner (**experimental**) — the autonomous loop stops being a prompt and
 becomes code, up to the point where closing the lifecycle would need a provider nobody has run.

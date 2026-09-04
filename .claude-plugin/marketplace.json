@@ -1,0 +1,33 @@
+{
+  "name": "spec-driven-development",
+  "owner": {
+    "name": "Manuel",
+    "url": "https://github.com/manujc00005"
+  },
+  "metadata": {
+    "description": "Spec-Driven Development framework: one plugin, the repository root."
+  },
+  "plugins": [
+    {
+      "name": "sdd",
+      "source": "./",
+      "description": "Spec-Driven Development for Claude Code and Codex: lifecycle skills, review gates, agents and guardrail hooks.",
+      "author": {
+        "name": "Manuel"
+      },
+      "homepage": "https://github.com/manujc00005/spec-driven-development",
+      "repository": "https://github.com/manujc00005/spec-driven-development",
+      "license": "MIT",
+      "category": "workflow",
+      "keywords": [
+        "spec-driven-development",
+        "sdd",
+        "lifecycle",
+        "review-gates",
+        "agents",
+        "hooks",
+        "codex"
+      ]
+    }
+  ]
+}

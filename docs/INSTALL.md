@@ -17,6 +17,56 @@ All scripts are **idempotent** and **safe to re-run**: an already-correct instal
 
 ---
 
+## Install as a plugin
+
+The repository root is a Claude Code plugin named `sdd`, and the repository is its own marketplace
+(spec 044). This is the shortest path and the one that needs no installer of ours:
+
+```bash
+# Claude Code — from a clone, or replace the path with the GitHub repo (owner/name)
+claude plugin marketplace add /path/to/spec-driven-development
+claude plugin install sdd@spec-driven-development
+```
+
+```bash
+# Codex
+codex plugin marketplace add /path/to/spec-driven-development
+codex plugin add sdd@spec-driven-development
+```
+
+That installs the 72 skills, the 8 agents and the default hook set from `hooks/hooks.json`, wired
+through `${CLAUDE_PLUGIN_ROOT}` — nothing is copied into your project. `claude plugin details sdd`
+shows the inventory and the projected token cost.
+
+Two things to know before you choose this path:
+
+- **Windows hooks stay on the installer for now.** `hooks/hooks.json` runs the `.sh` hooks with
+  `bash`; the PowerShell variants are not wired by the plugin. On Windows, use the installer below and
+  `settings.template.json` until a later spec verifies plugin hooks there.
+- **Do not wire the same hooks twice.** If a project already has the hooks in its
+  `.claude/settings.json` (from `scripts/wire-hooks.sh`), enabling the plugin makes every hook fire
+  twice per event. Pick one: remove the project wiring, or do not enable the plugin for that project.
+- **Do not ship the same skills twice either.** If you installed with `--link-user-claude`,
+  `~/.claude/skills` already points at the central copy; enabling the plugin as well lists every skill
+  twice (`verifier` and `sdd:verifier`). Pick one path per machine: the plugin, or the installer link.
+- **A local-directory marketplace loads in place.** When the marketplace was added from a checkout
+  path, the plugin root *is* that checkout: whatever that working tree holds runs in every project
+  with the plugin enabled at the next session — half-finished edits, and also any branch you check
+  out there, a contributor's PR branch included. If you review other people's branches in that
+  clone, point the marketplace at a separate clone you only fast-forward, or at the GitHub source,
+  which goes through the plugin cache and does not have this property.
+- **What you are trusting.** The hooks are bash scripts that run with your user's privileges on
+  nearly every tool call in an enabled project. Four of them run project-controlled code from the
+  project's own tree — `npx eslint --fix`, `npx prettier`, `npx tsc`, and `./mvnw` or `./gradlew`.
+  That was already true when a project wired them by hand; the plugin at **user** scope extends it
+  to every repository you open, including a freshly cloned one you have not read yet. For untrusted
+  checkouts, install with `--scope project` and enable the plugin only where you want it. Updates
+  from the GitHub source arrive with whatever the default branch holds; read the diff before
+  `claude plugin marketplace update` if that matters to you.
+
+The installer below keeps working unchanged and remains the path for profiles, Windows, and
+per-project Codex targets.
+
 ## Provider adapters
 
 SDD Core (the SPEC/PLAN/TASKS/DECISIONS lifecycle, review gates, skill contracts, agent responsibility model, and guardrail intent) is **provider-neutral**. A **provider adapter** packages that core for a specific AI coding agent. Full model and rationale: [`PROVIDER_ADAPTERS.md`](PROVIDER_ADAPTERS.md); registry and capability matrix: [`../adapters/README.md`](../adapters/README.md).
