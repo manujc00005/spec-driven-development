@@ -1,0 +1,6 @@
+exit: 10
+--- stdout ---
+--- stderr ---
+[GATE] refused: red baseline suite
+  detail: false exited 1
+  remediation: get the baseline green before starting an autonomous run

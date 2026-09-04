@@ -1,0 +1,6 @@
+exit: 10
+--- stdout ---
+--- stderr ---
+[GATE] refused: unattributed dirty tree
+  detail: 1 dirty path(s): stray.txt
+  remediation: commit, stash or discard the changes before starting an autonomous run

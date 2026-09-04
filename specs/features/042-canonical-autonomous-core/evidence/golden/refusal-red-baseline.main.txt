@@ -1,0 +1,20 @@
+# RETROSPECTIVE baseline - `main`'s real output on this path.
+# NOT captured at T001: reproduced afterwards from a temporary extraction of
+# `main`, for spec 042 conformance:CONF-006 / D018. D007 carries the full
+# provenance split of the corpus.
+# scenario: refusal-red-baseline
+# condition: red baseline suite
+# main-commit: 141638b6063e83386de501751c162487fb8268f2
+# command: python3 -m sdd_runner --repo <REPO> --feature <REPO>/specs/features/900-fixture --dry-run --baseline false
+# fixture: golden.SCENARIOS['refusal-red-baseline'], built by runner/tests/support.py, which is
+#   byte-identical between `main` and this branch.
+# normalization: golden.normalize only - <REPO>, <TMP>, <SHA>, <TS>, <HOST>,
+#   <PID>. No semantic difference is normalized.
+# relation: byte-identical to the current side.
+
+exit: 10
+--- stdout ---
+--- stderr ---
+[GATE] refused: red baseline suite
+  detail: false exited 1
+  remediation: get the baseline green before starting an autonomous run

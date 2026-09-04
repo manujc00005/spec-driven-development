@@ -13,8 +13,7 @@ Spend is checked BEFORE dispatch. `charge()` raises rather than allowing an
 over-budget call to be made and noticed afterwards.
 """
 
-FLOOR = 25
-PER_TASK = 6
+from .policy import FLOOR, PER_TASK  # noqa: F401 - re-exported (spec 042 AC-001)
 
 
 class BudgetExhausted(RuntimeError):

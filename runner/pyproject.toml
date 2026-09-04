@@ -1,7 +1,7 @@
 [project]
 name = "sdd-runner"
 version = "0.1.0"
-description = "Phase-2 executor for the SDD autonomous loop defined by spec 031."
+description = "The canonical executable authority for the SDD autonomous protocol (specs 031/040/042)."
 requires-python = ">=3.11"
 dependencies = []
 
@@ -12,5 +12,18 @@ dependencies = []
 [project.optional-dependencies]
 claude = ["claude-agent-sdk>=0.1", "anyio>=4"]  # anyio is used directly by the backend
 
+# Locally packaged, NOT distributed to adopters (spec 042 D006, upholding 040 D001).
+# "Installable" here means: a declared package, zero non-stdlib runtime dependencies,
+# no import reaching outside the package, and `python3 -m sdd_runner` working from a
+# plain checkout. It deliberately does NOT mean entering install.sh / install.ps1 /
+# profiles.json / the install manifest — that is a later feature's scope.
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["sdd_runner", "sdd_runner.backends"]
+
 [tool.sdd-runner]
 protocol-source = "specs/features/031-autonomous-orchestration-loop/SPEC.md"
+protocol-authority = "sdd_runner.policy"   # spec 042 D004: the core, not the skill

@@ -1,0 +1,6 @@
+exit: 10
+--- stdout ---
+--- stderr ---
+[GATE] refused: status unreadable
+  detail: the first line under `## Status` is '| state | who |', which states no lifecycle status
+  remediation: the gate reads the framework's own form — `## Status`, then a line naming one of Draft, Ready, In Progress, In Review, Done, Archived. A spec written in another dialect (a fenced block, a table) is not parsed here; the skill path reads it, this runner does not.

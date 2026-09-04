@@ -301,7 +301,11 @@ and interrupts a human only on an escalation or a non-success exit.
 
 Spec 031 named this feature in its own Non-goals and designed the verdict-block
 schema for both consumers. Where the runner and `sdd-orchestrate` disagree about
-semantics, **the runner is wrong** — specs 031 and 032 are normative.
+semantics, **the skill is wrong** — spec 042 made `runner/sdd_runner/` the
+protocol's executable authority, and contract tests hold nine prose surfaces
+(this document among them) to it. Specs 031 and 032 remain normative for what the
+protocol *says*; changing it is still a `/spec-update` against 031, and the core
+is where the change has to land for the suite to go green.
 
 ### Classification: experimental, stub-only
 

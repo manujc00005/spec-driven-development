@@ -1,0 +1,9 @@
+exit: 10
+--- stdout ---
+--- stderr ---
+[GATE] refused: adoption not needed
+  detail: SPEC.md Status is 'Ready'
+  remediation: run without --adopt; adoption is for a feature already In Progress
+[GATE] refused: inherited diff undetermined
+  detail: refs/remotes/origin/HEAD is not set, so the default branch is unknown
+  remediation: set it, e.g. `git remote set-head origin <branch>`, then re-run; the gate never assumes a default-branch name

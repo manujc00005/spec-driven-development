@@ -1,0 +1,41 @@
+# RETROSPECTIVE baseline - `main`'s real output on this path.
+# NOT captured at T001: reproduced afterwards from a temporary extraction of
+# `main`, for spec 042 conformance:CONF-006 / D018. D007 carries the full
+# provenance split of the corpus.
+# scenario: refusal-baseline-unavailable
+# condition: baseline suite unavailable
+# main-commit: 141638b6063e83386de501751c162487fb8268f2
+# command: python3 -m sdd_runner --repo <REPO> --feature <REPO>/specs/features/900-fixture --dry-run --baseline definitely-not-a-real-binary-042
+# fixture: golden.SCENARIOS['refusal-baseline-unavailable'], built by runner/tests/support.py, which is
+#   byte-identical between `main` and this branch.
+# normalization: golden.normalize only - <REPO>, <TMP>, <SHA>, <TS>, <HOST>,
+#   <PID>. No semantic difference is normalized.
+#   Traceback `File "...", line N, in f` frames dropped: they encode this
+#   machine's paths and the extraction directory. Exception lines, source
+#   lines and caret markers are verbatim.
+# relation: DIVERGES from the current side, authorised as DIFF-003 (D018).
+
+exit: 1
+--- stdout ---
+--- stderr ---
+Traceback (most recent call last):
+    sys.exit(main())
+             ~~~~^^
+    refusals = gate.check(repo, feature_dir,
+                          baseline_cmd=args.baseline.split() if args.baseline else None,
+                          first_entry=first_entry, adopt=args.adopt)
+    proc = subprocess.run(baseline_cmd, shell=False, cwd=repo,
+                          capture_output=True, text=True)
+    with Popen(*popenargs, **kwargs) as process:
+         ~~~~~^^^^^^^^^^^^^^^^^^^^^^
+    self._execute_child(args, executable, preexec_fn, close_fds,
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        pass_fds, cwd, env,
+                        ^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+                        gid, gids, uid, umask,
+                        ^^^^^^^^^^^^^^^^^^^^^^
+                        start_new_session, process_group)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    raise child_exception_type(errno_num, err_msg, err_filename)
+FileNotFoundError: [Errno 2] No such file or directory: 'definitely-not-a-real-binary-042'

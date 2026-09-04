@@ -1,0 +1,6 @@
+exit: 10
+--- stdout ---
+--- stderr ---
+[GATE] refused: open questions
+  detail: 1 unresolved question(s) in SPEC.md, which this gate cannot judge as blocking or not: OQ-1: which currency does the total use?
+  remediation: condition 2 forbids a question that blocks an unchecked task, and the gate cannot tell which do. Resolve them, strike them through, or mark them Resolved so the answer is recorded rather than inferred; or run /spec-clarify

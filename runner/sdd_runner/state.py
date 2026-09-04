@@ -19,10 +19,18 @@ import re
 import tempfile
 
 from .log import redact, secret_values
+from .policy import (ATTEMPT_COLUMNS, FINDING_COLUMNS, INHERITED_COLUMNS,  # noqa: F401
+                     LIFECYCLE, PROTOCOL_VERSION, RUN_RESULTS)
 
 _HEADING = re.compile(r"^##[ \t]+(?P<title>.+?)[ \t]*$", re.MULTILINE)
 
-RUN_RESULTS = ("ACTIVE", "PAUSED", "DONE", "ABORTED")
+
+class UnknownProtocolVersion(ValueError):
+    """The `Protocol version` field is present but unreadable — spec 042 FR-010."""
+
+    def __init__(self, raw):
+        self.raw = raw
+        super().__init__("unreadable protocol version %r" % (raw,))
 
 
 class Section:
@@ -164,6 +172,52 @@ class Orchestration:
         return s
 
     # -- the few fields the driver must read back -------------------------
+    def protocol_version(self):
+        """The protocol contract version this document was written under.
+
+        **Absent means 1** (spec 042 D003). That mirrors spec 041 D007 — a state
+        file with no `Entry` line is read as `ready` — so the repository has one
+        compatibility idiom rather than two, and every run started before the
+        field existed stays resumable.
+
+        **Present but unreadable fails closed**, including an empty value: a
+        truncated write is how the value is lost in practice, and guessing there
+        would be guessing about the very field that fixes what every other field
+        means. Absent and empty are different things and are treated differently
+        (spec 042 SPEC edge cases; domain:DOM-004 caught them being conflated).
+
+        The field is looked for **anywhere in the document**, case-insensitively,
+        with backticks stripped. Two writers state it in two dialects: this core
+        writes it inside `## State`, lower-case and unquoted; the skill's scaffold
+        states it in the header block, capitalised and backtick-quoted. A reader
+        that understood only its own spelling read the other writer's document as
+        *absent* and resumed it as version 1 — so the fail-closed gate could never
+        fire on the writer most likely to trip it (security:SEC-001 /
+        domain:DOM-003). Reading both is what spec 040 D034 §3 means by shared
+        readability.
+        """
+        stated = []
+        for line in self.dumps().splitlines():
+            line = line.strip()
+            if not line.startswith("- ") or ":" not in line:
+                continue
+            key, value = line[2:].split(":", 1)
+            if key.strip().lower() == "protocol version":
+                stated.append(value.strip().strip("`").strip())
+        if not stated:
+            return 1                       # absent
+        # A document that states two DIFFERENT versions is self-contradictory, and
+        # picking one silently is guessing at the field whose whole job is to say
+        # what every other field means. The first draft took the first statement,
+        # which would have become a fail-open the moment the version was bumped
+        # (security:SEC-007). Repeating the same value is not a contradiction.
+        if len(set(stated)) > 1:
+            raise UnknownProtocolVersion(", ".join(stated))
+        raw = stated[0]
+        if not raw.isdigit() or int(raw) < 1:
+            raise UnknownProtocolVersion(raw)
+        return int(raw)
+
     def run_result(self):
         body = self.body("Run result")
         for token in RUN_RESULTS:
@@ -178,19 +232,6 @@ class Orchestration:
         return self.run_result() == "ACTIVE"
 
 
-
-# The runner recognizes its OWN documents by these exact table headers. A
-# document written by the phase-1 executor uses different columns; resume must
-# BLOCK on it rather than guess (spec 040 T013, "no inventes estado").
-INHERITED_COLUMNS = ["Task", "Checked before adoption", "Verify clause",
-                     "Verification observed by this run"]
-ATTEMPT_COLUMNS = ["Attempt", "Task", "Agent", "Objective", "Lifecycle",
-                   "Allowed paths", "Pre", "Post", "Outcome", "Timestamp"]
-FINDING_COLUMNS = ["Reviewer:finding", "Task", "Repair task", "Severity", "Required action",
-                   "Status", "REJECTs", "Repair done", "Synthetic", "First seen", "Last seen",
-                   "Resolving verdict/fingerprint"]
-
-LIFECYCLE = ("PLANNED", "DISPATCHED", "RESPONDED", "VERIFIED", "RECOVERED", "FAILED")
 
 
 def parse_fields(body):
@@ -251,6 +292,9 @@ def new_document(feature_path, mode, started_at, caps):
     inherited = caps.get("inherited")          # gate.Inherited, or None for a ready entry
     doc.set_body("State", render_fields({
         "writer": "sdd_runner",
+        # spec 042 FR-009. Additive: a reader that predates the field ignores an
+        # unknown State line, and a document without it reads as version 1.
+        "protocol version": str(PROTOCOL_VERSION),
         "entry": str(caps.get("entry", "ready")),
         "adoption baseline commit": inherited.baseline if inherited else "n/a",
         "adoption diff base": ("%s (against %s)" % (inherited.diff_base,

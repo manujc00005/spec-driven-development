@@ -1,0 +1,5 @@
+exit: 13
+--- stdout ---
+run result: ABORTED (budget-exhausted)
+reason:     delegation budget exhausted: 1 of 1 used; refusing to dispatch
+--- stderr ---

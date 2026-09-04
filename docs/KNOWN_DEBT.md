@@ -23,6 +23,9 @@ claims the repo currently makes that nobody has checked.
 | DEBT-008 | The scope-keeper hook has never been observed firing in a live session | spec 036 | Open |
 | DEBT-009 | The runner has never executed against a real provider, or from `cron` | spec 040 | Open |
 | DEBT-010 | The adopted loop has never reached a human-gated `PAUSED` outside a fixture | spec 041 | Open (non-blocking) |
+| DEBT-011 | A dry run does not validate backend-exclusive options | spec 042 | Open |
+| DEBT-012 | `run.jsonl` detects write failures but is not tamper-evident | spec 042 | Open |
+| DEBT-013 | Five record-hygiene defects in spec 042, deliberately not repaired (one since closed) | spec 042 | Open (non-blocking), 4 of 5 |
 
 ---
 
@@ -326,3 +329,122 @@ unchanged — it is carried, not dismissed.
 
 **Related:** [[DEBT-009]] — both are about the loop never having met reality; that one is the runner
 against a provider, this one is the protocol against a real feature's human tasks.
+
+
+---
+
+## DEBT-011 — A dry run does not validate backend-exclusive options
+
+**Origin:** spec 042 (`canonical-autonomous-core`), T043 deferred on 2026-09-03; D011 **Superseded**.
+
+**The gap.** `--dry-run` returns its plan before a backend is resolved, so options that only mean
+something to a particular backend are not checked. The live case:
+
+```
+python3 -m sdd_runner --feature <path> --dry-run --backend claude --stub-script s.json  -> exit 0
+python3 -m sdd_runner --feature <path>            --backend claude --stub-script s.json  -> exit 14
+```
+
+The same contradictory request is accepted by one invocation and refused by the other. Spec 042's
+SPEC states the boundary explicitly — a dry run dispatches nothing, so it has no backend to
+contradict — but "explicable" is not the same as "intended", and a caller reasonably expects a dry
+run to answer as the real run would.
+
+**Cost if wrong.** Small and non-silent. The operator learns of the contradiction one invocation
+later, from a refusal that names the flags. Nothing is dispatched, no provider is reached, and no
+state is written in the meantime, so the wrong answer costs a re-run rather than damage.
+
+**Why it was not fixed in spec 042.** It **was** fixed, and then reverted. The fix moved the check
+ahead of the dry-run branch and turned an exit `0` into an exit `14` — an observable change that
+FR-009 did not authorise. At that point its structured list contained only `DIFF-001`; later review
+added other, unrelated entries, but the dry-run change remains outside the list. The maintainer
+rejected it as a usability improvement outside this refactor's scope. The attempt is recorded in
+spec 042's D011, marked Superseded/Rejected and kept in full so the reasoning survives.
+
+**What closes it.** A feature that owns the change deliberately: move the validation ahead of the
+dry-run branch (or into `RunRequest`), re-record the `dry-run-contradiction` golden transcript at
+exit `14`, and state the output change in its own acceptance criterion. It is a small change; what
+it needs is the authority to alter observable behaviour, which spec 042 did not have.
+
+**Related:** spec 042 D011 (Superseded), `domain:DOM-013`, `domain:DOM-017`, `domain:DOM-020`.
+
+
+---
+
+## DEBT-012 — `run.jsonl` detects write failures but is not tamper-evident
+
+**Origin:** spec 042 (`canonical-autonomous-core`), raised by `security-reviewer` in round 4 as an
+unresolved risk rather than a finding, and accepted here as debt.
+
+**What spec 042 closed.** A *failed* write is now detected and is fatal: `Loop._emit` raises
+`AuditUnavailable` on the first failure, the run stops before any further delegation, and the
+invocation reports exit 70 / `ABORTED` / `resumable: no` (D015). A worker can no longer make the
+transcript stop and let the run report success.
+
+**What remains open.** A worker with write access to the feature folder — which every implementer
+delegation has, by design — can still **truncate or rewrite** `run.jsonl`. Nothing detects that:
+`open(path, "a")` succeeds afterwards, subsequent appends land normally, and the file reads as a
+shorter but well-formed transcript. `state.py`'s claim that a run's decisions are reconstructible
+from the durable record holds against accident and **not** against the party the record exists to
+document.
+
+**Cost if wrong.** Bounded but real. `ORCHESTRATION.md` is written separately and atomically and
+carries the attempt table, the findings registry and the run result, so a tampered `run.jsonl`
+does not by itself let a worker hide that a delegation happened. What it can hide is the
+*event-level* detail a post-hoc audit would use to reconstruct a disputed run: dispatch payload
+references, verdict parsing, counter transitions. This matters when the loop is trusted to run
+unattended against a real provider, which it has never yet done ([[DEBT-009]]).
+
+**Why not in spec 042.** The feature's acceptance criterion is that observable behaviour does not
+change outside the differences FR-009's structured list authorises. Making the transcript
+tamper-evident means
+choosing a mechanism — a monotonic sequence number, a hash chain over records, or an append-only
+sink outside the repository — and **verifying the chain before every append**, which changes the
+write path's cost and failure modes on every event. That is a feature, with its own threat model and
+its own acceptance criteria, not a repair.
+
+**What closes it.** Either: (a) a per-record sequence number plus a hash chain (each record carries
+the digest of its predecessor), verified on open and before each append, with a documented response
+to a broken chain — most likely the same `AuditUnavailable` gate D015 established; or (b) an
+append-only sink outside the worker's reach, with the same verification. Either way the closing
+feature must state what a broken chain *does*, because a detector with no policy is the defect
+D015 was written to remove.
+
+**Related:** spec 042 D015 (the audit gate), `security:SEC-004`, `security:SEC-008`,
+`maintainer:MNT-001`, [[DEBT-009]].
+
+
+---
+
+## DEBT-013 — Five record-hygiene defects in spec 042, deliberately not repaired
+
+**Origin:** spec 042 round-5 reviews, listed by both reviewers as **non-blocking observations**. The
+maintainer authorised a bounded repair pass covering only the five blocking findings and instructed
+explicitly that observations be recorded rather than fixed, so that a pass meant to close
+contradictions did not turn into another round of improvements.
+
+None of these violates an acceptance criterion, a normative rule or a security property. They are
+recorded because a defect nobody wrote down is a defect nobody can choose about.
+
+| # | Where | What |
+|---|---|---|
+| 1 | `DECISIONS.md`, D016 Consequences | Says *"one row per identity, 42 of them"*. **The registry has grown by roughly half again since**, and the correction previously recorded here ("There are 54") had itself gone stale before anyone read it — twice. No figure is stated here now: `FINDINGS.md` is the count, and `registry_task_refs` derives it. True when written; a dated record rather than a live claim, but a reader may take it as a count to check. |
+| 2 | `FINDINGS.md`, `maintainer:MNT-005`…`MNT-010` | **RESOLVED 2026-09-04 (`conformance:CONF-007`).** Was: status `open` while their repair tasks are `[x]` and the repairs are in the tree, where the other rows use `repaired, awaiting re-review` for that state — two vocabularies in one column. All six now read `repaired, awaiting final conformance`, which is the same vocabulary and the more precise state: their re-review is T025, not a reviewer round. The row is kept marked rather than deleted (D013). |
+| 3 | `runner/tests/contract/test_identity_task_refs.py` | `if __name__ == "__main__": unittest.main()` sits above the last class, so running the file **directly** silently skips `TheCallerRefusesRatherThanAllocating` — the behavioural guard MNT-005 demanded. Under `unittest discover`, which is how the suite runs, everything is collected, so nothing is currently unverified. |
+| 4 | `loop.py` → `protocol.py` | The `UnresumableState` raised by `_schedule_repairs` is not caught by `Loop.run`'s per-task handlers, so it reaches the catch-all and surfaces as exit **70 / INTERNAL_ERROR** rather than exit **16 / STATE_UNRESUMABLE**, and its remediation is dropped. Still a coded, fail-closed refusal with no bypass — T066's criterion is met — but the classification is inconsistent with the same exception raised elsewhere in the loop. |
+| 5 | `evidence/mutation_harness.py` | A comment block describing one mutation now sits above a different one, after a row was inserted between them. Cosmetic. |
+
+**Cost if wrong.** Items 1 and 5 mislead a reader and cost nothing else; item 2 did the same and is
+closed. Item 3 is a negative-space trap of the D014 family: the day someone runs that file directly
+to check MNT-005, they get a pass that proves nothing. Item 4 costs an operator the remediation text
+and gives a scheduler the wrong code on one refusal path.
+
+**What closes it.** Items 1 and 5 are edits; item 2 was one and is done. Item 3 is moving four lines
+to the end of the file. Item 4 needs a decision first — whether `_schedule_repairs`'s refusal should
+classify as `STATE_UNRESUMABLE`, which is a behaviour change and therefore not spec 042's to make.
+
+**Status:** four of the five open. The heading keeps the figure five because that is how many were
+recorded; the table says which are live.
+
+**Related:** spec 042 D013 (keep the history), D014 (a negative assertion must instantiate what it
+denies), D016, `maintainer:MNT-005`.

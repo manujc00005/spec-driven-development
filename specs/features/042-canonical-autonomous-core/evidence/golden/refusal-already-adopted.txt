@@ -1,0 +1,6 @@
+exit: 10
+--- stdout ---
+--- stderr ---
+[GATE] refused: already adopted or entered
+  detail: <REPO>/specs/features/901-adopted/ORCHESTRATION.md already exists
+  remediation: a run is resumed, never re-adopted: re-enter without --adopt

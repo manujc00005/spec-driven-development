@@ -6,7 +6,16 @@ clause of spec 031 (as rendered in `skills/sdd-orchestrate/SKILL.md`) it comes
 from, and to the test that pins it.
 
 `test_transcription.py` asserts that this table stays honest: every module listed
-here must exist, and every test named here must be collected by the suite.
+here must exist, every test named here must be collected by the suite, and — since spec 042 T018 —
+**no row is silently unchecked**. `retry` was the last module missing from the guard's `MODULES`
+map, so one row was asserted about nothing; every module the table may name is now registered, and
+adding a row for an unregistered module fails instead of passing vacuously.
+
+**Where the constants moved (spec 042).** Rows naming a constant — `blocks.SEVERITIES`,
+`blocks.FINDING_KEYS`, `budget.default_cap`'s inputs, `escalation.HUMAN_GATED`, `loop.CORE_COMPLETE`
+— resolve through a re-export: the value is defined once in `sdd_runner.policy` and the owning
+module imports it. The reference in this table is still the spelling a reader will find in the code,
+which is why it was left alone.
 
 **Scope note (D034/D046).** Three clauses of 031's termination contract — lifecycle-skill
 invocation, the closure delta over what those skills change, and `PR_DESCRIPTION.md` — are **not
@@ -54,6 +63,11 @@ no clause this executor honours.
 | The run writes no spec `Status`, so no closure delta is computed over one | `loop.CORE_COMPLETE` | `test_finalization.CoreBoundary.test_a_converged_run_computes_no_closure_delta` |
 | The frozen tree map is persisted for the hand-off consumer | `closure.tree_map` | `test_finalization.ClosureRecord.test_the_frozen_record_is_persisted_with_an_empty_delta` |
 | Each attempt records an allowed-path scope; an out-of-scope write fails closed | `loop.Loop._scope_for` | `test_loop.ReadOnlyAgentsMayNotWrite` |
+| The protocol's vocabulary is defined once and read by every rule | `policy` | `test_policy.SingleDefinition` |
+| The whole protocol is reachable through one call | `protocol.run` | `test_public_lifecycle.TheFiveStates` |
+| Entry vs re-entry, resume ordering, budget and backend are the core's, not the caller's | `protocol.run` | `test_interface.TheCliMakesNoProtocolDecision` |
+| The durable record states the contract version it was written under | `state.Orchestration.protocol_version` | `test_protocol_version.TheFieldIsWrittenAndKept` |
+| A version the core cannot implement fails closed, never guessed | `resume.inspect` | `test_protocol_version.ResumeRefusesWhatItCannotImplement` |
 
 ## Resolved divergence — severity vocabulary (D011, 2026-08-31)
 

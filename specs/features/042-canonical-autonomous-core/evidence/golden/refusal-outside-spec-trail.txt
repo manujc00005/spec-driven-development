@@ -1,0 +1,8 @@
+exit: 10
+--- stdout ---
+--- stderr ---
+[GATE] refused: --feature must resolve to a directory inside specs/features
+  requested: specs
+  resolves to: <REPO>/specs
+  detail: it lands outside the spec trail
+  remediation: pass a feature folder under specs/features, or set --repo to the repository that contains it

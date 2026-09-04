@@ -1,0 +1,4 @@
+exit: 70
+--- stdout ---
+--- stderr ---
+[INTERNAL] audit transcript unavailable while recording 'plan': IsADirectoryError: [Errno 21] Is a directory: '<REPO>/specs/features/900-fixture/run.jsonl'. The run stopped at that event, before any further delegation. Nothing after it was recorded, so this run is not convergent and is not resumable until the feature folder is inspected.

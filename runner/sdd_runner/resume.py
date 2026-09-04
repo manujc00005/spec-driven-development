@@ -30,15 +30,12 @@ from dataclasses import dataclass, field
 from . import closure as closure_mod
 from . import state as state_mod
 from .counters import CounterState, FindingRow
-
-TERMINAL_RESULTS = ("DONE",)
+from .policy import PROTOCOL_VERSION, RECOVERABLE_RESULTS, TERMINAL_RESULTS  # noqa: F401
 
 # Attempts-row objectives. Must match loop.py.
 TASK_COMPLETE_OBJECTIVE = "task complete"
 IMPLEMENTATION_OBJECTIVE = "implementation"
 REPAIR_OBJECTIVE_PREFIX = "repair "
-RECOVERABLE_RESULTS = ("PAUSED", "ABORTED")
-
 
 class UnresumableState(RuntimeError):
     """The run cannot continue. Carries what is wrong and what a human must do."""
@@ -286,6 +283,25 @@ def inspect(doc, doc_path, max_iterations, hostname, pid_alive=_pid_alive):
             "%s has no recognizable Run result" % doc_path,
             "without a run result the runner cannot tell a finished run from an interrupted one. "
             "Inspect the file, or delete it to start a fresh run.")
+
+    # spec 042 FR-010. Checked before any field that carries STATE is believed —
+    # pid, host, caps, counters, findings, attempts, closure — because the version
+    # is what fixes those fields' meaning. Two checks precede it, `writer` and the
+    # presence of a run result, and both fail closed; an earlier draft of this
+    # comment claimed the version came first, which was not true.
+    try:
+        written_under = doc.protocol_version()
+    except state_mod.UnknownProtocolVersion as exc:
+        raise UnresumableState(
+            "%s records an unreadable protocol version %r" % (doc_path, exc.raw),
+            "the field must be a positive integer. This core implements protocol version %d; "
+            "inspect the file, or archive it and start a fresh run." % PROTOCOL_VERSION)
+    if written_under > PROTOCOL_VERSION:
+        raise UnresumableState(
+            "%s was written under protocol version %d, and this core implements %d"
+            % (doc_path, written_under, PROTOCOL_VERSION),
+            "a newer executor owns that run. Finish it with the executor that started it, or "
+            "archive the file and start a fresh run.")
 
     if result in TERMINAL_RESULTS:
         raise UnresumableState(

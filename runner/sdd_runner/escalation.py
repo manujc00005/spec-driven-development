@@ -9,26 +9,7 @@ the classifier never guesses in the permissive direction.
 
 import re
 from dataclasses import dataclass
-
-HUMAN_GATED = [
-    ("product-ux",
-     r"\b(ux|user experience|product decision|wording|copy|which flow|what should the user)\b"),
-    ("money",
-     r"\b(pricing|price|billing|invoice|refund|payment|charge the customer|financial liability"
-     r"|money|currency|tarifa|facturaci[oó]n)\b"),
-    ("personal-data",
-     r"\b(personal data|pii|gdpr|rgpd|lopdgdd|aepd|consent|retention|erasure|right to be forgotten"
-     r"|datos personales)\b"),
-    ("public-contract",
-     r"\b(public api|published schema|external contract|breaking change|api version"
-     r"|backward.?incompatib)\w*\b"),
-    ("destructive",
-     r"\b(delete|drop table|truncate|purge|apply the migration|production data|irreversible"
-     r"|destructive)\b"),
-    ("spec-contradiction",
-     r"\b(contradicts the spec|conflicts with the spec|spec says otherwise|not in the spec"
-     r"|outside the spec|spec-update)\b"),
-]
+from .policy import HUMAN_GATED  # noqa: F401 - re-exported (spec 042 AC-001)
 
 _COMPILED = [(name, re.compile(pattern, re.IGNORECASE)) for name, pattern in HUMAN_GATED]
 

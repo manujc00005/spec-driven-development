@@ -1,9 +1,16 @@
 # `runner/` — phase-2 executor for the SDD autonomous loop
 
-Spec: [`specs/features/040-agent-sdk-runner/`](../specs/features/040-agent-sdk-runner/).
-Protocol: **spec 031**, corrected by **spec 032**. This package transcribes that
-protocol; it does not define it. Where this runner and
-`skills/sdd-orchestrate/SKILL.md` disagree, **this runner is wrong** (D007).
+Specs: [`040-agent-sdk-runner/`](../specs/features/040-agent-sdk-runner/) built it;
+[`042-canonical-autonomous-core/`](../specs/features/042-canonical-autonomous-core/) made it the
+protocol's authority. Protocol: **spec 031**, corrected by **spec 032**.
+
+**Where this package and `skills/sdd-orchestrate/SKILL.md` disagree, the SKILL is wrong.** That is
+the inverse of spec 040 D007 and deliberately so (042 D004): D007 was right while the prose was the
+only complete definition and this package transcribed part of it, and stopped being right once the
+contract tests began checking nine prose surfaces against this core. The core is the only definition
+that cannot drift; deferring to prose would mean deferring to the unverifiable half. Semantic
+changes still go through `/spec-update` against 031 — the authority moved, the change process did
+not.
 
 ## What it is, and what it is not
 
@@ -53,6 +60,13 @@ by hand. `--adopt` over an existing state file always refuses *already adopted o
 instead.
 
 ### Exit codes
+
+Each code has a stable machine name as well as a meaning; a scheduler may branch on either, and
+`sdd_runner.policy.NAMES` is where both are defined. Names: `0` ok · `10` gate-refused ·
+`11` human-escalation · `12` cap-abort · `13` budget-exhausted · `14` backend-precondition ·
+`15` concurrent-run · `16` state-unresumable · `17` not-converged · `18` closure-not-proven ·
+`70` internal-error.
+
 
 `0` converged · `10` gate refused (under `--adopt` also *adoption not needed*, *already adopted or
 entered*, *inherited diff undetermined*; and *status unreadable* in either mode, when the line under

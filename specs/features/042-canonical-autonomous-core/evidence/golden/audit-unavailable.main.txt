@@ -1,0 +1,31 @@
+# RETROSPECTIVE baseline — `main`'s real output on this path.
+# Reproduced from a temporary extraction of `main` after round 4, NOT captured at
+# T001 with the other seventeen. Recorded because an authorised difference needs
+# both sides on the record (spec 042 D015, `maintainer:MNT-010`); the file frames
+# have been dropped from the traceback so the artifact does not encode this
+# machine's paths, and the exception line is kept verbatim.
+
+exit: 1
+--- stdout ---
+--- stderr ---
+Traceback (most recent call last):
+    outcome = loop.run()
+    self.log.emit("plan", unchecked=len(pending), runnable=[t.id for t in runnable],
+                  skipped=skipped, budget_cap=self.budget.cap,
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                  budget_used=self.budget.used,
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                  max_iterations=self.counters.max_iterations,
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                  resumed=resumed is not None)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    with open(self.path, "a", encoding="utf-8") as fh:
+IsADirectoryError: [Errno 21] Is a directory: '<REPO>/specs/features/900-fixture/run.jsonl'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+    sys.exit(main())
+    log.emit("internal-error", detail=str(exc))
+    with open(self.path, "a", encoding="utf-8") as fh:
+IsADirectoryError: [Errno 21] Is a directory: '<REPO>/specs/features/900-fixture/run.jsonl'

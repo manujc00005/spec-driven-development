@@ -1,0 +1,6 @@
+exit: 10
+--- stdout ---
+--- stderr ---
+[GATE] refused: baseline suite mutates the tree
+  detail: git status changed while running /opt/homebrew/opt/python@3.14/bin/python3.14 <TMP>/mutate.py
+  remediation: make the baseline hermetic; a mutating baseline corrupts fingerprints

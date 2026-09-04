@@ -6,6 +6,7 @@
 # Orchestration: <feature-name>
 
 - Feature: `<feature-path>`
+- Protocol version: `1`
 - Mode: `autonomous`
 - Entry: `ready | adopt`
 - Adopted at: `<ISO-8601 | n/a>`

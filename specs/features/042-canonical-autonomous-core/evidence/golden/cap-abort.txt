@@ -1,0 +1,5 @@
+exit: 12
+--- stdout ---
+run result: ABORTED (cap-abort)
+reason:     reviewer 'domain' failed to converge: 1 consecutive rejects that resolved nothing
+--- stderr ---

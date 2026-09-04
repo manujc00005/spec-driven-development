@@ -1,0 +1,6 @@
+exit: 10
+--- stdout ---
+--- stderr ---
+[GATE] refused: not a git repository
+  detail: <REPO>
+  remediation: run inside the repo checkout

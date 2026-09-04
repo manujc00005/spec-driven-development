@@ -1,0 +1,17 @@
+exit: 0
+--- stdout ---
+feature:         <REPO>/specs/features/901-adopted
+backend:         claude (not resolved: a dry run dispatches nothing)
+unchecked tasks: 2
+max-iterations:  3
+max-delegations: 25
+entry:           adopt
+adoption baseline commit: <SHA>
+adoption diff base:       <SHA> (against main)
+inherited tasks: 2 (verification not observed by this run)
+  T001  inherited  verify: `python3 -c "import src.pricing"` exits 0.
+  T002  inherited  verify: `discount(1500, member=True)` returns 500.
+  T003  Clamp totals at zero. Covers: AC-002. Verify: `discount(100, member=True)` returns 0.
+  T004  Add the unit tests. Covers: AC-001, AC-002. Verify: `python3 -m unittest src.test_pricin
+dry run: nothing dispatched.
+--- stderr ---

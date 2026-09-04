@@ -66,14 +66,40 @@ def redact(obj, secrets=None):
     return obj
 
 
+class AuditUnavailable(RuntimeError):
+    """The durable transcript could not be written — spec 042 D015.
+
+    Raised by the loop's `_emit` wrapper, never by `RunLog` itself: the writer
+    keeps its "never raises into the loop" promise so a lost line cannot turn a
+    coded exit into a traceback, and the *loop* decides that a run without a
+    durable record is not a run. The two responsibilities are separate on purpose.
+    """
+
+    def __init__(self, event, failures):
+        self.event = event
+        self.failures = list(failures)
+        super().__init__("audit transcript unavailable while recording %r: %s"
+                         % (event, self.failures[-1] if self.failures else "unknown"))
+
+
 class RunLog:
-    """Append-only JSONL writer. Never raises into the loop on a write failure."""
+    """Append-only JSONL writer. Never raises into the loop on a write failure.
+
+    That sentence was a promise with no implementation: the write had no handler,
+    so a full disk or a read-only feature directory raised straight into the
+    caller. Four `log.emit` calls sit *inside* exception handlers, where a raise
+    converts a correctly classified exit 15 or 16 into an unhandled exception —
+    an exit 70 `resumable: no` reported for a concurrent run that was perfectly
+    resumable (security:SEC-004). The promise is now kept here, once, instead of
+    at whichever call site happened to remember.
+    """
 
     def __init__(self, path, clock, environ=None):
         self.path = path
         self._clock = clock
         self._secrets = secret_values(environ)
         self.events = []
+        self.write_failures = []       # lines the transcript lost, for the record
 
     def emit(self, event, **fields):
         record = {"ts": self._clock(), "event": event}
@@ -81,6 +107,16 @@ class RunLog:
         record = redact(record, self._secrets)
         self.events.append(record)
         line = json.dumps(record, ensure_ascii=False, sort_keys=True)
-        with open(self.path, "a", encoding="utf-8") as fh:
-            fh.write(line + "\n")
+        try:
+            with open(self.path, "a", encoding="utf-8") as fh:
+                fh.write(line + "\n")
+        except OSError as exc:
+            # The writer RECORDS the failure; the loop decides what it means. That
+            # split is deliberate (D015): swallowing here is what stops a lost line
+            # turning a coded exit into a traceback, and `Loop._emit` is what turns
+            # it into a fatal audit failure. An earlier comment here said losing a
+            # line never changes what the run reports — true of the writer, and
+            # false of the system, once D015 made an unrecordable run a refusal
+            # (`maintainer:MNT-009`).
+            self.write_failures.append("%s: %s" % (type(exc).__name__, exc))
         return record
