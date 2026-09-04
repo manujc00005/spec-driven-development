@@ -50,9 +50,19 @@ Two things to know before you choose this path:
   `~/.claude/skills` already points at the central copy; enabling the plugin as well lists every skill
   twice (`verifier` and `sdd:verifier`). Pick one path per machine: the plugin, or the installer link.
 - **A local-directory marketplace loads in place.** When the marketplace was added from a checkout
-  path, the plugin root *is* that checkout: edits there are live in every project with the plugin
-  enabled, half-finished ones included. Installing from the GitHub repo goes through the plugin cache
-  and does not have this property.
+  path, the plugin root *is* that checkout: whatever that working tree holds runs in every project
+  with the plugin enabled at the next session — half-finished edits, and also any branch you check
+  out there, a contributor's PR branch included. If you review other people's branches in that
+  clone, point the marketplace at a separate clone you only fast-forward, or at the GitHub source,
+  which goes through the plugin cache and does not have this property.
+- **What you are trusting.** The hooks are bash scripts that run with your user's privileges on
+  nearly every tool call in an enabled project. Four of them run project-controlled code from the
+  project's own tree — `npx eslint --fix`, `npx prettier`, `npx tsc`, and `./mvnw` or `./gradlew`.
+  That was already true when a project wired them by hand; the plugin at **user** scope extends it
+  to every repository you open, including a freshly cloned one you have not read yet. For untrusted
+  checkouts, install with `--scope project` and enable the plugin only where you want it. Updates
+  from the GitHub source arrive with whatever the default branch holds; read the diff before
+  `claude plugin marketplace update` if that matters to you.
 
 The installer below keeps working unchanged and remains the path for profiles, Windows, and
 per-project Codex targets.

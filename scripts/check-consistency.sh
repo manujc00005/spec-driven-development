@@ -295,20 +295,33 @@ check_settings_wiring("hooks/hooks.json")
 # ---------------------------------------------------------------------------
 # Spec 044 FR-010 (D002/D005): hooks/hooks.json is the plugin wiring and must
 # stay equivalent to settings.template.sh.json — same multiset of
-# (event, matcher, hook name, timeout). Reference existence is covered above;
-# this catches a hook silently dropped from, or added to, one side only.
+# (event, matcher, type, hook name, timeout, statusMessage), with each command
+# required to be exactly the canonical shape for its side. Reference existence
+# is covered above; this catches a hook dropped from or added to one side, and
+# any command that is not purely the expected `bash <root>/hooks/<name>.sh`.
 # ---------------------------------------------------------------------------
-def _wiring_tuples(path):
+# The only command shapes the two wirings may contain. Anything else — a different
+# prefix, an absolute path, a second command chained before or after — is a
+# difference, even when the hook name inside it matches (security review
+# SEC-044-001: equivalence must cover the whole command, not a substring of it).
+PLUGIN_CMD_RE = re.compile(r'^bash "\$\{CLAUDE_PLUGIN_ROOT\}/hooks/([A-Za-z0-9_-]+)\.sh"$')
+TEMPLATE_CMD_RE = re.compile(r"^bash \$\{CLAUDE_PROJECT_DIR\}/\.claude/hooks/([A-Za-z0-9_-]+)\.sh$")
+
+
+def _wiring_tuples(path, cmd_re):
     with open(path, encoding="utf-8") as f:
         data = json.load(f)
     out = []
     for event, groups in data.get("hooks", {}).items():
         for group in groups:
             for h in group.get("hooks", []):
-                m = HOOK_REF_RE.search(h.get("command", ""))
-                name = m.group(1) if m else h.get("command", "")
-                out.append((event, group.get("matcher", ""), name, h.get("timeout")))
-    return sorted(out, key=lambda t: (t[0], t[1], t[2], str(t[3])))
+                cmd = h.get("command", "")
+                m = cmd_re.fullmatch(cmd)
+                # A command that is not exactly the expected shape keeps its full
+                # text as the "name", so it can never equal the other side's.
+                name = m.group(1) if m else f"<non-canonical command: {cmd}>"
+                out.append((event, group.get("matcher", ""), h.get("type", ""), name, h.get("timeout"), h.get("statusMessage", "")))
+    return sorted(out, key=lambda t: tuple(str(x) for x in t))
 
 
 def check_plugin_wiring():
@@ -320,7 +333,8 @@ def check_plugin_wiring():
     if not os.path.isfile(template_path):
         return  # already reported by check_settings_wiring
     try:
-        plugin, template = _wiring_tuples(plugin_path), _wiring_tuples(template_path)
+        plugin = _wiring_tuples(plugin_path, PLUGIN_CMD_RE)
+        template = _wiring_tuples(template_path, TEMPLATE_CMD_RE)
     except (OSError, ValueError) as exc:
         err("plugin-wiring", "hooks/hooks.json", f"could not parse wiring: {exc}")
         return

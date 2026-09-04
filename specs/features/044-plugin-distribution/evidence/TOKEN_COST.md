@@ -12,3 +12,7 @@ From `claude plugin details sdd` (full output in INVENTORY.md):
 ```
 
 Reading: the always-on figure is what every session pays for having the 72 skill and 8 agent descriptions loaded; on-invoke costs are paid only when a skill or agent fires. Hooks add no model-context cost (harness-only). This is the number D001 defers the per-profile split to.
+
+## Codex side (2026-09-04T20:01:58Z)
+
+Codex has no token-cost report, but it emitted `warning: Skill descriptions were shortened to fit the skills context budget` with the plugin installed (see CODEX_INSTALL.md). On Codex the cost of one whole-repo plugin shows up as truncated skill descriptions rather than as a number. This is a second input to the per-profile decision D001 defers.

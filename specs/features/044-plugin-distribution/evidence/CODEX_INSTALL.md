@@ -242,3 +242,31 @@ openai-curated           /Users/manu/.codex/.tmp/plugins
 spec-driven-development  /Users/manu/Proyectos/spec-driven-development
 [exit 0]
 ```
+
+## Skill-execution attempt (`codex exec`, 2026-09-04T20:01:58Z)
+
+Asked for beyond AC-007 by `/qa-review`: does a Codex session actually load the plugin's skills? Run in the disposable project with `-s read-only`:
+
+```
+$ codex exec -C /tmp/sdd-e2e-x5x1 -s read-only 'Using the spec-status skill provided by the sdd plugin, report what that skill would output for this directory. ...'
+OpenAI Codex v0.152.1
+--------
+workdir: /tmp/sdd-e2e-x5x1
+model: gpt-5.6-sol
+provider: openai
+approval: never
+sandbox: read-only
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 01a06e02-9f30-7c00-aef7-d5ae613d512d
+--------
+warning: Skill descriptions were shortened to fit the skills context budget. Codex can still see every skill, but some descriptions are shorter. Disable unused skills or plugins to leave more room for the rest.
+hook: SessionStart
+hook: SessionStart Completed
+hook: UserPromptSubmit
+hook: UserPromptSubmit Completed
+ERROR: You've hit your usage limit. Visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at Sep 7th, 2026 9:35 PM.
+ERROR: You've hit your usage limit. Visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at Sep 7th, 2026 9:35 PM.
+```
+
+Two facts, one gap. (1) The skills context was built with the plugin's skills in it: `warning: Skill descriptions were shortened to fit the skills context budget. Codex can still see every skill` — 72 additional skills exceed Codex's per-session description budget. (2) Codex ran its SessionStart and UserPromptSubmit hooks. The gap: the model call failed with `You've hit your usage limit ... try again at Sep 7th, 2026`, so no skill was executed. AC-007 (install exits 0) stands as written; skill execution on Codex is unobserved because of quota, not because of the plugin, and is recorded as such in DECISIONS.md D012.
