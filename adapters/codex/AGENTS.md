@@ -5,7 +5,7 @@
 > [`../../docs/PROVIDER_ADAPTERS.md`](../../docs/PROVIDER_ADAPTERS.md) — expressed as instructions a
 > Codex session follows, plus a set of lifecycle prompts under [`prompts/`](prompts/).
 >
-> **Status: prompt-based, unverified against a live Codex CLI in this environment.** See
+> **Status: prompt-based; the plugin path into Codex is verified (spec 044), these prompts are not run-verified.** See
 > [`PARITY.md`](PARITY.md) for exactly what does and does not carry over from the Claude adapter.
 
 ## How to use this file

@@ -96,6 +96,12 @@ repo is not currently overclaiming — but the label has to stay until someone c
 **Cost if wrong.** `adapters/codex/` ships prompts to a location the CLI may not read. A user
 following `adapters/codex/README.md` gets an adapter that appears installed and does nothing.
 
+> **2026-09-04 — narrowed further by spec 044, still not closed.** The plugin path is verified: `codex plugin
+> marketplace add <checkout>` and `codex plugin add sdd@spec-driven-development` exit 0 on `codex-cli 0.152.1`,
+> and a `codex exec` session built its skills context with the plugin's skills in it. What stays open is
+> exactly this entry's claim — whether the CLI reads and acts on the **prompts** under `~/.codex/prompts` —
+> plus one new observation: a Codex session executing a plugin skill has not been seen (usage limit, 044 D012).
+>
 > **2026-09-02 — partially advanced, not closed.** The CLI is installed (see [[DEBT-001]]), and
 > `$CODEX_HOME/prompts` — the directory `adapters/codex/install-codex.sh` targets — exists at
 > `~/.codex/prompts` and already holds eight SDD prompt files, so the *write* half of the assumption

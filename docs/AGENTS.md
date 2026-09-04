@@ -74,8 +74,13 @@ strategy), `domain-reviewer` (domain-specific expectations), `final-conformance-
 
 ## How these are installed — copy, not link
 
-Unlike `skills/` and `hooks/` (which are junctioned/symlinked from the central config),
-agent files are **copied file-by-file, additively**:
+**With the plugin** (spec 044) none of this applies: the eight agent files load from the plugin root
+by convention, nothing is copied, and `claude plugin details sdd` lists them. This file lives in
+`docs/` rather than `agents/` precisely because the plugin loader treats every `.md` under `agents/`
+as an agent.
+
+**With the installer**, unlike `skills/` and `hooks/` (which are junctioned/symlinked from the
+central config), agent files are **copied file-by-file, additively**:
 
 - `install.ps1 -LinkUserClaude` / `install.sh --link-user-claude` → copies them into
   `~/.claude/agents/`.

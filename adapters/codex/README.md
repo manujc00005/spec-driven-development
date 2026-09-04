@@ -4,9 +4,9 @@ A first, **honest, prompt-based** adapter that runs the provider-neutral **SDD C
 OpenAI Codex. It is additive: it introduces nothing into, and changes nothing about, the Claude Code
 adapter.
 
-> **Status: prompt-based, unverified against a live Codex CLI in this environment.** The `codex` CLI
-> is not installed here, so the adapter is built on documented Codex conventions and has not been run
-> against a real Codex session. See [`PARITY.md`](PARITY.md) for the full capability matrix and the
+> **Status: prompt-based; the plugin path into Codex is verified, the prompts are not.** `codex plugin add sdd@spec-driven-development` exits 0 on `codex-cli 0.152.1` (spec 044, see `PARITY.md` → Verification status). The `codex` CLI
+> is present on the maintainer machine, but this adapter's prompts are built on documented Codex
+> conventions and have not been run against a real Codex session. See [`PARITY.md`](PARITY.md) for the full capability matrix and the
 > explicit list of what does **not** carry over from the Claude adapter.
 
 ## What's in here
@@ -74,4 +74,4 @@ Windows: use `install-codex.ps1` with the PowerShell-equivalent flags (`-Target`
   profile-filtered install, and only the lifecycle spine of skills — not the full 61-skill catalogue
   or the stack-specific reviewers. All of this is intentional and documented in
   [`PARITY.md`](PARITY.md); none of it is claimed to work and silently missing.
-- Everything is **unverified against a live Codex CLI** until the follow-up in SPEC OQ-1 is done.
+- The **prompts are unverified against a live Codex session** until the follow-up in SPEC OQ-1 is done; the plugin path (`codex plugin add sdd@spec-driven-development`) is the verified part.

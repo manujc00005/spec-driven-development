@@ -59,6 +59,7 @@ An adapter packages the core so a specific agent can run it. What is provider-sp
 | Agent roles | Claude: `agents/*.md` subagents with a `tools:` grant. Codex: roles described in `AGENTS.md` (no native subagent grant). |
 | Guardrail enforcement | Claude: `hooks/*.{sh,ps1}` wired into `.claude/settings.json` (tool-call level). Codex: conventions stated in `AGENTS.md` (**not** enforced). |
 | Profile-aware install | Claude: `profiles.json` + `install.sh`/`install.ps1`. Codex: a self-contained copy script; no profile filtering. |
+| Plugin install (spec 044) | Both hosts: the repository root is the `sdd` plugin (`.claude-plugin/`, `.codex-plugin/`), whole content, no profile filtering; hooks travel only to Claude Code via `hooks/hooks.json`. |
 | Project linking | Claude: `.claude/` linking + central config. Codex: `AGENTS.md` at project root. |
 
 ## The honesty principle
@@ -96,5 +97,5 @@ practice:
 
 - **Claude Code** — primary, shipped. Lives at the repository root; see
   [`../adapters/claude/README.md`](../adapters/claude/README.md).
-- **Codex** — prompt-based, unverified against a live Codex CLI in this environment; see
+- **Codex** — prompt-based; the plugin installs into it (verified on `codex-cli 0.152.1`, spec 044) while its lifecycle prompts remain unverified end-to-end; see
   [`../adapters/codex/README.md`](../adapters/codex/README.md).

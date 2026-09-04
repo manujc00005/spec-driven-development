@@ -1,8 +1,11 @@
 # Installation guide
 
-This repository can be cloned into any folder. The scripts at the repo root turn that clone into a **central, machine-wide SDD configuration** that Claude Code reads from — and, optionally, link that central configuration into your per-user Claude Code home and into individual projects.
+There are two ways to get the framework onto a machine.
 
-Four concerns, four scripts:
+1. **As a plugin** — the repository root is the `sdd` plugin and its own marketplace; two commands per host, nothing copied or linked. This is the primary path: [Install as a plugin](#install-as-a-plugin).
+2. **With the scripts** — the alternative for a subset of profiles, for Windows hooks, and for a per-project Codex `AGENTS.md`. The scripts turn a clone into a **central, machine-wide SDD configuration** that Claude Code reads from and, optionally, link it into your per-user Claude Code home and into individual projects.
+
+Pick one per machine (see the caveats in the plugin section). Four concerns, four scripts:
 
 | Concern | Script | What it touches |
 |---|---|---|
@@ -74,7 +77,7 @@ SDD Core (the SPEC/PLAN/TASKS/DECISIONS lifecycle, review gates, skill contracts
 | Adapter | Status | Installer | Installs to |
 |---|---|---|---|
 | **Claude Code** | Primary, shipped. *It is the repository root* — no files were moved. | `install.sh` / `install.ps1` (+ the three scripts above) | Central config dir (+ opt-in `~/.claude`) |
-| **Codex** | Prompt-based; **unverified against a live Codex CLI**. No parity claimed. | `adapters/codex/install-codex.sh` / `.ps1` (copy-only) | Project-root `AGENTS.md` + `~/.codex/prompts/` |
+| **Codex** | Prompt-based; the plugin path into Codex is verified (spec 044), the lifecycle prompts are not. No parity claimed. | `adapters/codex/install-codex.sh` / `.ps1` (copy-only) | Project-root `AGENTS.md` + `~/.codex/prompts/` |
 
 The two adapters install to **disjoint locations and never overlap**, and each installer is independently idempotent.
 
@@ -365,7 +368,7 @@ Claude Code is a terminal/CLI tool that requires a local shell (PowerShell, bash
 
 ## Hook wiring templates
 
-Installing/linking makes the hook *scripts* available; Claude Code only runs them once they are wired in the project's `.claude/settings.json`. Two ready-to-copy templates ship at the repo root, wiring the same hook set:
+Installing/linking makes the hook *scripts* available; Claude Code only runs them once they are wired. With the **plugin**, that wiring is `hooks/hooks.json` and happens for every enabled project. With the **scripts**, it is the project's `.claude/settings.json`, and two ready-to-copy templates ship at the repo root, wiring the same hook set:
 
 - **Windows:** [`settings.template.json`](../settings.template.json) — PowerShell commands (`powershell -NoProfile -File ...hooks/<name>.ps1`).
 - **macOS/Linux:** [`settings.template.sh.json`](../settings.template.sh.json) — bash commands (`bash ...hooks/<name>.sh`; run `chmod +x hooks/*.sh hooks/lib/claude-json.sh` once if needed).
