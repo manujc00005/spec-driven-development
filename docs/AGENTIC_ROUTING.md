@@ -35,7 +35,7 @@ model-tier agents" below for exactly how the two fit together.
 - Can be routed by profile — which reviewer skills `domain-reviewer` or `security-reviewer`
   load for a given stack is a `profiles.json` decision, not hardcoded in the agent.
 
-Do not convert every skill into an agent. Most of this repo's 71 skills stay skills,
+Do not convert every skill into an agent. Most of this repo's 72 skills stay skills,
 consumed by whichever agent owns that concern — see each skill's own `## SDD Contract`
 block for its `primary_agent`.
 

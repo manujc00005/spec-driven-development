@@ -5,6 +5,12 @@ primary Claude Code adapter. **No parity is claimed.** Read this before relying 
 
 ## Verification status
 
+- **Plugin install verified (spec 044).** `codex plugin marketplace add <checkout>` and `codex plugin add
+  sdd@spec-driven-development` exit 0 on `codex-cli 0.152.1`; a `codex exec` session built its skills
+  context with the plugin's 72 skills in it (Codex warns that their descriptions were shortened to fit
+  its budget). Executing one of those skills in Codex is **not yet observed** — the run hit the
+  account's usage limit (spec 044 D012, repeatable after 2026-09-07). Evidence:
+  `specs/features/044-plugin-distribution/evidence/CODEX_INSTALL.md`.
 - **Prompt-based; autonomous-mode smoke verification pending.** `codex-cli
   0.147.0-alpha.6.6` is available in this environment. The adapter remains based on **documented
   Codex conventions** (project-root `AGENTS.md`, custom prompts under `~/.codex/prompts/`, config at
@@ -18,7 +24,7 @@ primary Claude Code adapter. **No parity is claimed.** Read this before relying 
 | SDD Core concept | Claude adapter | Codex adapter | Status |
 |---|---|---|---|
 | SPEC / PLAN / TASKS / DECISIONS | shared `specs/_templates/` | **same** templates, verbatim | ✅ identical |
-| Skill contracts (`## SDD Contract`) | on all 71 skills | reused as provider-neutral metadata | ✅ shared |
+| Skill contracts (`## SDD Contract`) | on all 72 skills | reused as provider-neutral metadata | ✅ shared |
 | Lifecycle steps (create→…→close) | `skills/*/SKILL.md` | `prompts/*.md` (spine) | ⚠️ prompt-based |
 | Consistency gate | `/spec-analyze`, `/sdd-guardrails` | `prompts/sdd-spec-analyze.md`, `sdd-guardrails.md` | ⚠️ prompt-based |
 | Generic review gate | `/spec-review`, `/qa-review` | `prompts/sdd-spec-review.md` (inline risk list) | ⚠️ prompt-based |
@@ -34,7 +40,7 @@ primary Claude Code adapter. **No parity is claimed.** Read this before relying 
 |---|---|---|---|
 | **Deterministic guardrails** | `hooks/*.{sh,ps1}` block `git push`, gate on spec status, etc., at tool-call level via `.claude/settings.json` | **conventions in `AGENTS.md` only — NOT enforced** | ❌ no hook parity |
 | **Native subagents** | 8 agents with restricted `tools:` grants (structural read-only enforcement) | roles the single session adopts; no enforced permission isolation | ❌ no native subagent grant |
-| **Full skill catalogue** | 71 skills | 7-prompt lifecycle spine only | ❌ curated subset (DECISIONS D004) |
+| **Full skill catalogue** | 72 skills | 7-prompt lifecycle spine only | ❌ curated subset (DECISIONS D004) |
 | **Stack-specific reviewers** | Java/Spring, payments, event-driven, Next/Prisma, SEO/GEO reviewer skills | not ported; folded into the generic review prompt's risk list | ❌ not ported in v1 |
 | **Python/SQL/data reviewers** | `python-reviewer`, `sql-query-reviewer`, `database-performance-reviewer`, `data-pipeline-reviewer`, `python-testing-reviewer` (`python-sql-data` profile, spec 029) | not ported | ❌ not ported — same reason as the rest of the reviewer catalogue |
 | **Delivery/operations reviewers** | `deployment-review`, `container-review`, `pipeline-review`, `release-readiness` (`delivery-operations` profile, spec 024) | not ported | ❌ not ported — deferred, see below |

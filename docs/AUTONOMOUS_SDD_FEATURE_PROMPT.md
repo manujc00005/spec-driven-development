@@ -369,11 +369,14 @@ una sola vez, fuera de la sesión autónoma, con el instalador dual de este repo
 
 | Plataforma | Preview | Instalación de Claude + Codex para el proyecto |
 |---|---|---|
+| Cualquiera, como plugin (recomendado) | `claude plugin details sdd` tras añadir el marketplace | `claude plugin marketplace add <repo>` + `claude plugin install sdd@spec-driven-development`; en Codex, `codex plugin marketplace add <repo>` + `codex plugin add sdd@spec-driven-development` |
 | macOS | `./install-all.sh --dry-run --link-user-claude --codex-target /ruta/al/proyecto` | `./install-all.sh --link-user-claude --codex-target /ruta/al/proyecto` |
 | Windows PowerShell | `.\install-all.ps1 -DryRun -LinkUserClaude -CodexTarget C:\ruta\al\proyecto` | `.\install-all.ps1 -LinkUserClaude -CodexTarget C:\ruta\al\proyecto` |
 
-Para que **Claude Code** tenga guardrails mecánicos dentro del proyecto, conecta los hooks después
-de revisar primero el dry-run:
+Con el plugin, los hooks ya están conectados en cada proyecto donde esté activo y este paso sobra;
+no lo combines con el plugin o cada hook disparará dos veces. Con el instalador, para que **Claude
+Code** tenga guardrails mecánicos dentro del proyecto, conecta los hooks después de revisar primero
+el dry-run:
 
 | Plataforma | Preview | Aplicación |
 |---|---|---|

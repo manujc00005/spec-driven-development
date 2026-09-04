@@ -5,6 +5,8 @@ no hooks, no templates, no agents.
 
 Install it alongside whatever stack profile the project already uses:
 
+With the plugin every profile's skills are already present — the profile flag below is the installer's way of selecting a subset:
+
 ```bash
 ./install.sh --profile python-sql-data
 ```

@@ -8,6 +8,8 @@ AI accelerates execution. SDD keeps delivery controlled through specs, plans, de
 
 **Requirement → SPEC → PLAN → TASKS → DECISIONS → Agent execution → Review gates → Evidence → PR-ready delivery**
 
+**It installs as a plugin.** The repository root is the `sdd` plugin and the repository is its own marketplace: two commands in Claude Code, two in Codex, nothing copied into your project. The profile-aware installer remains for profile selection and Windows hooks. See [Install as a plugin](docs/INSTALL.md#install-as-a-plugin).
+
 <div align="center">
 
 ![Methodology](https://img.shields.io/badge/methodology-Spec--Driven%20Development-1f6feb)
@@ -23,7 +25,7 @@ AI accelerates execution. SDD keeps delivery controlled through specs, plans, de
 ![Agents](https://img.shields.io/badge/agents-8-1a7f37)
 ![Profiles](https://img.shields.io/badge/profiles-9-d4a72c)
 
-[Quickstart](#-quickstart) · [How it works](#how-it-works) · [Agents and skills](#agents-and-skills) · [Profiles](#️-profiles) · [Provider adapters](#provider-adapters) · [Current support](#current-support)
+[Quickstart](#-quickstart) · [Install as a plugin](docs/INSTALL.md#install-as-a-plugin) · [How it works](#how-it-works) · [Agents and skills](#agents-and-skills) · [Profiles](#️-profiles) · [Provider adapters](#provider-adapters) · [Current support](#current-support)
 
 </div>
 
@@ -122,7 +124,8 @@ The existing multi-model orchestration path uses a separate model-tier pair: `de
 
 | Area | Status |
 |---|---|
-| Claude Code adapter, installers, skills, hooks, and model-tier orchestration | **Shipped** |
+| Plugin distribution — `sdd@spec-driven-development` for Claude Code and Codex, the repository root as plugin and marketplace | **Shipped** (spec 044; local-checkout install verified on both CLIs, inventory 72 skills / 8 agents / default hook set) |
+| Claude Code adapter, installers, skills, hooks, and model-tier orchestration | **Shipped** — the installer is the alternative path: profile selection, Windows hooks, per-project Codex targets |
 | Six lifecycle-agent definitions and profile routing contracts | **Shipped; schema- and dry-run validated, not yet live-install verified** |
 | Java/Spring backend profile | **Default** |
 | Messaging/event-driven, payments/fintech, Next/Prisma, and SEO/GEO profiles | **Optional** |
@@ -130,7 +133,7 @@ The existing multi-model orchestration path uses a separate model-tier pair: `de
 | Python/SQL/data profile (Python scripts, SQL correctness, database cost, data loads, pytest) | **Optional overlay.** Five reviewers shipped. Review only — replaces no tool, and is not data-engineering coverage |
 | Blockchain/crypto profile | **Disabled placeholder** |
 | Graphify integration | **Optional; Graphify itself is external** |
-| Codex adapter | **Shipped as an additive, prompt-based adapter** (operating guide + lifecycle prompts + copy-only installer). Unverified against a live Codex CLI; no parity claimed — see [`adapters/codex/PARITY.md`](adapters/codex/PARITY.md) |
+| Codex adapter | **Shipped as an additive, prompt-based adapter** (operating guide + lifecycle prompts + copy-only installer), plus the plugin path. `codex plugin add sdd@spec-driven-development` verified on `codex-cli 0.152.1`; the lifecycle prompts remain unverified end-to-end and no parity is claimed — see [`adapters/codex/PARITY.md`](adapters/codex/PARITY.md) |
 | Other AI providers | **Conceptually compatible; add via the adapter model** in [`docs/PROVIDER_ADAPTERS.md`](docs/PROVIDER_ADAPTERS.md) |
 
 ### Provider adapters
@@ -140,14 +143,16 @@ lifecycle, review gates, skill contracts, agent responsibility model, guardrail 
 doctrine — does not depend on any AI tool. A **provider adapter** packages that core for a specific agent:
 
 - **Claude Code** — the primary shipped adapter; it *is* the repository root (`skills/`, `agents/`, `hooks/`,
-  installers, settings templates). Nothing was moved. Pointer: [`adapters/claude/README.md`](adapters/claude/README.md).
+  installers, settings templates), and since spec 044 that root is also the `sdd` plugin (`.claude-plugin/`, `hooks/hooks.json`). Nothing was moved. Pointer: [`adapters/claude/README.md`](adapters/claude/README.md).
 - **Codex** — a first, honest, prompt-based adapter under [`adapters/codex/`](adapters/codex/): an `AGENTS.md`
   operating guide, the lifecycle-spine prompts, and a self-contained copy-only installer. It reuses the same
   `specs/_templates/`. It does **not** claim parity — no enforced hooks, no native subagents, no profile-filtered
-  install — and is unverified against a live Codex CLI. The gaps are stated in
-  [`adapters/codex/PARITY.md`](adapters/codex/PARITY.md).
+  install. Its lifecycle prompts are unverified end-to-end; the plugin install into Codex is verified
+  (`.codex-plugin/plugin.json`, spec 044). The gaps are stated in [`adapters/codex/PARITY.md`](adapters/codex/PARITY.md).
 
-Both adapters install with independent, idempotent scripts (they touch disjoint locations and never
+The shortest path for either host is the plugin: `claude plugin marketplace add <repo>` + `claude plugin install sdd@spec-driven-development`, or the `codex plugin` equivalents ([details and caveats](docs/INSTALL.md#install-as-a-plugin)). The scripts below remain for profile selection, Windows hooks and per-project Codex `AGENTS.md`.
+
+Both adapters also install with independent, idempotent scripts (they touch disjoint locations and never
 overlap). To install both first-time, a thin convenience wrapper calls each in order — it does not
 modify or reimplement either installer:
 
@@ -233,36 +238,39 @@ It also addresses a cost shift. AI coding tools are moving from seat-based to us
 
 ## 🚀 Quickstart
 
-**Shortest path — install as a plugin** (Claude Code or Codex, two commands, nothing copied into your project): see [Install as a plugin](docs/INSTALL.md#install-as-a-plugin). The installer below remains the path for profiles and Windows.
+**Install as a plugin** — Claude Code or Codex, two commands, nothing copied into your project:
+
+```bash
+# Claude Code — from GitHub, or replace the repo with a local clone path
+claude plugin marketplace add manujc00005/spec-driven-development
+claude plugin install sdd@spec-driven-development
+```
+
+```bash
+# Codex
+codex plugin marketplace add https://github.com/manujc00005/spec-driven-development
+codex plugin add sdd@spec-driven-development
+```
+
+That loads the 72 skills, the 8 agents and the default hook set (`hooks/hooks.json`). Read the five caveats before you choose this path — Windows hooks, double wiring, duplicated skills, in-place loading, what you are trusting: [Install as a plugin](docs/INSTALL.md#install-as-a-plugin).
+
+**Alternative — the profile-aware installer.** Use it when you want a subset of profiles, Windows hooks, or a per-project Codex `AGENTS.md`:
 
 ```bash
 git clone https://github.com/manujc00005/spec-driven-development.git
 cd spec-driven-development
 
-# Preview — writes nothing
-./install.sh --dry-run          # macOS/Linux (requires python3)
+./install.sh --dry-run          # macOS/Linux (requires python3) — preview, writes nothing
 .\install.ps1 -DryRun           # Windows
 
-# Install core + default profile (java-spring-backend) into the central config dir
-./install.sh
-.\install.ps1
-
-# Provider-aware: install BOTH adapters (Claude Code + the prompt-based Codex adapter)
-./install-all.sh --codex-target <your-project>    # macOS/Linux — calls both installers in order
-.\install-all.ps1 -CodexTarget <your-project>     # Windows
-
-# Opt-in: link your ~/.claude to the central dir (skills, hooks) + copy agents
-./install.sh --link-user-claude
-.\install.ps1 -LinkUserClaude
-
-# Per project: wire the shipped hooks into .claude/settings.json (additive, backs up first)
-./scripts/wire-hooks.sh --project-dir <your-project>
-.\scripts\wire-hooks.ps1 -ProjectDir <your-project>
-
-# Later, to update an existing install (git pull + re-install + "what's new" report)
-./scripts/update.sh             # macOS/Linux
-.\scripts\update.ps1            # Windows
+./install.sh                    # core + default profile into the central config dir
+./install.sh --link-user-claude # opt-in: link ~/.claude (skills, hooks) + copy agents
+./install-all.sh --codex-target <your-project>   # both adapters; writes the per-project AGENTS.md
+./scripts/wire-hooks.sh --project-dir <your-project>  # wire the hooks into one project's settings
+./scripts/update.sh             # later: git pull + re-install + "what's new" report
 ```
+
+Do not combine both paths on one machine: the plugin and `--link-user-claude` would list every skill twice, and the plugin plus `wire-hooks` would fire every hook twice.
 
 Then, in any project, start a new Claude Code session and run:
 
@@ -475,19 +483,27 @@ spec-driven-development/
 ├── LICENSE                        # MIT
 ├── profiles.json                  # profile manifest — the installer's source of truth
 ├── CLAUDE.md.example              # sanitized project instructions — copy/merge into your own CLAUDE.md
+├── .claude-plugin/                # plugin.json + marketplace.json — the repo root IS the `sdd` plugin and its marketplace (spec 044)
+├── .codex-plugin/                 # the same identity for Codex
 ├── settings.template.json         # hook wiring template — Windows (PowerShell commands)
 ├── settings.template.sh.json      # hook wiring template — macOS/Linux (bash commands, same hook set)
 ├── install.ps1 / install.sh       # profile-aware installers (Claude adapter — central config dir + optional ~/.claude linking)
 ├── install-all.ps1 / .sh          # convenience wrapper — installs both adapters by calling each installer in order
 ├── link-project.ps1 / .sh         # link one project's .claude/ to the central dir
 ├── adapters/                      # provider-adapter layer — claude/ (pointer to this root) + codex/ (prompt-based adapter)
-├── skills/                        # 71 skills — one folder per slash command
-├── hooks/                         # 12 hook families × (.ps1 + .sh) = 24 scripts
+├── skills/                        # 72 skills — one folder per slash command
+├── hooks/                         # 13 hook families × (.ps1 + .sh) = 26 scripts
+│   ├── hooks.json                 # the plugin's wiring — same default set as the bash template, `${CLAUDE_PLUGIN_ROOT}` paths, gate-enforced equivalence
 │   ├── README.md                  # per-hook trigger, effect, and activation guide
 │   └── lib/claude-json.sh         # dependency-free JSON helper for .sh hooks (no jq, no python)
-├── agents/                        # 6 lifecycle agents + deep-reasoner.md (Opus) + fast-worker.md (Sonnet) — copied, never linked
+├── agents/                        # 6 lifecycle agents + deep-reasoner.md (Opus) + fast-worker.md (Sonnet) — agent files only; their README is docs/AGENTS.md so the plugin loader does not ship it as an agent
 ├── docs/
-│   ├── INSTALL.md                 # step-by-step install guide (Windows, macOS/Linux)
+│   ├── INSTALL.md                 # install guide — plugin first, then the scripts (Windows, macOS/Linux)
+│   ├── AGENTS.md                  # the agents reference (moved from agents/README.md, spec 044)
+│   ├── AUTONOMOUS_SDD_FEATURE_PROMPT.md  # delivers a feature autonomously to a PR through gates G0–G8 — the supported autonomous path
+│   ├── TOKEN_ECONOMY.md           # bounded-context contract
+│   ├── WORKSPACE_SDD.md           # the .sdd-workspace/ layer for folders of related projects
+│   ├── KNOWN_DEBT.md              # accepted, unverified claims — one entry each
 │   ├── SDD-ORCHESTRATION.md       # multi-model orchestration reference
 │   ├── AGENTIC_ROUTING.md         # lifecycle-agent reference: skills vs. agents, routing model
 │   ├── PROVIDER_ADAPTERS.md       # SDD Core vs. provider adapters — the provider-neutral/adapter boundary
@@ -496,6 +512,8 @@ spec-driven-development/
 │                                  #   ARCHITECTURE, TESTING, SECURITY, DEPLOYMENT, RUNBOOK,
 │                                  #   MESSAGING, MICROSERVICES_PATTERNS, GRAPHIFY, PROJECT_GRAPH,
 │                                  #   + 10 WORKSPACE_* templates for the .sdd-workspace/ layer)
+├── runner/                        # maintainer tooling, FROZEN at spec 042 (runner/README.md) — not plugin content, not installed
+├── scripts/                       # check-consistency (the CI gate), update, wire-hooks, personal-config, skill-eval
 ├── specs/
 │   ├── _templates/                # 12 SDD lifecycle templates (SPEC, PLAN, TASKS, DECISIONS,
 │   │                              #   CONSTITUTION, SERVICES, PR_DESCRIPTION, REVIEW_REPORT_TEMPLATE, …)
@@ -503,7 +521,23 @@ spec-driven-development/
 └── examples/                      # worked end-to-end examples (payment webhook idempotency)
 ```
 
-How content flows at install time:
+How content reaches a project — two paths, pick one per machine:
+
+```mermaid
+flowchart LR
+    R2["📦 This repository = the sdd plugin<br/>skills · agents · hooks/hooks.json"]
+    M["🛒 Marketplace<br/>this repo, GitHub or local path"]
+    S1["💻 Any project with the plugin enabled<br/>nothing copied, nothing linked"]
+    R2 --> M -->|"claude plugin install / codex plugin add"| S1
+    classDef repo fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+    classDef mk fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
+    classDef consumer fill:#dcfce7,stroke:#16a34a,color:#14532d
+    class R2 repo
+    class M mk
+    class S1 consumer
+```
+
+A directory-sourced marketplace loads the checkout in place; a GitHub-sourced one goes through the plugin cache. The installer path is the alternative, for profile selection and Windows hooks:
 
 ```mermaid
 flowchart LR
@@ -572,9 +606,9 @@ own for that stack (e.g. `java-spring-backend` routes `spring-security-reviewer`
 
 ## ⚙️ Installation
 
-**Prefer the plugin.** `claude plugin marketplace add <this repo>` then `claude plugin install sdd@spec-driven-development` — details, the Codex equivalent and two caveats in [Install as a plugin](docs/INSTALL.md#install-as-a-plugin). The installer below is the alternative.
+**The plugin is the primary path.** `claude plugin marketplace add <this repo>` then `claude plugin install sdd@spec-driven-development`; `codex plugin marketplace add` and `codex plugin add sdd@spec-driven-development` for Codex. Inventory and projected token cost: `claude plugin details sdd`. Caveats and the Codex commands: [Install as a plugin](docs/INSTALL.md#install-as-a-plugin).
 
-Installation is split across a few small, single-purpose scripts — full guide in [`docs/INSTALL.md`](docs/INSTALL.md):
+**The installer is the alternative** — for a subset of profiles, for Windows hooks (the plugin wires the bash hooks only), and for a per-project Codex `AGENTS.md`. It is split across a few small, single-purpose scripts — full guide in [`docs/INSTALL.md`](docs/INSTALL.md):
 
 | Concern | Script | Touches |
 |---|---|---|
@@ -610,7 +644,7 @@ After installing: start a **new Claude Code session** (skills/agents are discove
 
 **Using it in an existing project:** run `/sdd-onboard` — it detects the stack, scaffolds the context docs (`PROJECT_CONTEXT.md`, `TECH_STACK.md`, `ARCHITECTURE.md`), and never modifies application code. Then `/project-init` for the constitution.
 
-**Customizing:** everything is plain markdown and JSON. Edit skills in the central dir (all links see the change immediately), edit copied agents per project (the installer detects the difference and preserves your customization unless you `--force`), add project-specific profiles to your own fork of `profiles.json`, and wire only the hooks you want in `.claude/settings.json` starting from `settings.template.json`.
+**Customizing:** everything is plain markdown and JSON. With the plugin, edit your fork (or the checkout a local marketplace points at) and the change is live at the next session. With the installer, edit skills in the central dir (all links see the change immediately), edit copied agents per project (the installer detects the difference and preserves your customization unless you `--force`), add project-specific profiles to your own fork of `profiles.json`, and wire only the hooks you want in `.claude/settings.json` starting from `settings.template.json`.
 
 ---
 
@@ -671,6 +705,12 @@ The same discipline the workflow demands from code applies to the tooling itself
 - **`~/.claude` linking is opt-in**, and replacing a real directory with a link requires `--force` and produces a `<path>.bak-<timestamp>` backup first.
 - **Agents copied per-file, additively** — never a directory link over `.claude/agents`.
 
+**Plugin guarantees** (spec 044):
+
+- The manifests name no skill and no agent; components load from `skills/`, `agents/` and `hooks/hooks.json` by convention, and `runner/`, `scripts/`, `specs/` are not plugin content — verified in the recorded inventory.
+- `hooks/hooks.json` wires exactly the default set of `settings.template.sh.json`: same events, matchers, timeouts and status messages. The consistency gate compares the two as whole commands, rejects any hook-entry key outside `type`/`command`/`timeout`/`statusMessage` (an `async` key would silently disarm a blocking hook), and has seven suite cases for it.
+- The hooks run with your privileges in every enabled project, and four of them run the project's own tooling. That is stated, with the `--scope project` remedy for untrusted checkouts, in [Install as a plugin](docs/INSTALL.md#install-as-a-plugin).
+
 **Hook guarantees** ([`hooks/README.md`](hooks/README.md) has the per-hook table):
 
 - `git-guardrails` blocks **every `git push`** (not just `--force`) plus `reset --hard`, `clean -f`/`-fd`, `branch -D`, `checkout .`, `restore .` — committing and pushing remain deliberate human actions.
@@ -679,7 +719,7 @@ The same discipline the workflow demands from code applies to the tooling itself
 - Only two hooks modify files at all (`eslint-fix`, `prettier-format`), both running the project's own configured formatter, and only if that config exists.
 - `.sh` hooks are dependency-free: no `jq`, no `python3` — JSON parsing goes through [`hooks/lib/claude-json.sh`](hooks/lib/claude-json.sh).
 
-**Continuous integration** — [`scripts/check-consistency.sh`](scripts/check-consistency.sh) runs on every push and pull request ([`.github/workflows/consistency.yml`](.github/workflows/consistency.yml)) and fails the build if `profiles.json`, the on-disk skills/hooks/templates/agents, the settings-template hook wiring, or the count claims in this README (marked with `<!-- count:key -->N<!-- /count -->` comments) drift apart. Run it locally with `bash scripts/check-consistency.sh`.
+**Continuous integration** — [`scripts/check-consistency.sh`](scripts/check-consistency.sh) runs on every push and pull request ([`.github/workflows/consistency.yml`](.github/workflows/consistency.yml)) and fails the build if `profiles.json`, the on-disk skills/hooks/templates/agents, the settings-template hook wiring, the plugin wiring in `hooks/hooks.json`, or the count claims in this README (marked with `<!-- count:key -->N<!-- /count -->` comments) drift apart. Run it locally with `bash scripts/check-consistency.sh`.
 
 **Graphify degrades gracefully** — the Graphify-aware skills and hook use `GRAPH_REPORT.md` (produced by an external, optional tool) when present, and fall back to bounded heuristic scanning when absent. Nothing fails without it:
 
@@ -717,9 +757,10 @@ Counted from this repository, not aspirational:
 | Project-context templates | **<!-- count:docs-templates-total -->21<!-- /count -->** | `docs/_templates/` |
 | Agents | **<!-- count:agents-total -->8<!-- /count -->** | 6 lifecycle agents (`codebase-researcher`, `solution-architect`, `implementer`, `security-reviewer`, `domain-reviewer`, `final-conformance-reviewer`) + 2 model-tier agents (`deep-reasoner` Opus read-only, `fast-worker` Sonnet bounded) — see [`docs/AGENTS.md`](docs/AGENTS.md) |
 | Profiles | **<!-- count:profiles-total -->9<!-- /count -->** | `core`, `java-spring-backend` (default), `messaging-event-driven`, `next-prisma-web`, `seo-geo-addon` (billable overlay), `payments-fintech` (payments overlay), `delivery-operations` (deploy/containers/CI overlay), `python-sql-data` (Python/SQL/data review overlay), `blockchain-crypto` (disabled) |
-| Docs | **7 guides** | `INSTALL.md`, `SDD-ORCHESTRATION.md`, `AGENTIC_ROUTING.md`, `PROVIDER_ADAPTERS.md`, `TOKEN_ECONOMY.md`, `WORKSPACE_SDD.md`, `hooks/README.md` + per-directory READMEs |
-| Installers | **4 scripts** | `install.ps1/.sh`, `link-project.ps1/.sh` — dry-run, backups, profile-aware |
-| Provider adapters | **2** | Claude Code (primary, shipped — the repo root) + Codex (prompt-based, copy-only installer, unverified against a live CLI). See [`adapters/README.md`](adapters/README.md) |
+| Docs | **11 guides** | `INSTALL.md`, `AGENTS.md`, `AGENTIC_ROUTING.md`, `SDD-ORCHESTRATION.md`, `PROVIDER_ADAPTERS.md`, `TOKEN_ECONOMY.md`, `WORKSPACE_SDD.md`, `KNOWN_DEBT.md`, `PYTHON_SQL_PROFILE.md`, `AUTONOMOUS_SDD_FEATURE_PROMPT.md`, `hooks/README.md` + per-directory READMEs |
+| Plugin | **1 plugin, 2 hosts** | `sdd@spec-driven-development` — `.claude-plugin/`, `.codex-plugin/`, `hooks/hooks.json`; local-checkout install verified on both CLIs, ~8.3k always-on tokens on Claude Code (`specs/features/044-plugin-distribution/evidence/`) |
+| Installers | **4 scripts** | `install.ps1/.sh`, `link-project.ps1/.sh` — dry-run, backups, profile-aware; the alternative path |
+| Provider adapters | **2** | Claude Code (primary, shipped — the repo root) + Codex (prompt-based, copy-only installer; plugin install verified on `codex-cli 0.152.1`, lifecycle prompts unverified end-to-end). See [`adapters/README.md`](adapters/README.md) |
 
 This repo dogfoods its own workflow: the phases that built it are specced under [`specs/features/`](specs/features/) with their own `SPEC/PLAN/TASKS/DECISIONS` documents.
 
@@ -727,6 +768,7 @@ This repo dogfoods its own workflow: the phases that built it are specced under 
 
 **Shipped**
 
+- Plugin distribution (spec 044): the repository root is the `sdd` plugin and its own marketplace, for Claude Code and Codex
 - Core SDD lifecycle, guardrails, and generic reviews
 - Six lifecycle-agent contracts, profile routing, and the two model-tier orchestration agents
 - Enforcement hooks (cross-platform) with activation guide
@@ -739,11 +781,12 @@ This repo dogfoods its own workflow: the phases that built it are specced under 
 - Adaptive project onboarding (`/sdd-onboard`) with optional Graphify setup templates (`GRAPHIFY.md`, `PROJECT_GRAPH.md`)
 - Worked example: Payment Webhook Idempotency ([`examples/001-payment-webhook-idempotency/`](examples/001-payment-webhook-idempotency/)) — Java/Spring webhook receiver with constraint-based idempotency, full spec/plan/tasks/decisions, 14 tests, database migration, and review artifacts
 - Worked example: Server Action Rate Limiting ([`examples/002-server-action-rate-limiting/`](examples/002-server-action-rate-limiting/)) — TypeScript/Next.js server action with sliding-window rate limiting, x-forwarded-for trust-boundary attack tests, zod validation, enumeration-resistant responses, and a security review whose real finding (SEC-001) is preserved in the trail
-- Provider-adapter layer ([`docs/PROVIDER_ADAPTERS.md`](docs/PROVIDER_ADAPTERS.md), [`adapters/`](adapters/)) separating provider-neutral SDD Core from per-provider packaging, plus a first **prompt-based Codex adapter** (`AGENTS.md` operating guide, lifecycle-spine prompts, copy-only installer) and an `install-all` wrapper — honest by design: no hook/subagent/skill parity claimed, unverified against a live Codex CLI (see [`adapters/codex/PARITY.md`](adapters/codex/PARITY.md))
+- Provider-adapter layer ([`docs/PROVIDER_ADAPTERS.md`](docs/PROVIDER_ADAPTERS.md), [`adapters/`](adapters/)) separating provider-neutral SDD Core from per-provider packaging, plus a first **prompt-based Codex adapter** (`AGENTS.md` operating guide, lifecycle-spine prompts, copy-only installer) and an `install-all` wrapper — honest by design: no hook/subagent/skill parity claimed; the plugin path into Codex is verified since spec 044, the lifecycle prompts are not (see [`adapters/codex/PARITY.md`](adapters/codex/PARITY.md))
 - Hardened `security-reviewer` agent (spec 020): explicit vulnerability taxonomy, abuse-case attack anticipation, RGPD/LOPDGDD/AEPD ownership, and Confirmed-vs-Potential source-to-sink evidence discipline; `security-review`/`privacy-compliance-review` now delegate to this shipped agent instead of unshipped external subagents
 
 **Planned**
 
+- Installer retirement on the plugin's recorded evidence (`scripts/update.*`, the install manifest, the dead `agents/README.md` copy branch), and the per-profile decision on the recorded token cost
 - Defensive hooks declared in profiles, including `messaging-review-reminder`, `openapi-contract-reminder`, `prisma-migration-guard`, and `stripe-review-reminder`
 - `observability-reviewer` skill + `OBSERVABILITY.md` template
 - Live-install verification of the six lifecycle agents
@@ -776,11 +819,12 @@ As a portfolio piece, it demonstrates: AI-assisted engineering workflow design; 
 
 Stated plainly, because they matter:
 
-- **Claude Code is the primary, fully featured adapter.** A second **Codex adapter** ships too, but it is deliberately narrower: prompt-based, unverified against a live Codex CLI, with no enforced hooks, no native subagents, and only the lifecycle-spine prompts. This repository does **not** claim Claude/Codex parity — the gaps are enumerated in [`adapters/codex/PARITY.md`](adapters/codex/PARITY.md).
+- **Claude Code is the primary, fully featured adapter.** A second **Codex adapter** ships too, but it is deliberately narrower: prompt-based, with no enforced hooks, no native subagents, and only the lifecycle-spine prompts. The plugin installs into Codex (verified, spec 044) and its skills load there — Codex truncates their descriptions to fit its budget — but a Codex session executing one of them has not been observed yet (account quota, D012). This repository does **not** claim Claude/Codex parity — the gaps are enumerated in [`adapters/codex/PARITY.md`](adapters/codex/PARITY.md).
 - **Model availability depends on your account.** Fable/Opus/Sonnet are aliases resolved by your Claude Code plan and version; the orchestration degrades along the documented fallback table rather than failing, but the "ideal" three-model setup is not guaranteed everywhere.
-- **Agent recognition requires install + a new session.** Live discovery passed for `deep-reasoner` and `fast-worker`; the six lifecycle agents are authored, schema-validated, and installer dry-run validated, but have not yet been verified through a real agent-registry install.
+- **Agent recognition requires install (or the plugin) + a new session.** Live discovery passed for `deep-reasoner` and `fast-worker`; the six lifecycle agents are authored, schema-validated, and installer dry-run validated, but have not yet been verified through a real agent-registry install.
 - **`install.sh` requires `python3`** (stdlib only) for profile resolution. No `jq` anywhere.
-- **Windows-first origins.** The default central-dir location and the original hook wiring are Windows-shaped, but parity is shipped, not just documented: every hook has a `.sh` variant, both installers exist, and `settings.template.sh.json` provides the ready-made macOS/Linux hook wiring.
+- **Windows-first origins.** The default central-dir location and the original hook wiring are Windows-shaped, but parity is shipped, not just documented: every hook has a `.sh` variant, both installers exist, and `settings.template.sh.json` provides the ready-made macOS/Linux hook wiring. The **plugin** wires the bash hooks only; on Windows, keep the installer for hooks until a later spec verifies plugin hooks there.
+- **The autonomous runner is frozen at spec 042** (`runner/README.md`). The supported autonomous path is the prompt in [`docs/AUTONOMOUS_SDD_FEATURE_PROMPT.md`](docs/AUTONOMOUS_SDD_FEATURE_PROMPT.md), which runs gates G0–G8 to a pull request against a real provider.
 - **Graphify is external and optional.** This repo ships the integration layer only; without the tool you get graceful degradation, not the architecture map.
 - **Not every profile is active.** `blockchain-crypto` is a disabled placeholder; planned profile entries are reported but not installed.
 - **Two worked examples so far** ([Java/Spring webhook idempotency](examples/001-payment-webhook-idempotency/), [TypeScript/Next.js rate limiting](examples/002-server-action-rate-limiting/)). Both demonstrate the workflow artifacts end-to-end, but they are educational — pattern walkthroughs, not complete production systems.

@@ -27,6 +27,15 @@ Spec 025 · Workspace SDD — the first coverage of what happens *between* proje
 
 ### Changed
 
+- **The repository is the `sdd` plugin and its own marketplace (spec 044).** `.claude-plugin/`,
+  `.codex-plugin/` and `hooks/hooks.json` make `claude plugin install sdd@spec-driven-development` and
+  `codex plugin add sdd@spec-driven-development` the primary install path; the profile-aware installer
+  stays as the alternative for profile selection, Windows hooks and per-project Codex `AGENTS.md`.
+  `agents/README.md` moved to `docs/AGENTS.md` (the plugin loader ships every `.md` under `agents/` as
+  an agent). The consistency gate holds `hooks/hooks.json` equivalent to `settings.template.sh.json`
+  as whole commands. README, INSTALL, the adapter docs and AGENTS were realigned to plugin-first, and
+  the Codex status was corrected: plugin install verified on `codex-cli 0.152.1`, prompts still
+  unverified end-to-end.
 - **The runner is frozen at spec 042 (maintainer decision, 2026-09-04).** No new runner specs;
   spec 043 is paused on its branch, unmerged. `docs/AUTONOMOUS_SDD_FEATURE_PROMPT.md` is now
   versioned and is the supported path for unattended feature delivery. Spec 042's AC-013 kept

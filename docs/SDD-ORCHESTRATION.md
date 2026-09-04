@@ -115,6 +115,8 @@ Verified against Claude Code **2.1.207**: agent frontmatter keys `name`, `descri
 Everything ships from this repo through `profiles.json` (core profile) — there is no
 second source of truth.
 
+The shortest path is the plugin — `claude plugin install sdd@spec-driven-development` after adding this repo as a marketplace — which loads the agents with everything else ([Install as a plugin](INSTALL.md#install-as-a-plugin)). The installer path, for profiles and Windows:
+
 ```powershell
 # Windows — into the central dir, then copy agents into your ~/.claude/agents
 .\install.ps1

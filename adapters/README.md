@@ -12,8 +12,8 @@ For the full model, read [`../docs/PROVIDER_ADAPTERS.md`](../docs/PROVIDER_ADAPT
 
 | Adapter | Location | Status | Installer |
 |---|---|---|---|
-| **Claude Code** | repository root (`skills/`, `agents/`, `hooks/`, installers, settings templates) — see [`claude/README.md`](claude/README.md) | **Primary, shipped.** Live-verified for `deep-reasoner`/`fast-worker`; lifecycle agents schema/dry-run validated. | `install.sh` / `install.ps1` (profile-aware) |
-| **Codex** | [`codex/`](codex/) | **Prompt-based. Unverified against a live Codex CLI in this environment** (`which codex` → not found). No parity claimed. | `codex/install-codex.sh` / `.ps1` (copy-only) |
+| **Claude Code** | repository root (`skills/`, `agents/`, `hooks/`, installers, settings templates) — see [`claude/README.md`](claude/README.md) | **Primary, shipped.** Live-verified for `deep-reasoner`/`fast-worker`; all 8 agents listed by the plugin inventory (spec 044). | Plugin `sdd@spec-driven-development` (primary) · `install.sh` / `install.ps1` (profile-aware alternative) |
+| **Codex** | [`codex/`](codex/) | **Prompt-based.** `codex-cli 0.152.1` is present on the maintainer machine and `codex plugin add sdd@spec-driven-development` exits 0 (spec 044); the lifecycle prompts remain unverified end-to-end. No parity claimed. | Plugin `sdd@spec-driven-development` · `codex/install-codex.sh` / `.ps1` (copy-only, per-project `AGENTS.md`) |
 
 > The Claude adapter is **not** stored under `adapters/claude/` — it *is* the repository root, and
 > no file was moved there. `adapters/claude/README.md` is a pointer. This keeps `install.sh`,
@@ -33,7 +33,7 @@ prompt-based · `❌` not implemented (honest gap).
 | Agent responsibility model | ✅ `agents/*.md` subagents (`tools:` grant) | ⚠️ roles described in `codex/AGENTS.md` | Codex has no verified native subagent/`tools:` grant here; roles are personas the model adopts. |
 | Deterministic guardrails (block push, gate on spec status) | ✅ `hooks/*.{sh,ps1}` at tool-call level | ❌ **not enforced** — conventions in `AGENTS.md` only | The largest honest gap. Codex adapter does **not** claim hook parity. See `codex/PARITY.md`. |
 | Profile-aware routing / install | ✅ `profiles.json` + installers | ❌ no profile filtering | Codex installer is copy-only; no `profiles.json` involvement. |
-| Skill contracts (`## SDD Contract`) | ✅ on all 71 skills | ✅ reused as provider-neutral metadata | The `provider_specific` flag already anticipated this split. |
+| Skill contracts (`## SDD Contract`) | ✅ on all 72 skills | ✅ reused as provider-neutral metadata | The `provider_specific` flag already anticipated this split. |
 | Review gates (risk-triggered) | ✅ review skills | ⚠️ `codex/prompts/sdd-spec-review.md` (generic gate) | Stack-specific reviewers (Java/Spring, payments, …) not ported to Codex in v1. |
 | Bounded context (Graphify optional) | ✅ optional, graceful degradation | ✅ same doctrine (external tool) | Graphify is external to both adapters; never mandatory, never `graph.json` wholesale. |
 | PR-ready delivery / traceability | ✅ `/pr-description` + evidence chain | ⚠️ described in `AGENTS.md` | Same discipline; no Codex-native PR tooling claimed. |
