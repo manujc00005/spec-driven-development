@@ -1,0 +1,20 @@
+# RETROSPECTIVE baseline - `main`'s real output on this path.
+# NOT captured at T001: reproduced afterwards from a temporary extraction of
+# `main`, for spec 042 conformance:CONF-006 / D018. D007 carries the full
+# provenance split of the corpus.
+# scenario: refusal-baseline-mutates
+# condition: baseline suite mutates the tree
+# main-commit: 141638b6063e83386de501751c162487fb8268f2
+# command: python3 -m sdd_runner --repo <REPO> --feature <REPO>/specs/features/900-fixture --dry-run --baseline /opt/homebrew/opt/python@3.14/bin/python3.14 <TMP>/mutate.py
+# fixture: golden.SCENARIOS['refusal-baseline-mutates'], built by runner/tests/support.py, which is
+#   byte-identical between `main` and this branch.
+# normalization: golden.normalize only - <REPO>, <TMP>, <SHA>, <TS>, <HOST>,
+#   <PID>. No semantic difference is normalized.
+# relation: byte-identical to the current side.
+
+exit: 10
+--- stdout ---
+--- stderr ---
+[GATE] refused: baseline suite mutates the tree
+  detail: git status changed while running /opt/homebrew/opt/python@3.14/bin/python3.14 <TMP>/mutate.py
+  remediation: make the baseline hermetic; a mutating baseline corrupts fingerprints

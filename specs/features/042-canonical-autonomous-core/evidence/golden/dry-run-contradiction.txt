@@ -1,0 +1,12 @@
+exit: 0
+--- stdout ---
+feature:         <REPO>/specs/features/900-fixture
+backend:         claude (not resolved: a dry run dispatches nothing)
+unchecked tasks: 2
+max-iterations:  3
+max-delegations: 25
+entry:           ready
+  T001  Do the first thing. Covers: AC-001. Verify: the suite passes.
+  T002  Do the second thing. Covers: AC-001. Verify: the suite passes.
+dry run: nothing dispatched.
+--- stderr ---

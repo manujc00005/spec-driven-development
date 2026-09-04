@@ -1,0 +1,6 @@
+exit: 10
+--- stdout ---
+--- stderr ---
+[GATE] refused: TASKS.md missing
+  detail: <REPO>/specs/features/900-fixture/TASKS.md
+  remediation: run /spec-plan to produce PLAN/TASKS/DECISIONS

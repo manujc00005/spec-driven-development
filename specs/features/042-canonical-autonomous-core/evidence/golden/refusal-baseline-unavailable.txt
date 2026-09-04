@@ -1,0 +1,6 @@
+exit: 10
+--- stdout ---
+--- stderr ---
+[GATE] refused: baseline suite unavailable
+  detail: [Errno 2] No such file or directory: 'definitely-not-a-real-binary-042' (argv: definitely-not-a-real-binary-042)
+  remediation: install or correct the command PLAN.md mandates, or pass a --baseline that exists and is executable

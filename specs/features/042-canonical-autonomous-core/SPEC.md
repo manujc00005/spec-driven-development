@@ -2,7 +2,7 @@
 
 ## Status
 
-In Progress
+Done
 
 ## Problem
 
@@ -57,9 +57,10 @@ contract: the CLI, `/sdd`, `/sdd-orchestrate`, and the `stub`/`claude`/`codex` b
 `ORCHESTRATION.md` stays the durable authority for an individual run, and gains a
 `protocol_version` so a future contract change is detectable rather than silent.
 
-**Observable behaviour does not change.** This is an architectural refactor: the same exit codes,
-the same refusal condition names, the same gate ordering, the same loop outcomes, with one additive
-exception stated in FR-009.
+**Observable behaviour does not change**, apart from the exceptions FR-009 enumerates. This is an
+architectural refactor: the same exit codes, the same refusal condition names, the same gate
+ordering, the same loop outcomes, apart from the `authorised-observable-differences` block FR-009
+carries — the single place any of them is listed or counted.
 
 ## Non-goals
 
@@ -76,8 +77,26 @@ Explicitly out of scope, and no task in this feature may touch them:
   three authorities is demonstrated in writing and resolved by a recorded decision.
 - Deleting `/sdd-orchestrate --autonomous`, the `python3 -m sdd_runner` invocation, any CLI flag, or
   any current exit code.
-- `git commit`, `git push`, `git merge`, real migrations, or any change to secrets.
+- **The autonomous runner does not create commits, push, merge, or open pull requests**, and
+  this feature adds no code that does. Also out of scope: real migrations and any change to
+  secrets.
+
+  **Clarified 2026-09-04 (`conformance:CONF-008`).** The line read *"`git commit`, `git push`,
+  `git merge`, real migrations, or any change to secrets"* under a heading saying no task may
+  touch them, which reads as a blanket ban on the maintainer committing at all — and D010 was
+  written on that reading, recording the branch's own history as an unauthorised deviation.
+  The Non-goal is about **what the runner does**, not about how the maintainer manages their
+  own branch: the maintainer's ordinary commits, outside the runner's behaviour, were never in
+  scope here. D010 stays on the record unamended — it is the honest account of what was
+  believed at the time, and D013's rule is that the history stays legible.
 - Modifying `docs/AUTONOMOUS_SDD_FEATURE_PROMPT.md` (untracked working-tree file, preserved as-is).
+- **Making `--dry-run` validate backend-exclusive options.** A dry run resolves no backend, so it
+  accepts combinations the real run refuses (`--dry-run --backend claude --stub-script <path>` exits
+  `0` with a plan; the same request without `--dry-run` exits `14`). That asymmetry is `main`'s
+  behaviour and AC-008 requires it to survive. It was briefly changed during review repair and
+  reverted; the decision recording the attempt is D011 (**Superseded**). A follow-up feature may
+  make the dry run answer exactly as the real run does — it needs its own transcripts and its own
+  acceptance criterion, because it changes observable output on purpose.
 
 ## Users / Actors
 
@@ -134,6 +153,15 @@ re-entry, resume authentication ordering, the entry gate, budget computation, ba
 the loop, freeze, and the terminal result. The CLI owns argv, stdout/stderr formatting, and the
 process exit code — nothing else.
 
+**A dry run resolves no backend, and therefore validates no backend-exclusive option.**
+`--dry-run` dispatches nothing, so it never reaches backend resolution; options that only mean
+something to a particular backend — `--stub-script` against `--backend claude` is the live example —
+are validated where the backend is resolved, on the real run. This is the behaviour on `main` and
+this feature preserves it. It is stated here because it looks like an omission and is not: a dry
+run has no backend to contradict, and making it refuse anyway would widen observable behaviour for
+a request that was never going to dispatch. Tightening that validation so a dry run answers exactly
+as a real run would is a **follow-up, out of scope here** — see Non-goals.
+
 Every normative rule (state names, gate conditions, caps, severities, escalation domains, reviewer
 triggers, fingerprint inclusion, run artifacts, exit codes) is a typed value in **one** policy
 module, and the contract tests read that module to check the skill, the CLI, the templates and the
@@ -160,9 +188,24 @@ missing `Entry` line.
   — including feature-path containment inside `specs/features/` through resolved real paths — is
   performed by the core, not by the caller.
 - **FR-004:** `RunOutcome` is a value type carrying the run result, exit code, reason, remediation,
-  resumability, open escalations, the `GateResult`, the dry-run plan when requested, and the
-  protocol version. It **leaks no internal object**: no `Loop`, no `Orchestration`, no `Backend`, no
-  `CounterState`, no open file handle.
+  resumability, open escalations, the `GateResult`, the dry-run plan when requested, the protocol
+  version, any `Diagnostic`s, and **`loop_completed`**. It **leaks no internal object**: no `Loop`,
+  no `Orchestration`, no `Backend`, no `CounterState`, no open file handle.
+- **FR-004a — disposition and diagnostics are independent facts, and both are stated.**
+  `loop_completed` says whether `Loop.run()` returned normally with a reportable terminal result.
+  `diagnostics` say something went wrong alongside the invocation. **Neither may be derived from the
+  other**, and no adapter may infer one from the other. A caller decides whether to report a
+  terminal result from `loop_completed` alone.
+
+  This is a contract change, made because the alternative had already failed: the disposition was
+  *inferred* as "terminal result and no diagnostics", which held only while diagnostics accompanied
+  refusals. The moment a converged run carried one — its `run.jsonl` writer losing events — a
+  `DONE`/exit-0 run stopped printing its result and stopped emitting `run-finished`, leaving a
+  scheduler waiting on an event that never arrived (D012, `maintainer:MNT-001`).
+
+  `loop_completed` is `False` for preflight refusals, containment failures, `--dry-run`, and the
+  internal-error path. **It is not `execution_started`**: an exception may be raised after the loop
+  begins, and the baseline prints no terminal result and sends no `run-finished` in that case.
 - **FR-005:** `GateResult` is a structured, fail-closed value: a boolean pass, plus the ordered
   refusals, each with its stable condition name, observed evidence and remediation. Every refusal
   reported by the gate today keeps its condition name and its position in the ordering.
@@ -179,8 +222,42 @@ missing `Entry` line.
   and exclusion rules, run-artifact names, lifecycle values, run results, severities and exit codes
   are typed values in one policy module, importable without importing the loop.
 - **FR-009:** `ORCHESTRATION.md` gains a `Protocol version: <n>` header field, written by the core
-  on create and preserved on save. This is the **only** intentional change to observable output in
-  this feature.
+  on create and preserved on save. It is the first of the intentional changes to observable output
+  in this feature. **The block below is the complete list**: every one is enumerated here with a
+  stable identifier and the decision that authorised it, and nothing outside this list may differ
+  from `main`. The count is the length of the list, and is stated nowhere else.
+
+  ```yaml
+  authorised-observable-differences:
+    - id: DIFF-001
+      decision: D003
+      surface: ORCHESTRATION.md
+      change: the additive Protocol version header line
+    - id: DIFF-002
+      decision: D015
+      surface: CLI exit code and both streams
+      change: a failure to persist run.jsonl becomes exit 70 with a stable redacted diagnostic
+    - id: DIFF-003
+      decision: D018
+      surface: CLI exit code and both streams
+      change: a baseline suite that cannot launch becomes exit 10 with a BASELINE_UNAVAILABLE refusal
+  ```
+
+  This block is the record, and the contract tests read it **structurally, by identifier**:
+  `test_golden_cli.TheSpecAndTheseConstantsAgree` fails if its own constants and this list disagree,
+  and `test_main_baselines` fails if a listed difference has no recorded `main` side, if an
+  unlisted difference appears, or if a listed one is not the difference the record describes.
+  Adding a further difference means adding an entry here first.
+
+  **Two entries were added to this list after the fact, and the history is kept on purpose.**
+  The requirement said "only" while the tree already shipped `DIFF-002` — authorised by D015 and
+  pinned by the `audit-unavailable` transcript pair, but never written back here; that is the
+  unrepaired half of `domain:DOM-023`, re-reported in round 5 as `security:SEC-013`. It then said
+  **"exactly two"** while the tree already shipped `DIFF-003` — the `BASELINE_UNAVAILABLE` refusal
+  introduced by `security:SEC-006`'s repair and reclassified by `security:SEC-012`, neither of which
+  was asked to decide whether the departure from `main` was authorised. Nothing detected it, because
+  the ten gate-refusal scenarios CONF-003 added had **no `main` side to be compared against** until
+  CONF-006 captured one. Authorised retroactively by D018.
 - **FR-010:** A state file **without** `Protocol version` is read as version `1` and remains fully
   resumable. A file whose version the core does not understand refuses fail-closed as unresumable,
   naming the version it read and the version it supports — it is never guessed into shape.
@@ -315,7 +392,10 @@ No database. The persisted artifacts:
   core still exits 18 when core completion is not proven.
 - A caller passing a `RunRequest` with contradictory fields (`entry="adopt"` with an existing valid
   state file; `stub_script` with `backend="claude"`) → rejected by the core with the same condition
-  names the CLI produces today.
+  names the CLI produces today, **on the path that resolves a backend**. A dry run resolves none, so
+  it accepts the `stub_script`/backend pair and returns its plan — `main`'s behaviour, preserved by
+  AC-008 and now stated rather than implied. An earlier draft of this bullet read as an unqualified
+  requirement, which is what led a review repair to change the dry run and break FR-009.
 - A contract test greps for a protocol constant instead of reading the FR-012 surface list → it
   fails on twelve unrelated review skills that use the same words as report vocabulary (FR-012a).
 - A protocol constant is added to the policy module but to no surface list → the "uncovered
@@ -360,11 +440,25 @@ No database. The persisted artifacts:
 - **AC-007:** A scripted `stub` run demonstrates **start, pause, abort, resume and core-complete**
   through the public interface only — the test imports `run` and `RunRequest` and nothing else from
   the package.
-- **AC-008:** External behaviour is unchanged and proved so: for a fixed set of scenarios (clean
-  first entry, each gate refusal, dry run, dry-run adopt, concurrent run, unresumable state, cap
-  abort, budget exhaustion, human escalation, core-complete), the CLI's exit code and stdout/stderr
-  are byte-identical before and after, apart from the `Protocol version` line of FR-009. No real
-  provider becomes usable.
+- **AC-008:** External behaviour is unchanged and proved so: for the recorded scenario corpus under
+  `evidence/golden/` — at minimum clean first entry, each gate refusal, dry run, dry-run adopt,
+  concurrent run, re-entry after a completed run, unresumable state, cap abort, budget exhaustion,
+  human escalation, core-complete, backend precondition, the dry-run/backend-option asymmetry, and
+  the internal-error path, and the audit-unavailable path — the CLI's exit code and stdout/stderr are
+  byte-identical before and after, **apart from the differences FR-009's
+  `authorised-observable-differences` block enumerates, and nothing else.** This criterion states no
+  count of its own: the list is the authority, and it is read by identifier. A further difference
+  would need its own entry in that list and its own decision — a repair that widened dry-run
+  validation tried to become one and was reverted (D011, Superseded). No real provider becomes
+  usable.
+
+  This criterion twice named a number the tree had already passed. It read *"That is the only
+  permitted difference and it stays the only one"* while `DIFF-002` was in the tree
+  (`domain:DOM-023` / `security:SEC-013`), and then *"apart from the two differences… and nothing
+  else"* while `DIFF-003` was in the tree (`conformance:CONF-006`, authorised by D018). Both times a
+  criterion gating this feature was false against it, which is the failure this feature exists to
+  end; both times the repair was to record the difference, never to relax the criterion. The count
+  now lives only in the list, so the criterion cannot go stale again by arithmetic.
 - **AC-009:** `scripts/check-consistency.sh` exits 0, and `install.sh`, `install.ps1`,
   `profiles.json` and the install manifest are **byte-identical to `main`** (`git diff --stat main --
   install.sh install.ps1 profiles.json` is empty). The canonical package imports nothing outside

@@ -12,7 +12,6 @@ import io
 import os
 import subprocess
 import sys
-import sysconfig
 import unittest
 
 import sdd_runner
@@ -76,10 +75,23 @@ class StandsOnItsOwn(unittest.TestCase):
         self.assertIn("--dry-run", proc.stdout)
 
     def test_nothing_here_needs_the_optional_extras(self):
-        for name in OPTIONAL:
-            with self.subTest(module=name):
-                self.assertNotIn(name, sys.modules,
-                                 "%s was imported merely by loading the package" % name)
+        """Measured in a fresh process — domain:DOM-014.
+
+        This used to assert the extras were absent from `sys.modules`, which is
+        process-global: on a machine where they ARE installed, any earlier test
+        touching the Claude backend puts them there and this fails for a reason
+        unrelated to what it claims. It passed only because the maintainer's
+        machine has neither installed — i.e. for the same reason it would pass if
+        it asserted nothing.
+        """
+        probe = ("import sys, sdd_runner; sdd_runner.run;"
+                 "print([m for m in %r if m in sys.modules])" % (sorted(OPTIONAL),))
+        proc = subprocess.run([sys.executable, "-c", probe], capture_output=True,
+                              text=True, timeout=60,
+                              env=dict(os.environ, PYTHONPATH=RUNNER_ROOT))
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertEqual(proc.stdout.strip(), "[]",
+                         "importing the package pulled in an optional extra")
 
 
 class InvisibleToTheInstallers(unittest.TestCase):

@@ -98,6 +98,11 @@ INHERITED_UNDETERMINED = "inherited diff undetermined"
 # feature's SPEC so an operator who hits it on exit 10 finds it written down.
 STATUS_UNREADABLE = "status unreadable"
 
+# The baseline command is *executed* by the gate, so its launch can fail in a way
+# that has nothing to do with reading the spec trail. Named separately so the
+# refusal can say which (security:SEC-012).
+BASELINE_UNAVAILABLE = "baseline suite unavailable"
+
 # The lifecycle words this framework's own template uses. The gate does NOT try to
 # parse an adopter's dialect — that surface is unbounded, and the skill path reads
 # any of them because a model reads them. This list exists only to tell "a status
@@ -174,6 +179,14 @@ HUMAN_GATED = [
 # -- run results and the durable record ---------------------------------------
 
 RUN_RESULTS = ("ACTIVE", "PAUSED", "DONE", "ABORTED")
+
+# Results an invocation can report that never reach `ORCHESTRATION.md`, because no
+# run existed to record them. `OUTCOME_RESULTS` was defined here alongside them and
+# had no consumer repo-wide — dead on arrival, and waved past the uncovered-constant
+# guard with an exemption line. Deleted: dead code you create is yours
+# (domain:DOM-006).
+REFUSED = "REFUSED"      # the gate, or a pre-gate check, said no
+PLANNED = "PLANNED"      # --dry-run: the plan was computed, nothing dispatched
 TERMINAL_RESULTS = ("DONE",)
 RECOVERABLE_RESULTS = ("PAUSED", "ABORTED")
 

@@ -3,8 +3,23 @@
 AC-008 requires the CLI's observable behaviour to be byte-identical across the
 refactor. The 276 tests assert the LOOP's behaviour; none of them asserts a byte
 of what the CLI prints, and FR-007 requires the dry-run rendering to survive
-unchanged. So the oracle is recorded here, from the PRE-refactor code, before the
-first implementation task touches anything (D007).
+unchanged. So an oracle is recorded here (D007).
+
+NOT ALL OF IT IS A PRE-REFACTOR ORACLE, and the difference is the whole point of
+D007: a transcript captured after the refactor proves only that the refactor
+agrees with itself. Seventeen scenarios were captured at T001 against the
+pre-refactor code, before the first implementation task touched anything. The
+other thirteen were added later, against the refactored code — `internal-error`
+and `dry-run-contradiction` during the review rounds, `audit-unavailable` with
+D015, and the ten `refusal-*` gate conditions with CONF-003, which added coverage
+rather than narrowing AC-008's "each gate refusal".
+
+What gives those thirteen a real "before" side is a separate artifact: eleven
+`<scenario>.main.txt` files, reproduced from a temporary extraction of `main` at
+`141638b` and labelled retrospective. Nine of the ten gate conditions reproduce
+byte-for-byte; `refusal-baseline-unavailable` is `DIFF-003` (D018) and
+`audit-unavailable` is `DIFF-002` (D015). `test_main_baselines` is the guard, and
+D007 carries the full provenance split (`conformance:CONF-006`).
 
 A transcript is `exit code + stdout + stderr`, normalized: temp paths, shas,
 timestamps, pids and hostnames differ per run and are replaced by placeholders.
@@ -233,6 +248,159 @@ def sc_cap_abort(tmp):
                   "--max-iterations", "1", "--max-delegations", "40"]
 
 
+def sc_dry_run_contradiction(tmp):
+    """A dry run does not validate backend-exclusive options, because it resolves
+    no backend — and this transcript pins that it still does not.
+
+    It briefly did: repairing domain:DOM-013 moved the check ahead of the dry-run
+    branch and turned this exit `0` into an exit `14`. That widened observable
+    behaviour, which is the one thing this feature promised not to do, so it was
+    reverted and spec 042's D011 is Superseded. The scenario stays: what it now guards is the
+    baseline, and it is the transcript that would catch the same widening being
+    reintroduced.
+
+    The same request WITHOUT `--dry-run` is refused — see `stub-script-wrong-backend`.
+    The pair is the point: validation applies where dispatch happens.
+    """
+    repo, feature = support.make_repo(tmp)
+    return repo, ["--repo", repo, "--feature", feature, "--dry-run",
+                  "--backend", "claude", "--stub-script", _script(tmp, [])]
+
+
+def sc_internal_error(tmp):
+    """The catch-all path, which no transcript covered — security:SEC-004 / DOM-006.
+
+    `Loop.run` is patched to raise, which is the only deterministic way to reach
+    the handler from the CLI. The patch is undone before the scenario returns, so
+    it cannot leak into another capture.
+    """
+    from sdd_runner import loop as loop_mod
+    repo, feature = support.make_repo(tmp)
+    # A valid script: the backend must resolve, or the run refuses before the
+    # handler under test is ever reached.
+    argv = ["--repo", repo, "--feature", feature, "--backend", "stub",
+            "--stub-script", _script(tmp, [support.fixture("worker_done.md")]),
+            "--baseline", "true"]
+
+    original = loop_mod.Loop.run
+
+    def boom(self):
+        raise RuntimeError("deliberate failure for the internal-error transcript")
+
+    loop_mod.Loop.run = boom
+    try:
+        code, out, err = run_cli(argv, repo, tmp)
+    finally:
+        loop_mod.Loop.run = original
+    return (repo, argv), (code, out, err)
+
+
+def sc_audit_unavailable(tmp):
+    """A converged run whose transcript cannot be written — spec 042 D015.
+
+    **Retrospective baseline, and labelled as one.** This scenario was not
+    captured before the refactor with the other seventeen; it was found in round 4
+    and its `main` behaviour was reproduced afterwards from a temporary extraction
+    of `main`: exit **1**, empty stdout, a raw `IsADirectoryError` traceback on
+    stderr, because the first `log.emit` raised and the handler's second `emit`
+    raised again. Pretending it was recorded at T001 would be the kind of tidy
+    history this feature has twice refused to write.
+
+    What it pins now is the *authorised* replacement (AC-008's second permitted
+    difference): a stable diagnostic and exit 70 instead of a traceback and exit 1.
+    """
+    repo, feature = support.make_repo(tmp)
+    script = _script(tmp, ([support.fixture("worker_done.md"), support.approve_block()] * 2)
+                     + support.finalization_flat())
+    os.mkdir(os.path.join(feature, "run.jsonl"))
+    return repo, ["--repo", repo, "--feature", feature, "--backend", "stub",
+                  "--stub-script", script, "--baseline", "true"]
+
+
+# --- one scenario per gate.check terminal condition (spec 042 CONF-003) -------
+# Every one drives the real CLI through the real gate. None calls `gate.check`
+# directly and none constructs an expected refusal by hand: a transcript that
+# does not exercise the path proves nothing about the path.
+
+def sc_refusal_feature_folder_missing(tmp):
+    repo, _feature = support.make_repo(tmp)
+    return repo, ["--repo", repo, "--feature", "specs/features/999-does-not-exist",
+                  "--dry-run"]
+
+
+def sc_refusal_spec_missing(tmp):
+    repo, feature = support.make_repo(tmp)
+    os.remove(os.path.join(feature, "SPEC.md"))
+    _git(repo, "add", "-A"); _git(repo, "commit", "-qm", "drop SPEC.md")
+    return repo, ["--repo", repo, "--feature", feature, "--dry-run"]
+
+
+def sc_refusal_tasks_missing(tmp):
+    repo, feature = support.make_repo(tmp)
+    os.remove(os.path.join(feature, "TASKS.md"))
+    _git(repo, "add", "-A"); _git(repo, "commit", "-qm", "drop TASKS.md")
+    return repo, ["--repo", repo, "--feature", feature, "--dry-run"]
+
+
+def sc_refusal_status_unreadable(tmp):
+    """A `## Status` section whose line states no lifecycle status at all.
+
+    This condition is the runner's alone (spec 041 D011): the skill path is
+    model-mediated and reads any dialect, so it never needs to say it could not
+    read one. This parser does.
+    """
+    spec = support.SPEC.replace("## Status\n\nReady", "## Status\n\n| state | who |")
+    repo, feature = support.make_repo(tmp, spec=spec)
+    return repo, ["--repo", repo, "--feature", feature, "--dry-run"]
+
+
+def sc_refusal_open_questions(tmp):
+    spec = support.SPEC.replace("- ~~OQ-1~~ **Resolved.**",
+                                "- OQ-1: which currency does the total use?")
+    repo, feature = support.make_repo(tmp, spec=spec)
+    return repo, ["--repo", repo, "--feature", feature, "--dry-run"]
+
+
+def sc_refusal_not_a_git_repository(tmp):
+    """A spec trail with no repository around it."""
+    repo = os.path.join(tmp, "bare")
+    feature = os.path.join(repo, "specs", "features", "900-fixture")
+    os.makedirs(feature)
+    for name, text in (("SPEC.md", support.SPEC), ("TASKS.md", support.TASKS)):
+        with open(os.path.join(feature, name), "w", encoding="utf-8") as fh:
+            fh.write(text)
+    return repo, ["--repo", repo, "--feature", feature, "--dry-run"]
+
+
+def sc_refusal_already_adopted(tmp):
+    """`--adopt` over a feature that already has a state document."""
+    repo, feature, _info = support.make_adopted_repo(tmp)
+    with open(os.path.join(feature, "ORCHESTRATION.md"), "w", encoding="utf-8") as fh:
+        fh.write("# Orchestration: prior run\n\n## State\n\n- writer: sdd_runner\n\n")
+    return repo, ["--repo", repo, "--feature", feature, "--dry-run", "--adopt"]
+
+
+def sc_refusal_baseline_unavailable(tmp):
+    repo, feature = support.make_repo(tmp)
+    return repo, ["--repo", repo, "--feature", feature, "--dry-run",
+                  "--baseline", "definitely-not-a-real-binary-042"]
+
+
+def sc_refusal_red_baseline(tmp):
+    repo, feature = support.make_repo(tmp)
+    return repo, ["--repo", repo, "--feature", feature, "--dry-run", "--baseline", "false"]
+
+
+def sc_refusal_baseline_mutates_the_tree(tmp):
+    """A baseline that passes and leaves the tree dirty is refused just the same."""
+    repo, feature = support.make_repo(tmp)
+    script = os.path.join(tmp, "mutate.py")
+    with open(script, "w", encoding="utf-8") as fh:
+        fh.write("import pathlib; pathlib.Path('mutated-by-the-baseline.txt').write_text('x')\n")
+    return repo, ["--repo", repo, "--feature", feature, "--dry-run",
+                  "--baseline", "%s %s" % (sys.executable, script)]
+
+
 SCENARIOS = {
     "dry-run": sc_dry_run,
     "dry-run-adopt": sc_dry_run_adopt,
@@ -251,12 +419,32 @@ SCENARIOS = {
     "concurrent-run": sc_concurrent_run,
     "human-escalation": sc_human_escalation,
     "cap-abort": sc_cap_abort,
+    "dry-run-contradiction": sc_dry_run_contradiction,
+    "internal-error": sc_internal_error,
+    "audit-unavailable": sc_audit_unavailable,
+    "refusal-feature-folder-missing": sc_refusal_feature_folder_missing,
+    "refusal-spec-missing": sc_refusal_spec_missing,
+    "refusal-tasks-missing": sc_refusal_tasks_missing,
+    "refusal-status-unreadable": sc_refusal_status_unreadable,
+    "refusal-open-questions": sc_refusal_open_questions,
+    "refusal-not-a-git-repository": sc_refusal_not_a_git_repository,
+    "refusal-already-adopted": sc_refusal_already_adopted,
+    "refusal-baseline-unavailable": sc_refusal_baseline_unavailable,
+    "refusal-red-baseline": sc_refusal_red_baseline,
+    "refusal-baseline-mutates": sc_refusal_baseline_mutates_the_tree,
 }
+
+# Scenarios whose builder runs the CLI itself, because reaching the path needs a
+# patch that must not outlive the capture.
+SELF_RUNNING = {"internal-error"}
 
 
 def capture(name):
     build = SCENARIOS[name]
     with tempfile.TemporaryDirectory() as tmp:
+        if name in SELF_RUNNING:
+            _repo_argv, (code, out, err) = build(tmp)
+            return render(code, out, err)
         repo, argv = build(tmp)
         code, out, err = run_cli(argv, repo, tmp)
         return render(code, out, err)

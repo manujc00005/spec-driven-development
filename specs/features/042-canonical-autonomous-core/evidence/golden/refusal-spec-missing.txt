@@ -1,0 +1,6 @@
+exit: 10
+--- stdout ---
+--- stderr ---
+[GATE] refused: SPEC.md missing
+  detail: <REPO>/specs/features/900-fixture/SPEC.md
+  remediation: run /spec-create for this feature

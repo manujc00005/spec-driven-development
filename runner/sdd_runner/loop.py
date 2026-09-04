@@ -23,6 +23,7 @@ from .counters import CounterState
 from .escalation import classify_all
 from .resume import ConcurrentRun, UnresumableState
 from .retry import DelegationFailedClosed, RetryPolicy, call_with_retry
+from .log import AuditUnavailable
 from .policy import (AGENT_FILES, CORE_COMPLETE, PROTOCOL_VERSION,  # noqa: F401
                      READ_ONLY_AGENTS, REVIEWERS, SECURITY_TRIGGERS)
 
@@ -78,6 +79,9 @@ class Loop:
         self.implemented_tasks = set()   # a worker came back DONE; the review is what is pending
         self.resumed = None              # the ResumeState this run re-entered from
         self.closure = None              # the persisted freeze/closure record, if any
+        # The contract version this run's document was written under. Set from the
+        # document itself once it exists; until then the core's own (domain:DOM-010).
+        self.protocol_version = PROTOCOL_VERSION
         self.baseline_cmd = baseline_cmd  # PLAN-mandated verification, when declared
 
     # -- paths ------------------------------------------------------------
@@ -136,6 +140,17 @@ class Loop:
         return digest.hexdigest()[:16]
 
     # -- state ------------------------------------------------------------
+    def _carry_protocol_version(self, doc):
+        """Adopt the version the DOCUMENT was written under.
+
+        Set here, where the document comes into existence, rather than in `run`
+        one call later — a test that reaches the document without reaching this
+        line was able to pass with the carry deleted, twice (domain:DOM-010). An
+        unreadable value cannot arrive: `resume.inspect` refuses it first.
+        """
+        self.protocol_version = doc.protocol_version()
+        return doc
+
     def _load_or_create_state(self, unchecked_count):
         """Create a fresh document, or re-enter an existing one (031 FR-011).
 
@@ -162,12 +177,12 @@ class Loop:
                 raise ConcurrentRun(
                     "another runner published %s while this one was starting; refusing to "
                     "start a second runner" % self.state_path)
-            return doc, None
+            return self._carry_protocol_version(doc), None
 
         doc = state.Orchestration.load(self.state_path)
         resumed = resume_mod.inspect(doc, self.state_path,
                                      self.counters.max_iterations, self.hostname)
-        return doc, resumed
+        return self._carry_protocol_version(doc), resumed
 
     def _inherited_record(self):
         """What an adopted run takes on trust, computed once at state creation.
@@ -221,8 +236,21 @@ class Loop:
             "writer": "sdd_runner",
             # spec 042 FR-009: written on create by `state.new_document` and
             # PRESERVED here. This dict replaces the whole State body on every
-            # persist, so a field that is not restated is a field that is lost.
-            "protocol version": str(PROTOCOL_VERSION),
+            # persist, so a field that is not restated is a field that is lost —
+            # and two ARE lost, pre-existing: `adoption baseline commit` and
+            # `adoption diff base`, which `state.new_document` writes and this dict
+            # does not restate, so an adopted run drops them on its first persist.
+            # Reported, not fixed here: the loss predates spec 042 and belongs to
+            # whoever owns the adoption record (domain:DOM-009). This comment used
+            # to claim a completeness the dict does not have.
+            #
+            # It restates the version the DOCUMENT was read under, not the core's.
+            # Stamping the core's would silently relabel a resumed older run as
+            # current on its first persist — destroying exactly the provenance
+            # D003 defers to the spec that first bumps the integer
+            # (domain:DOM-010). Today the two are always equal; the point is that
+            # they stop being equal without this line changing.
+            "protocol version": str(self.protocol_version),
             "entry": self.entry,
             "phase": phase,
             "current task": note or "none",
@@ -243,6 +271,32 @@ class Loop:
         self.doc.set_body("State", state.render_fields(self._state_fields(phase, note)))
         self._write_findings()
         self.doc.save(self.state_path)
+
+    def _emit(self, event, **fields):
+        """The loop's ONLY route to the transcript — spec 042 D015.
+
+        `RunLog.emit` swallows an `OSError` so a failed write cannot turn a
+        correctly classified exit into a traceback. That is right for the writer
+        and wrong as the end of the story: a run whose durable record is gone has
+        no evidence for anything it goes on to claim, and the maintainer's policy
+        is that an audit failure is a **security gate**, not a warning printed
+        beside a success.
+
+        So this checks what the writer recorded and raises `AuditUnavailable` on
+        the first failure — before the next delegation, not after the run has
+        finished dispatching work nobody can audit. `protocol.run` turns it into
+        exit 70 / `ABORTED` / `resumable=False`.
+
+        Every event goes through here. `test_audit_gate.OnlyOneRouteToTheLog`
+        walks this module's AST and fails on a direct `self.log.emit` outside this
+        method, because one bypass is all it takes for a run to keep going after
+        its record has stopped.
+        """
+        before = len(self.log.write_failures)
+        record = self.log.emit(event, **fields)
+        if len(self.log.write_failures) > before:
+            raise AuditUnavailable(event, self.log.write_failures)
+        return record
 
     def _mark_active(self):
         self.doc.set_body("Run result", "\nACTIVE\n\nresumable: yes\n\n")
@@ -290,7 +344,7 @@ class Loop:
         self._attempt_row(attempt, task, agent, objective, "DISPATCHED", path_scope,
                           pre, "", "")
         self._persist("DELEGATE", task or "%s -> %s" % (attempt, agent))
-        self.log.emit("dispatch", attempt=attempt, agent=agent, task=task, objective=objective,
+        self._emit("dispatch", attempt=attempt, agent=agent, task=task, objective=objective,
                       scope=list(path_scope), pre_fingerprint=pre,
                       budget_used=self.budget.used, budget_cap=self.budget.cap)
 
@@ -298,7 +352,7 @@ class Loop:
         response = call_with_retry(
             lambda timeout: self.backend.run(system, prompt, path_scope, timeout),
             self.retry_policy, self.budget, self.sleep,
-            on_attempt=lambda n: self.log.emit("attempt", attempt=attempt, n=n, agent=agent),
+            on_attempt=lambda n: self._emit("attempt", attempt=attempt, n=n, agent=agent),
             reason="%s/%s" % (attempt, agent))
 
         post = self.fingerprint()
@@ -308,7 +362,7 @@ class Loop:
             # out-of-scope writes with corrupt provenance - terminal, never guessed.
             self._attempt_row(attempt, task, agent, objective, "FAILED", path_scope,
                               pre, post, "OUT-OF-SCOPE WRITE")
-            self.log.emit("out-of-scope-write", attempt=attempt, agent=agent, task=task,
+            self._emit("out-of-scope-write", attempt=attempt, agent=agent, task=task,
                           pre_fingerprint=pre, post_fingerprint=post)
             raise UnattributedWrite(
                 "%s (%s) changed the tree outside its recorded scope: it is a read-only agent, "
@@ -317,7 +371,7 @@ class Loop:
         self.doc.append_line("Delegation log",
                              "- %s %s: dispatched, responded (pre %s -> post %s)"
                              % (attempt, agent, pre, post))
-        self.log.emit("response", attempt=attempt, agent=agent, post_fingerprint=post,
+        self._emit("response", attempt=attempt, agent=agent, post_fingerprint=post,
                       chars=len(response.text or ""), backend=response.backend)
         return attempt, response, post, pre
 
@@ -330,10 +384,10 @@ class Loop:
         try:
             self.doc, resumed = self._load_or_create_state(len(pending))
         except ConcurrentRun as exc:
-            self.log.emit("refused", kind="concurrent", reason=str(exc))
+            self._emit("refused", kind="concurrent", reason=str(exc))
             return Outcome(exits.CONCURRENT_RUN, "ABORTED", str(exc), resumable=True)
         except UnresumableState as exc:
-            self.log.emit("refused", kind="unresumable", reason=exc.reason,
+            self._emit("refused", kind="unresumable", reason=exc.reason,
                           remediation=exc.remediation)
             return Outcome(exits.STATE_UNRESUMABLE, "ABORTED", exc.reason,
                            resumable=False, remediation=exc.remediation)
@@ -345,20 +399,20 @@ class Loop:
             try:
                 self._adopt(resumed)
             except UnresumableState as exc:
-                self.log.emit("refused", kind="unresumable", reason=exc.reason,
+                self._emit("refused", kind="unresumable", reason=exc.reason,
                               remediation=exc.remediation)
                 return Outcome(exits.STATE_UNRESUMABLE, "ABORTED", exc.reason,
                                resumable=False, remediation=exc.remediation)
             if resumed.open_escalations:
                 reason = ("re-entry blocked: %d escalation(s) are still waiting for a maintainer "
                           "answer" % len(resumed.open_escalations))
-                self.log.emit("refused", kind="open-escalation",
+                self._emit("refused", kind="open-escalation",
                               escalations=resumed.open_escalations)
                 return Outcome(exits.HUMAN_ESCALATION, "PAUSED", reason, resumable=True,
                                escalations=resumed.open_escalations,
                                remediation="answer them in DECISIONS.md and clear the 'waiting' "
                                            "rows from the Escalations section, then re-enter")
-            self.log.emit("resume", prior_result=resumed.prior_result,
+            self._emit("resume", prior_result=resumed.prior_result,
                           recovered_from_interrupt=resumed.recovered_from_interrupt,
                           completed=sorted(resumed.completed_tasks),
                           blocked=sorted(resumed.blocked_tasks),
@@ -369,7 +423,7 @@ class Loop:
         runnable = [t for t in pending if t.id not in self.completed_tasks]
         skipped = [t.id for t in pending if t.id in self.completed_tasks]
         self._mark_active()
-        self.log.emit("plan", unchecked=len(pending), runnable=[t.id for t in runnable],
+        self._emit("plan", unchecked=len(pending), runnable=[t.id for t in runnable],
                       skipped=skipped, budget_cap=self.budget.cap,
                       budget_used=self.budget.used,
                       max_iterations=self.counters.max_iterations,
@@ -381,17 +435,17 @@ class Loop:
             try:
                 outcome = self._process_task(task)
             except BudgetExhausted as exc:
-                self.log.emit("abort", kind="budget", detail=str(exc))
+                self._emit("abort", kind="budget", detail=str(exc))
                 return self._finish("ABORTED", exits.BUDGET_EXHAUSTED, str(exc), resumable=True)
             except DelegationFailedClosed as exc:
-                self.log.emit("abort", kind="delegation-failed-closed", detail=str(exc))
+                self._emit("abort", kind="delegation-failed-closed", detail=str(exc))
                 return self._finish("ABORTED", exits.INTERNAL_ERROR, str(exc), resumable=True)
             except UnattributedWrite as exc:
-                self.log.emit("abort", kind="unattributed-write", detail=str(exc))
+                self._emit("abort", kind="unattributed-write", detail=str(exc))
                 return self._finish("ABORTED", exits.STATE_UNRESUMABLE, str(exc),
                                     resumable=False)
             except BackendPrecondition as exc:
-                self.log.emit("abort", kind="backend", detail=str(exc))
+                self._emit("abort", kind="backend", detail=str(exc))
                 return self._finish("ABORTED", exits.BACKEND_PRECONDITION, str(exc),
                                     resumable=True)
             if outcome is not None:
@@ -406,18 +460,18 @@ class Loop:
         try:
             return self._finalize(runnable)
         except BudgetExhausted as exc:
-            self.log.emit("abort", kind="budget", phase="finalization", detail=str(exc))
+            self._emit("abort", kind="budget", phase="finalization", detail=str(exc))
             return self._finish("ABORTED", exits.BUDGET_EXHAUSTED, str(exc), resumable=True)
         except DelegationFailedClosed as exc:
-            self.log.emit("abort", kind="delegation-failed-closed", phase="finalization",
+            self._emit("abort", kind="delegation-failed-closed", phase="finalization",
                           detail=str(exc))
             return self._finish("ABORTED", exits.INTERNAL_ERROR, str(exc), resumable=True)
         except UnattributedWrite as exc:
-            self.log.emit("abort", kind="unattributed-write", phase="finalization",
+            self._emit("abort", kind="unattributed-write", phase="finalization",
                           detail=str(exc))
             return self._finish("ABORTED", exits.STATE_UNRESUMABLE, str(exc), resumable=False)
         except BackendPrecondition as exc:
-            self.log.emit("abort", kind="backend", phase="finalization", detail=str(exc))
+            self._emit("abort", kind="backend", phase="finalization", detail=str(exc))
             return self._finish("ABORTED", exits.BACKEND_PRECONDITION, str(exc), resumable=True)
 
     # -- one task's convergence cycle ------------------------------------
@@ -470,7 +524,7 @@ class Loop:
                 if self.counters.would_exceed(reviewer):
                     reason = ("reviewer %r reached the no-progress cap (%d) on %s"
                               % (reviewer, self.counters.max_iterations, task.id))
-                    self.log.emit("abort", kind="cap", scope="reviewer", reviewer=reviewer,
+                    self._emit("abort", kind="cap", scope="reviewer", reviewer=reviewer,
                                   task=task.id, detail=reason)
                     return self._finish("ABORTED", exits.CAP_ABORT, reason, resumable=True)
 
@@ -488,7 +542,7 @@ class Loop:
                     else:
                         reason = ("reviewer %r failed to converge: %d consecutive rejects that "
                                   "resolved nothing" % (name, self.counters.max_iterations))
-                    self.log.emit("abort", kind="cap", scope=kind, name=name, task=task.id,
+                    self._emit("abort", kind="cap", scope=kind, name=name, task=task.id,
                                   detail=reason)
                     return self._finish("ABORTED", exits.CAP_ABORT, reason, resumable=True)
 
@@ -511,7 +565,7 @@ class Loop:
         attempt, response, post, _pre = self._delegate(
             "worker", brief, self._scope_for("worker"), task=task.id, objective=objective)
         completion = blocks.parse_worker(response.text)
-        self.log.emit("completion", task=task.id, kind=objective, status=completion.status,
+        self._emit("completion", task=task.id, kind=objective, status=completion.status,
                       malformed=completion.malformed, errors=completion.errors,
                       finding=row.identity if row else None)
         self._attempt_row(attempt, task.id, "worker", objective, "RESPONDED", [self.repo],
@@ -526,14 +580,14 @@ class Loop:
             # worker DONE establishes is that a repair was ATTEMPTED, which is the
             # precondition for the next REJECT to count as a failed repair.
             self.counters.record_repair_done(row.identity)
-            self.log.emit("repair-done", task=task.id, finding=row.identity)
+            self._emit("repair-done", task=task.id, finding=row.identity)
         self._persist("IMPLEMENTED", task.id)
         return None
 
     def _handle_block(self, task, completion):
         classifications = classify_all(completion.decisions)
         for c in classifications:
-            self.log.emit("escalation", task=task.id, gated=c.gated, trigger=c.trigger,
+            self._emit("escalation", task=task.id, gated=c.gated, trigger=c.trigger,
                           question=c.question, reason=c.reason)
         gated = [c for c in classifications if c.gated]
         if gated:
@@ -551,7 +605,7 @@ class Loop:
         # Auto-resolvable: recorded, and the run stops rather than looping on a
         # worker that cannot proceed. The deep-reasoner call and the DECISIONS.md
         # write are T014's work, not this one's.
-        self.log.emit("escalation-auto", task=task.id,
+        self._emit("escalation-auto", task=task.id,
                       questions=[c.question for c in classifications])
         reason = ("worker BLOCKED on %s with a technically auto-resolvable question, and "
                   "automatic resolution is not implemented yet (T014)" % task.id)
@@ -565,7 +619,7 @@ class Loop:
         self._attempt_row("A-%03d" % self.attempt_seq, task.id, "worker",
                           resume_mod.TASK_COMPLETE_OBJECTIVE, "VERIFIED", [self.repo],
                           "", self.fingerprint(), "DONE")
-        self.log.emit("task-complete", task=task.id,
+        self._emit("task-complete", task=task.id,
                       reviewers=self._required_reviewers(task))
         self._persist("TASK COMPLETE", task.id)
 
@@ -585,7 +639,7 @@ class Loop:
             reviewer, "Review the diff for %s - %s" % (task.id, task.title),
             self._scope_for(reviewer), task=task.id, objective="verdict")
         verdict = blocks.parse_reviewer(response.text, reviewer, self.iteration)
-        self.log.emit("verdict", reviewer=reviewer, task=task.id, verdict=verdict.verdict,
+        self._emit("verdict", reviewer=reviewer, task=task.id, verdict=verdict.verdict,
                       synthetic=verdict.synthetic, malformed=verdict.malformed,
                       errors=verdict.errors, findings=[f.get("id") for f in verdict.findings])
         self._attempt_row(attempt, task.id, reviewer, "verdict", "VERIFIED", [self.repo],
@@ -610,7 +664,7 @@ class Loop:
             # re-schedules EVERY stale required reviewer, not only the one that
             # rejected (031 FR-011).
             self.approvals = {k: fp for k, fp in self.approvals.items() if fp == post}
-        self.log.emit("counters", reviewer=reviewer,
+        self._emit("counters", reviewer=reviewer,
                       no_progress_streak=self.counters.reviewer(reviewer).no_progress_streak,
                       total_invocations=self.counters.reviewer(reviewer).total_invocations,
                       clean_reapprovals=self.counters.reviewer(reviewer).clean_reapprovals,
@@ -624,17 +678,39 @@ class Loop:
         with open(self.tasks_path, encoding="utf-8") as fh:
             text = fh.read()
         changed = False
+        # The registry's own `task_ref` column is the authority on a re-report:
+        # it is the structured record of which task owns which identity, and a
+        # `(from …)` title suffix is prose that can be reworded, wrapped across
+        # lines, or dropped. This lookup used to depend on that suffix alone and
+        # had silently stopped resolving anything at all (spec 042
+        # `maintainer:MNT-004` / D017), so the comment below promised a reuse the
+        # code could no longer perform.
+        registry = {ident: row.task_ref
+                    for ident, row in self.counters.findings.items()
+                    if getattr(row, "task_ref", "")}
         for item in findings:
             finding_id = str(item.get("id"))
             identity = "%s:%s" % (reviewer, finding_id)
-            existing = tasks_mod.task_for_finding(text, finding_id)
+            try:
+                existing = tasks_mod.task_for_finding(text, finding_id, registry=registry)
+            except tasks_mod.BrokenRepairTaskReference as exc:
+                # The record and the tree disagree about who owns this identity.
+                # Allocating here would create a second task for a finding that
+                # already has one — the outcome the rule exists to prevent — so the
+                # run refuses instead, with nothing written (`maintainer:MNT-005`).
+                self._emit("refused", kind="broken-repair-task-reference",
+                           finding=identity, reason=str(exc))
+                raise UnresumableState(
+                    "the findings registry and TASKS.md disagree: %s" % exc,
+                    "reconcile the registry's Repair task column with TASKS.md, then "
+                    "re-enter; this run wrote no task and changed no file")
             row = self.counters.findings.get(identity)
             if existing is not None:
                 # Re-reporting updates the registry row; it never allocates a
                 # second task for the same identity.
                 if row is not None and not row.task_ref:
                     row.task_ref = existing.id
-                self.log.emit("repair-task-reused", finding=identity, task=existing.id)
+                self._emit("repair-task-reused", finding=identity, task=existing.id)
                 continue
             new_id = tasks_mod.next_task_id(text)
             text = tasks_mod.append_finding_task(
@@ -643,7 +719,7 @@ class Loop:
             if row is not None:
                 row.task_ref = new_id
             changed = True
-            self.log.emit("repair-task-created", finding=identity, task=new_id,
+            self._emit("repair-task-created", finding=identity, task=new_id,
                           covers=task.covers)
         if changed:
             with open(self.tasks_path, "w", encoding="utf-8") as fh:
@@ -661,7 +737,7 @@ class Loop:
             text = tasks_mod.check_task(text, ref)
         with open(self.tasks_path, "w", encoding="utf-8") as fh:
             fh.write(text)
-        self.log.emit("repair-tasks-closed", tasks=sorted(refs))
+        self._emit("repair-tasks-closed", tasks=sorted(refs))
 
     def _write_findings(self):
         rows = []
@@ -694,7 +770,7 @@ class Loop:
 
     # -- finalization (031 FR-013) ----------------------------------------
     def _blocked(self, code, reason, remediation, result="PAUSED", resumable=True):
-        self.log.emit("finalization-blocked", code=code, reason=reason,
+        self._emit("finalization-blocked", code=code, reason=reason,
                       remediation=remediation)
         outcome = self._finish(result, code, reason, resumable=resumable)
         outcome.remediation = remediation
@@ -707,7 +783,7 @@ class Loop:
         freeze and closure-delta contract. None of them is skippable, and a check
         that cannot be evaluated blocks rather than passes.
         """
-        self.log.emit("finalize-start", completed=sorted(self.completed_tasks))
+        self._emit("finalize-start", completed=sorted(self.completed_tasks))
 
         # The state-only conditions are re-checked on EVERY entry, freeze or no
         # freeze. They cost nothing, and skipping them on re-entry would let a run
@@ -736,7 +812,7 @@ class Loop:
                     % (record["frozen_fingerprint"], current),
                     "031 FR-013 returns this run to REVIEW. Re-enter to re-review the changed "
                     "tree; the freeze is discarded, not repaired.")
-            self.log.emit("freeze-reused", fingerprint=record["frozen_fingerprint"],
+            self._emit("freeze-reused", fingerprint=record["frozen_fingerprint"],
                           phase=record["phase"])
 
         return self._close(record)
@@ -818,7 +894,7 @@ class Loop:
         if not stale:
             return None
 
-        self.log.emit("stale-approvals", count=len(stale),
+        self._emit("stale-approvals", count=len(stale),
                       pairs=["%s@%s" % (r, t.id) for r, t in stale], fingerprint=current)
 
         for reviewer, task in stale:
@@ -858,7 +934,7 @@ class Loop:
             % (self.feature_dir, tasks_text[:2000]),
             self._scope_for("final-conformance"), task="-", objective=objective)
         verdict = blocks.parse_reviewer(response.text, "final-conformance", self.iteration)
-        self.log.emit("verdict", reviewer="final-conformance", task="-",
+        self._emit("verdict", reviewer="final-conformance", task="-",
                       verdict=verdict.verdict, synthetic=verdict.synthetic,
                       errors=verdict.errors,
                       findings=[f.get("id") for f in verdict.findings])
@@ -889,7 +965,7 @@ class Loop:
         proc = subprocess.run(self.baseline_cmd, cwd=self.repo, capture_output=True, text=True)
         after = subprocess.run(["git", "-C", self.repo, "status", "--porcelain"],
                                capture_output=True, text=True).stdout
-        self.log.emit("verification", command=list(self.baseline_cmd),
+        self._emit("verification", command=list(self.baseline_cmd),
                       returncode=proc.returncode, hermetic=before == after)
         if proc.returncode != 0:
             return "%s (exit %d)" % (closure_mod.VERIFY_FAILED, proc.returncode)
@@ -922,7 +998,7 @@ class Loop:
         self.closure = {"frozen_fingerprint": fingerprint, "phase": "FROZEN",
                         "verification": verification, "frozen": frozen, "delta": []}
         self._persist_closure()
-        self.log.emit("freeze", fingerprint=fingerprint, paths=len(frozen),
+        self._emit("freeze", fingerprint=fingerprint, paths=len(frozen),
                       verification=verification)
         return None
 
@@ -954,7 +1030,7 @@ class Loop:
         self.closure["phase"] = CORE_COMPLETE
         self.closure["delta"] = []
         self._persist_closure()
-        self.log.emit("core-complete", fingerprint=record["frozen_fingerprint"],
+        self._emit("core-complete", fingerprint=record["frozen_fingerprint"],
                       verification=record["verification"], paths=len(record["frozen"]),
                       handoff="lifecycle delegation, closure delta and PR-description "
                               "evidence are outside spec 040 (D034)")
@@ -970,7 +1046,7 @@ class Loop:
                           "\n%s\n\nresumable: %s\n\nreason: %s\n\n"
                           % (result, "yes" if resumable else "no", reason))
         self._persist("END", reason)
-        self.log.emit("finish", result=result, code=code, reason=reason,
+        self._emit("finish", result=result, code=code, reason=reason,
                       budget_used=self.budget.used, budget_cap=self.budget.cap,
                       completed=sorted(self.completed_tasks))
         return Outcome(code, result, reason, resumable, escalations or [])

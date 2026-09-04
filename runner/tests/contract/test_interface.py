@@ -55,8 +55,16 @@ class TheCliMakesNoProtocolDecision(unittest.TestCase):
         with io.open(CLI, encoding="utf-8") as fh:
             return ast.parse(fh.read())
 
-    def test_it_imports_only_the_public_interface_and_rendering_vocabulary(self):
-        allowed = set(sdd_runner.__all__) | {"protocol", "HUMAN_ESCALATION", "NAMES"}
+    def test_it_imports_only_the_public_interface(self):
+        """No whitelist — domain:DOM-005.
+
+        This allowed `HUMAN_ESCALATION` and `NAMES` from `policy`, which made
+        AC-011, AC-003 and T009's Verify clause pass while all three were false as
+        written. The exception was never forced: both needs are protocol questions,
+        so `RunOutcome` answers them (`exit_name`, `awaiting_human`) and the CLI
+        imports the module that owns them and nothing else.
+        """
+        allowed = set(sdd_runner.__all__)
         for node in ast.walk(self._cli_tree()):
             if isinstance(node, ast.ImportFrom) and node.level:
                 for alias in node.names:
@@ -81,6 +89,16 @@ class NothingInternalEscapes(unittest.TestCase):
         for internal in INTERNAL_TYPES:
             self.assertNotIsInstance(value, internal,
                                      "%s leaks a %s" % (path, internal.__name__))
+        # Every dataclass REACHABLE from the outcome must be frozen, not just the
+        # five declared ones. `gate.Refusal` was mutable, publicly exported and
+        # held inside a frozen `GateResult`, so `outcome.gate.refusals[0].detail`
+        # was assignable while the docstring promised only frozen value types
+        # (domain:DOM-008). A fixed list of types to check cannot catch the type
+        # nobody thought to list.
+        if dataclasses.is_dataclass(value) and not isinstance(value, type):
+            self.assertTrue(value.__dataclass_params__.frozen,
+                            "%s is a mutable %s reachable from the outcome"
+                            % (path, type(value).__name__))
         if dataclasses.is_dataclass(value) and not isinstance(value, type):
             for f in dataclasses.fields(value):
                 self._walk(getattr(value, f.name), "%s.%s" % (path, f.name), seen)
@@ -95,6 +113,19 @@ class NothingInternalEscapes(unittest.TestCase):
         outcome = protocol.run(protocol.RunRequest(repo=".", feature="nowhere"))
         self._walk(outcome, "outcome", set())
 
+    def test_a_gate_refusal_outcome_is_frozen_all_the_way_down(self):
+        """The path that actually reaches `Refusal` — the walk above never did."""
+        import tempfile
+        from tests import support
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, feature = support.make_repo(tmp, spec=support.SPEC.replace("Ready", "Draft"))
+            outcome = protocol.run(protocol.RunRequest(repo=repo, feature=feature,
+                                                       dry_run=True))
+        self.assertTrue(outcome.gate.refusals, "this fixture must produce a refusal")
+        self._walk(outcome, "outcome", set())
+        with self.assertRaises(dataclasses.FrozenInstanceError):
+            outcome.gate.refusals[0].detail = "mutated"
+
     def test_the_outcome_and_gate_types_are_frozen_value_types(self):
         for cls in (protocol.RunOutcome, protocol.GateResult, protocol.RunPlan,
                     protocol.RunRequest, protocol.Diagnostic):
@@ -103,6 +134,46 @@ class NothingInternalEscapes(unittest.TestCase):
                 self.assertTrue(cls.__dataclass_params__.frozen,
                                 "%s must be frozen: a mutable outcome is shared state"
                                 % cls.__name__)
+
+    def test_resumability_cannot_be_left_to_a_default(self):
+        """security:SEC-002, and then SEC-005/DOM-018 on the guard for it.
+
+        The first guard here was `assertTrue(call, source)` over source lines
+        containing `_refuse(exits.STATE_UNRESUMABLE` — a tautology, since `call`
+        is a non-empty line by construction, and blind anyway because the keyword
+        sits on the *next* physical line. It certified a repaired finding and
+        could never fail.
+
+        Two real checks replace it. The signature one is the stronger: a
+        keyword-only parameter with no default makes the mistake impossible rather
+        than detectable.
+        """
+        import ast
+        import inspect as _inspect
+        parameter = _inspect.signature(protocol._refuse).parameters["resumable"]
+        self.assertEqual(parameter.kind, _inspect.Parameter.KEYWORD_ONLY)
+        self.assertIs(parameter.default, _inspect.Parameter.empty,
+                      "a default here is the trap SEC-002 fell into")
+
+        with io.open(protocol.__file__, encoding="utf-8") as fh:
+            tree = ast.parse(fh.read())
+        checked = 0
+        for node in ast.walk(tree):
+            if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+                    and node.func.id == "_refuse"):
+                continue
+            keywords = {kw.arg for kw in node.keywords}
+            with self.subTest(line=node.lineno):
+                self.assertIn("resumable", keywords,
+                              "line %d refuses without stating resumability" % node.lineno)
+            first = node.args[0] if node.args else None
+            if isinstance(first, ast.Attribute) and first.attr == "STATE_UNRESUMABLE":
+                value = [kw.value for kw in node.keywords if kw.arg == "resumable"][0]
+                with self.subTest(unresumable_at=node.lineno):
+                    self.assertIs(getattr(value, "value", None), False,
+                                  "an UnresumableState refusal reported itself resumable")
+                checked += 1
+        self.assertGreaterEqual(checked, 2, "the STATE_UNRESUMABLE call sites moved")
 
     def test_a_gate_result_is_fail_closed_by_construction(self):
         """There is no way to spell "passed" other than having no refusals."""

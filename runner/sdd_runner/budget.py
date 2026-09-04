@@ -1,4 +1,3 @@
-from .policy import FLOOR, PER_TASK  # noqa: F401 - re-exported (spec 042 AC-001)
 """Delegation budget — spec 031 FR-009, spec 040 FR-004.
 
 The delegation budget is the SOLE global monotonic backstop against an unbounded
@@ -13,6 +12,8 @@ The default is task-relative and computed ONCE at first entry:
 Spend is checked BEFORE dispatch. `charge()` raises rather than allowing an
 over-budget call to be made and noticed afterwards.
 """
+
+from .policy import FLOOR, PER_TASK  # noqa: F401 - re-exported (spec 042 AC-001)
 
 
 class BudgetExhausted(RuntimeError):

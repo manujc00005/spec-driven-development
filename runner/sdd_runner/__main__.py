@@ -8,7 +8,7 @@ event is delivered as JSON on stdin. No agent-authored text ever reaches a shell
 string (spec 040 NFR: Security).
 
 **This module makes no protocol decision.** It parses argv into a `RunRequest`,
-calls `protocol.run` once, renders the `RunOutcome`, and returns the exit code.
+calls the public `run` interface once, renders the `RunOutcome`, and returns the exit code.
 First-entry determination, resume authentication, the entry gate, the budget
 formula and backend resolution used to live here; spec 042 moved them behind the
 public interface, where a second caller can reach them without re-deriving them.
@@ -19,8 +19,7 @@ import json
 import subprocess
 import sys
 
-from . import protocol
-from .policy import HUMAN_ESCALATION, NAMES
+from . import RunRequest, run
 
 
 def build_parser():
@@ -93,7 +92,14 @@ def render_plan(plan, out=None):
 
 
 def render(outcome):
-    """Everything the operator sees, and which stream it goes on."""
+    """Everything the operator sees, and which stream it goes on.
+
+    Diagnostics and the terminal report are **independent**. A diagnostic says
+    something went wrong alongside the run; `loop_completed` says whether there is
+    a run to report. Coupling them cost a converged run its result line once
+    already, and the coupling lived here.
+    """
+    # Always, whatever else is true of the outcome.
     for diagnostic in outcome.diagnostics:
         print(diagnostic.render(), file=sys.stderr)
     for line in outcome.gate.render():
@@ -101,9 +107,8 @@ def render(outcome):
     if outcome.plan is not None:
         render_plan(outcome.plan)
         return
-    if outcome.result in ("DONE", "PAUSED", "ABORTED") and not outcome.diagnostics:
-        print("run result: %s (%s)"
-              % (outcome.result, NAMES.get(outcome.exit_code, outcome.exit_code)))
+    if outcome.loop_completed:
+        print("run result: %s (%s)" % (outcome.result, outcome.exit_name))
         print("reason:     %s" % outcome.reason)
         # Every blocking outcome carries a remediation, and the operator never saw
         # it: the CLI printed what was wrong and not what to do about it.
@@ -114,7 +119,7 @@ def render(outcome):
 def main(argv=None):
     args = build_parser().parse_args(argv)
     notify = _notifier(args.notify)
-    outcome = protocol.run(protocol.RunRequest(
+    outcome = run(RunRequest(
         repo=args.repo, feature=args.feature, backend=args.backend, model=args.model,
         max_iterations=args.max_iterations, max_delegations=args.max_delegations,
         baseline=args.baseline.split() if args.baseline else None,
@@ -122,8 +127,8 @@ def main(argv=None):
         stub_script=args.stub_script, adopt=args.adopt, dry_run=args.dry_run,
     ))
     render(outcome)
-    if notify and outcome.plan is None and not outcome.diagnostics \
-            and outcome.gate.passed and outcome.exit_code != HUMAN_ESCALATION:
+    if notify and outcome.loop_completed and outcome.gate.passed \
+            and not outcome.awaiting_human:
         notify({"event": "run-finished", "result": outcome.result,
                 "code": outcome.exit_code, "reason": outcome.reason})
     return outcome.exit_code

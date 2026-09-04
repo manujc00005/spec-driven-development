@@ -1,0 +1,20 @@
+# RETROSPECTIVE baseline - `main`'s real output on this path.
+# NOT captured at T001: reproduced afterwards from a temporary extraction of
+# `main`, for spec 042 conformance:CONF-006 / D018. D007 carries the full
+# provenance split of the corpus.
+# scenario: refusal-feature-folder-missing
+# condition: feature folder missing
+# main-commit: 141638b6063e83386de501751c162487fb8268f2
+# command: python3 -m sdd_runner --repo <REPO> --feature specs/features/999-does-not-exist --dry-run
+# fixture: golden.SCENARIOS['refusal-feature-folder-missing'], built by runner/tests/support.py, which is
+#   byte-identical between `main` and this branch.
+# normalization: golden.normalize only - <REPO>, <TMP>, <SHA>, <TS>, <HOST>,
+#   <PID>. No semantic difference is normalized.
+# relation: byte-identical to the current side.
+
+exit: 10
+--- stdout ---
+--- stderr ---
+[GATE] refused: feature folder missing
+  detail: <REPO>/specs/features/999-does-not-exist
+  remediation: pass an existing specs/features/<nnn>-<name> path

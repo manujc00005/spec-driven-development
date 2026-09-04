@@ -1,0 +1,4 @@
+exit: 70
+--- stdout ---
+--- stderr ---
+[INTERNAL] RuntimeError: deliberate failure for the internal-error transcript

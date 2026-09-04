@@ -1,0 +1,6 @@
+exit: 10
+--- stdout ---
+--- stderr ---
+[GATE] refused: feature folder missing
+  detail: <REPO>/specs/features/999-does-not-exist
+  remediation: pass an existing specs/features/<nnn>-<name> path

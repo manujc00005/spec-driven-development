@@ -15,10 +15,24 @@ import unittest
 from sdd_runner import policy
 
 PACKAGE = os.path.dirname(os.path.abspath(policy.__file__))
+# AC-001 says "anywhere under `runner/`" and FR-001 names the CLI, a backend **and
+# a test fixture** as places a duplicate must not hide. The walk covered
+# `runner/sdd_runner/` only, so a constant redefined in a fixture would not have
+# failed it (spec 042 CONF-004). The property held — widening it found nothing —
+# but a guard narrower than the criterion it enforces is a guard with a blind spot.
+RUNNER_ROOT = os.path.dirname(PACKAGE)
+
+# The only exclusions, and each is a source file that is *not* a place a protocol
+# constant could be defined for the package to read:
+#   * `policy.py` itself, which is where they are defined;
+#   * `__pycache__`, which is generated.
+# Nothing else is skipped — not the tests, not the fixtures, not the backends.
+EXCLUDED_DIRS = {"__pycache__"}
 
 
 def _module_files():
-    for dirpath, _dirs, files in os.walk(PACKAGE):
+    for dirpath, dirs, files in os.walk(RUNNER_ROOT):
+        dirs[:] = [d for d in dirs if d not in EXCLUDED_DIRS]
         for name in sorted(files):
             if name.endswith(".py"):
                 yield os.path.join(dirpath, name)
@@ -53,8 +67,30 @@ class SingleDefinition(unittest.TestCase):
             for assigned in _module_level_assignments(path):
                 if assigned in names:
                     offenders.append("%s assigns %s" %
-                                     (os.path.relpath(path, PACKAGE), assigned))
+                                     (os.path.relpath(path, RUNNER_ROOT), assigned))
         self.assertEqual(offenders, [], "protocol constants defined twice: %s" % offenders)
+
+    def test_the_walk_covers_everything_the_criterion_names(self):
+        """AC-001 says `runner/`, not `runner/sdd_runner/` (CONF-004)."""
+        walked = list(_module_files())
+        self.assertTrue(any(os.sep + "tests" + os.sep in f for f in walked),
+                        "the walk no longer reaches the tests AC-001 names")
+        self.assertTrue(any(os.sep + "backends" + os.sep in f for f in walked),
+                        "the walk no longer reaches the backends")
+        self.assertGreater(len(walked), 30)
+
+    def test_only_policy_defines_the_canonical_constants(self):
+        """Stated positively: exactly one file assigns each of them."""
+        names = _policy_names()
+        definers = {}
+        for path in _module_files():
+            for assigned in _module_level_assignments(path):
+                if assigned in names:
+                    definers.setdefault(assigned, []).append(os.path.basename(path))
+        for name in sorted(names):
+            with self.subTest(constant=name):
+                self.assertEqual(definers.get(name, ["policy.py"]), ["policy.py"],
+                                 "%s is defined outside policy.py" % name)
 
     def test_policy_is_not_empty_and_covers_the_inventoried_vocabulary(self):
         """A guard over an empty set passes for the wrong reason."""
@@ -76,8 +112,12 @@ class SingleDefinition(unittest.TestCase):
             tree = ast.parse(fh.read())
         for node in ast.walk(tree):
             if isinstance(node, ast.ImportFrom):
-                self.assertIsNone(node.module and node.level and node.module,
-                                  "policy must not import from the package: %s" % node.module)
+                # `assertIsNone(node.module and node.level and node.module)` lived
+                # here and was incoherent: for any level-0 import the expression is
+                # `0`, so it would have failed with "policy must not import from the
+                # package" against a perfectly ordinary `from x import y`. Latent
+                # only because `policy` has no ImportFrom at all (domain:DOM-011).
+                # The level check below is the guard that was meant.
                 self.assertEqual(node.level, 0, "policy must not use a relative import")
             if isinstance(node, ast.Import):
                 for alias in node.names:

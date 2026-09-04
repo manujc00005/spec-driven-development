@@ -61,6 +61,13 @@ instead.
 
 ### Exit codes
 
+Each code has a stable machine name as well as a meaning; a scheduler may branch on either, and
+`sdd_runner.policy.NAMES` is where both are defined. Names: `0` ok · `10` gate-refused ·
+`11` human-escalation · `12` cap-abort · `13` budget-exhausted · `14` backend-precondition ·
+`15` concurrent-run · `16` state-unresumable · `17` not-converged · `18` closure-not-proven ·
+`70` internal-error.
+
+
 `0` converged · `10` gate refused (under `--adopt` also *adoption not needed*, *already adopted or
 entered*, *inherited diff undetermined*; and *status unreadable* in either mode, when the line under
 `## Status` states no lifecycle status — this runner reads the framework's own SPEC form and does not

@@ -1,0 +1,20 @@
+# RETROSPECTIVE baseline - `main`'s real output on this path.
+# NOT captured at T001: reproduced afterwards from a temporary extraction of
+# `main`, for spec 042 conformance:CONF-006 / D018. D007 carries the full
+# provenance split of the corpus.
+# scenario: refusal-status-unreadable
+# condition: status unreadable
+# main-commit: 141638b6063e83386de501751c162487fb8268f2
+# command: python3 -m sdd_runner --repo <REPO> --feature <REPO>/specs/features/900-fixture --dry-run
+# fixture: golden.SCENARIOS['refusal-status-unreadable'], built by runner/tests/support.py, which is
+#   byte-identical between `main` and this branch.
+# normalization: golden.normalize only - <REPO>, <TMP>, <SHA>, <TS>, <HOST>,
+#   <PID>. No semantic difference is normalized.
+# relation: byte-identical to the current side.
+
+exit: 10
+--- stdout ---
+--- stderr ---
+[GATE] refused: status unreadable
+  detail: the first line under `## Status` is '| state | who |', which states no lifecycle status
+  remediation: the gate reads the framework's own form — `## Status`, then a line naming one of Draft, Ready, In Progress, In Review, Done, Archived. A spec written in another dialect (a fenced block, a table) is not parsed here; the skill path reads it, this runner does not.

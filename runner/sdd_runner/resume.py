@@ -284,10 +284,11 @@ def inspect(doc, doc_path, max_iterations, hostname, pid_alive=_pid_alive):
             "without a run result the runner cannot tell a finished run from an interrupted one. "
             "Inspect the file, or delete it to start a fresh run.")
 
-    # spec 042 FR-010. Checked before anything else is believed about the document:
-    # a file written under a contract this core does not implement cannot be
-    # authenticated by reading its fields, because the fields' meaning is exactly
-    # what the version pins.
+    # spec 042 FR-010. Checked before any field that carries STATE is believed —
+    # pid, host, caps, counters, findings, attempts, closure — because the version
+    # is what fixes those fields' meaning. Two checks precede it, `writer` and the
+    # presence of a run result, and both fail closed; an earlier draft of this
+    # comment claimed the version came first, which was not true.
     try:
         written_under = doc.protocol_version()
     except state_mod.UnknownProtocolVersion as exc:

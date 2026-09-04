@@ -15,7 +15,7 @@ import os
 import tempfile
 import unittest
 
-from sdd_runner import PROTOCOL_VERSION, RunRequest, run
+from sdd_runner import RunRequest, run
 from tests import support
 
 
@@ -60,7 +60,10 @@ class TheFiveStates(unittest.TestCase):
         self.assertEqual(outcome.exit_code, 0, outcome.reason)
         self.assertEqual(outcome.result, "DONE")
         self.assertIn("core complete", outcome.reason)
-        self.assertEqual(outcome.protocol_version, PROTOCOL_VERSION)
+        state = os.path.join(self.feature, "ORCHESTRATION.md")
+        with open(state, encoding="utf-8") as fh:
+            text = fh.read()
+        self.assertIn("- protocol version: %d" % outcome.protocol_version, text)
 
     # -- pause ------------------------------------------------------------
     def test_pause_on_a_human_gated_question(self):
@@ -109,7 +112,7 @@ class TheFiveStates(unittest.TestCase):
         with open(state, encoding="utf-8") as fh:
             text = fh.read()
         self.assertIn("- delegations used: 1", text)
-        self.assertIn("- protocol version: %d" % PROTOCOL_VERSION, text)
+        self.assertIn("- protocol version: %d" % aborted.protocol_version, text)
 
 
 class NothingButTheInterfaceWasNeeded(unittest.TestCase):
@@ -118,14 +121,13 @@ class NothingButTheInterfaceWasNeeded(unittest.TestCase):
         import io
         with io.open(os.path.abspath(__file__), encoding="utf-8") as fh:
             tree = ast.parse(fh.read())
+        imported = set()
         for node in ast.walk(tree):
             if isinstance(node, ast.ImportFrom) and node.module == "sdd_runner":
-                names = {a.name for a in node.names}
-                self.assertTrue(names <= {"run", "RunRequest", "RunOutcome", "GateResult",
-                                          "RunPlan", "Refusal", "Diagnostic",
-                                          "PROTOCOL_VERSION"}, names)
+                imported.update(a.name for a in node.names)
             if isinstance(node, ast.ImportFrom) and (node.module or "").startswith("sdd_runner."):
                 self.fail("reached into %s" % node.module)
+        self.assertEqual(imported, {"run", "RunRequest"})
 
 
 if __name__ == "__main__":

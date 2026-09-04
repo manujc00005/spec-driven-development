@@ -13,14 +13,16 @@ refuses: on first entry no run exists yet to attribute anything to (041 D004).
 
 import os
 import re
+import shlex
 import subprocess
 from dataclasses import dataclass, field
 from .policy import (ADOPT_STATUSES, ADOPTION_NOT_NEEDED, ALREADY_ENTERED,  # noqa: F401
+                     BASELINE_UNAVAILABLE,
                      INHERITED_UNDETERMINED, KNOWN_STATUS_WORDS, READY_STATUSES,
                      REENTRY_STATUSES, RUN_ARTIFACTS, STATUS_UNREADABLE)
 
 
-@dataclass
+@dataclass(frozen=True)
 class Refusal:
     condition: str
     detail: str
@@ -274,8 +276,24 @@ def check(repo, feature_dir, baseline_cmd=None, first_entry=True, adopt=False,
 
     if baseline_cmd:
         _, before, _ = _git(repo, "status", "--porcelain")
-        proc = subprocess.run(baseline_cmd, shell=False, cwd=repo,
-                              capture_output=True, text=True)
+        try:
+            proc = subprocess.run(baseline_cmd, shell=False, cwd=repo,
+                                  capture_output=True, text=True)
+        except OSError as exc:
+            # Caught HERE, where it is known that the baseline was being launched.
+            # It used to travel up to a caller that wrapped the whole gate in
+            # `except (OSError, UnicodeDecodeError)` and answered "a file the entry
+            # gate reads could not be read... SPEC.md and TASKS.md must be readable
+            # UTF-8" — a cause nobody observed, at the moment an autonomous run
+            # refuses (security:SEC-012). A missing or non-executable command is a
+            # `FileNotFoundError` or `PermissionError`, both `OSError`, and neither
+            # says anything about the spec trail.
+            refusals.append(Refusal(
+                BASELINE_UNAVAILABLE,
+                "%s (argv: %s)" % (exc, " ".join(shlex.quote(a) for a in baseline_cmd)),
+                "install or correct the command PLAN.md mandates, or pass a "
+                "--baseline that exists and is executable"))
+            return refusals
         _, after, _ = _git(repo, "status", "--porcelain")
         if proc.returncode != 0:
             refusals.append(Refusal(

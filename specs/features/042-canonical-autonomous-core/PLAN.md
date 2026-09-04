@@ -152,7 +152,7 @@ neither installed.
 
 | ID | Risk | Mitigation |
 |---|---|---|
-| R1 | A "no behaviour change" refactor changes behaviour nobody was asserting | T001's golden transcripts, captured before the first edit, over ten scenarios including every refusal path |
+| R1 | A "no behaviour change" refactor changes behaviour nobody was asserting | T001's golden transcripts, captured before the first edit, over the whole recorded corpus — including one scenario per terminal condition `gate.check` can emit, verified by a matrix derived from the gate's own AST (`test_gate_refusal_coverage`). *The original mitigation said "ten scenarios including every refusal path"; the corpus has grown and it never covered every refusal path — **five of fifteen conditions, carried by four scenarios** (`refusal-adopt-not-needed` reaches two) — until CONF-003 was repaired. The figure read "four of fifteen conditions", which was the scenario count wearing the condition label (CONF-007).* |
 | R2 | Constants get *copied* into `policy` instead of *moved*, leaving two definitions | T003's test enumerates `policy` and greps `runner/` for a second definition of each name |
 | R3 | Contract tests written by grep instead of by list, so they fail on the twelve review skills and get weakened | FR-012a is its own task (T016) with its own criterion; the guard asserts the tests read the list |
 | R4 | Rewiring 21 test files quietly weakens an assertion to keep the count | AC-005 forbids it; T020 verifies the test diff is import-only, and the count is a floor (≥ 276), not a target |
@@ -184,24 +184,41 @@ neither installed.
 
 ## Rollback strategy
 
-Three layers, cheapest first:
+> **This section contradicted the SPEC and has been rewritten. See D010.** Its earlier form
+> mandated "every task is a separate commit", which `SPEC.md`'s Non-goals forbid: *"`git commit`,
+> `git push`, `git merge`, real migrations, or any change to secrets."* The contradiction was
+> written into the PLAN, missed by the `/spec-analyze` pass, and then acted on. What follows is the
+> rollback that is actually consistent with the SPEC; the commits that were nonetheless made are
+> recorded as a deviation in D010, not retroactively authorised here.
 
-1. **Per-task.** Every task is a separate commit on `feature/042-canonical-autonomous-core`;
-   `git revert` of one commit restores the previous state, because no task depends on a later one to
-   be correct.
-2. **Whole feature.** Delete the branch. `main` is untouched throughout — no commit, push or merge
-   happens in this feature, and the installers and manifests are byte-identical to `main` by AC-009,
-   so nothing downstream can have drifted.
-3. **The durable artifact.** The only persisted change is the additive `Protocol version` line.
-   A reverted core reads a file carrying it and ignores an unknown field; a file without it reads as
-   version 1 by FR-010. Rollback therefore strands no resumable run in either direction.
+Two layers, cheapest first:
+
+1. **Working tree.** Every change this feature makes is confined to `runner/`, the four protocol
+   surfaces it corrects, and its own feature folder. Discarding the working tree restores the
+   previous state; no build artefact, cache or generated file has to be cleaned up first.
+2. **The branch.** `main` is never written to. Deleting `feature/042-canonical-autonomous-core`
+   removes the feature entirely, and AC-009's byte-identity check means nothing downstream can have
+   drifted in the meantime.
+
+**The durable artifact.** The only persisted change is the additive `Protocol version` line. A
+reverted core reads a file carrying it and ignores an unknown field; a file without it reads as
+version 1 by FR-010. Rollback therefore strands no resumable run in either direction.
 
 No migration, no data, no deployment, no feature flag needed.
 
 ## PLAN verification checklist
 
-- [x] The plan covers all acceptance criteria. (AC-001…AC-013 → T001…T022; mapping in TASKS.md)
-- [x] The plan avoids behavior outside the spec. (Non-goals restated as R7; no gate/cap/safety change)
+- [x] The plan covers all acceptance criteria. AC-001…AC-013 each have explicit coverage: the
+      Coverage map in TASKS.md maps every criterion to the implementation tasks that satisfy it,
+      and every repair task added since carries its own `Covers:` clause, so coverage is stated
+      per task rather than by a range. **No range is claimed here**: an earlier version of this
+      item said the map "spans T001…T045", which was false in both halves — the map's highest id
+      is T026 and the task list runs past it (`domain:DOM-026`).
+- [x] The plan avoids behavior outside the spec. (Non-goals restated as R7; no gate/cap/safety
+      change; the Rollback section no longer orders commits.) **This item read `NO` while the
+      Rollback section still mandated per-task commits. That section was rewritten, so the
+      checklist now describes the plan as it stands — the commits that were made under the old
+      wording remain recorded as a deviation in D010, which is not amended.**
 - [x] The Context budget section is filled (reading list + model routing), not left as placeholder.
 - [x] Risks are documented. (R1…R8, each with a mitigation owned by a task)
 - [x] Test strategy is documented.
