@@ -1,5 +1,18 @@
 # `runner/` — phase-2 executor for the SDD autonomous loop
 
+> **FROZEN at spec 042 (maintainer decision, 2026-09-04).** No new runner specs are opened and no
+> runner code changes land on `main` until the freeze is lifted. Spec 043 (`feature/043-real-provider-execution`)
+> was `In Progress` on its own branch when the freeze was decided; it is paused, not merged, and its
+> uncommitted work stays on that branch. The autonomous path for real work is the prompt in
+> [`docs/AUTONOMOUS_SDD_FEATURE_PROMPT.md`](../docs/AUTONOMOUS_SDD_FEATURE_PROMPT.md), which runs
+> today against a real provider. `DEBT-009` stays open by decision, not by omission.
+>
+> **Why:** eight of the last thirteen framework specs went into this package and its only proven
+> backend is still `stub`; in the same two months the framework took roughly three commits for every
+> one that reached a consumer project. **Unfreeze condition:** three real features delivered through
+> the prompt show a concrete need the prompt cannot meet (deterministic resume, token budget,
+> fail-closed guarantees), recorded as a spec that names those features.
+
 Specs: [`040-agent-sdk-runner/`](../specs/features/040-agent-sdk-runner/) built it;
 [`042-canonical-autonomous-core/`](../specs/features/042-canonical-autonomous-core/) made it the
 protocol's authority. Protocol: **spec 031**, corrected by **spec 032**.

@@ -292,6 +292,11 @@ structural verification alone is never reported as a live PASS.
 
 ## Phase 2 — the runner (`runner/`, spec 040)
 
+> **Frozen since 2026-09-04.** The runner is paused at spec 042 by maintainer decision; see the
+> notice at the top of [`runner/README.md`](../runner/README.md). For unattended delivery use
+> [`AUTONOMOUS_SDD_FEATURE_PROMPT.md`](AUTONOMOUS_SDD_FEATURE_PROMPT.md). The section below
+> describes the frozen state and remains accurate for it.
+
 Everything above runs inside an interactive Claude Code session: the loop is a
 prompt, and a person has to be there for it to exist. **Phase 2 is the same
 protocol executed as code** — a Python package under `runner/` that reads

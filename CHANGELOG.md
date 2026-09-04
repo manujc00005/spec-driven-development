@@ -11,6 +11,7 @@ under `specs/features/` — the framework is developed with its own workflow.
 
 ## [Unreleased]
 
+Runner frozen at spec 042 — the autonomous path is the prompt again, until real use says otherwise.
 Spec 040 · Agent SDK runner (**experimental**) — the autonomous loop stops being a prompt and
 becomes code, up to the point where closing the lifecycle would need a provider nobody has run.
 Spec 039 · Windows first-run install fixes — the global instructions that never loaded.
@@ -25,6 +26,11 @@ Spec 025 · Workspace SDD — the first coverage of what happens *between* proje
 
 ### Changed
 
+- **The runner is frozen at spec 042 (maintainer decision, 2026-09-04).** No new runner specs;
+  spec 043 is paused on its branch, unmerged. `docs/AUTONOMOUS_SDD_FEATURE_PROMPT.md` is now
+  versioned and is the supported path for unattended feature delivery. Spec 042's AC-013 kept
+  the file untracked only for the duration of that spec; this is a new, explicit decision.
+  Rationale and unfreeze condition: notice at the top of `runner/README.md`.
 - **The install manifest records freshness per profile (spec 034).** `.sdd-install.json` moves to
   `schemaVersion: 2`, adding a `profileState` map of `{commit, version, installedAt}` per profile.
   A run only installs files for its **active** profiles, but the manifest stored a single
