@@ -308,13 +308,22 @@ PLUGIN_CMD_RE = re.compile(r'^bash "\$\{CLAUDE_PLUGIN_ROOT\}/hooks/([A-Za-z0-9_-
 TEMPLATE_CMD_RE = re.compile(r"^bash \$\{CLAUDE_PROJECT_DIR\}/\.claude/hooks/([A-Za-z0-9_-]+)\.sh$")
 
 
-def _wiring_tuples(path, cmd_re):
+# The only keys a hook entry may carry. Anything else (`async`, `if`, `once`, ...)
+# changes how the harness runs the hook — an async PreToolUse hook cannot block —
+# so an unknown key is an error on either side, not something to compare.
+HOOK_ENTRY_KEYS = {"type", "command", "timeout", "statusMessage"}
+
+
+def _wiring_tuples(path, cmd_re, label):
     with open(path, encoding="utf-8") as f:
         data = json.load(f)
     out = []
     for event, groups in data.get("hooks", {}).items():
         for group in groups:
             for h in group.get("hooks", []):
+                unknown = sorted(set(h) - HOOK_ENTRY_KEYS)
+                if unknown:
+                    err("plugin-wiring", label, f"{event} hook entry carries unexpected key(s) {unknown}; only {sorted(HOOK_ENTRY_KEYS)} are allowed (SEC-044-001 residual)")
                 cmd = h.get("command", "")
                 m = cmd_re.fullmatch(cmd)
                 # A command that is not exactly the expected shape keeps its full
@@ -333,10 +342,10 @@ def check_plugin_wiring():
     if not os.path.isfile(template_path):
         return  # already reported by check_settings_wiring
     try:
-        plugin = _wiring_tuples(plugin_path, PLUGIN_CMD_RE)
-        template = _wiring_tuples(template_path, TEMPLATE_CMD_RE)
-    except (OSError, ValueError) as exc:
-        err("plugin-wiring", "hooks/hooks.json", f"could not parse wiring: {exc}")
+        plugin = _wiring_tuples(plugin_path, PLUGIN_CMD_RE, "hooks/hooks.json")
+        template = _wiring_tuples(template_path, TEMPLATE_CMD_RE, "settings.template.sh.json")
+    except (OSError, ValueError, AttributeError, TypeError) as exc:
+        err("plugin-wiring", "hooks/hooks.json", f"could not parse wiring: {exc!r}")
         return
     if plugin != template:
         missing = [t for t in template if t not in plugin]

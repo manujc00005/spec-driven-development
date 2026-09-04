@@ -382,3 +382,11 @@ moving hooks from a per-project opt-in to a plugin.
 
 **Consequences:** A future change to the canonical command shape must update both regexes and the
 transcription rule in D002. The suite grows by two repo copies.
+
+*Amended after re-verification (same day):* the second `security-reviewer` run returned **Pass** and
+raised one Low residual — behavioural keys (`async`, `if`, `once`) were outside the compared tuple, so
+an `"async": true` on a blocking hook would pass the gate while disarming the block. Rather than
+enumerate such keys, the gate now rejects any hook-entry key outside `{type, command, timeout,
+statusMessage}` on either file, and its parse guard also catches malformed shapes (`hooks` not an
+object) without a traceback. Three more suite cases cover async key, suffix chaining and malformed
+shape. The suite grows to five repo copies for this feature.

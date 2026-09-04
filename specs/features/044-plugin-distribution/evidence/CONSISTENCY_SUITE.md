@@ -1,11 +1,17 @@
-# T011 — scripts/check-consistency.test.sh on the final tree
+# T011 — scripts/check-consistency.test.sh
 
-Date: 2026-09-04T19:54:08Z
+## Run 2 (2026-09-04T20:07:44Z, after the SEC-044-001 fix)
 
 ```
 [PASS] plugin-wiring-hook-removed
+[PASS] plugin-wiring-chained-command
+[PASS] plugin-wiring-absolute-path
 [PASS] plugin-wiring-missing-file
-48 passed, 0 failed.
+50 passed, 0 failed.
 ```
 
-Full log: CONSISTENCY_SUITE.log (48 cases).
+## Run 3 (after the residual fix: unknown keys, suffix, malformed shape)
+
+_pending — appended below when the run completes._
+
+Full log of the latest run: CONSISTENCY_SUITE.log.
