@@ -303,3 +303,26 @@ message; the debug log is what ties the message to the plugin.
 **Consequences:** The spec's edge-case wording is imprecise and stays as written; this decision is
 the correction. `docs/INSTALL.md` does not need to change: adopters' projects have `specs/`. The
 `.graphify/` directory seen after the first session is not claimed as evidence of anything.
+
+### D011 - Two caveats added to `docs/INSTALL.md` after `/spec-review`
+
+**Date:** 2026-09-04
+
+**Status:** Accepted
+
+**Context:** `/spec-review` passed but observed two facts the spec had not anticipated, both on
+this machine: (1) the installer's `--link-user-claude` makes `~/.claude/skills` a symlink to the
+central copy, so with the plugin enabled every skill is listed twice (`verifier` and
+`sdd:verifier`); (2) a marketplace added from a local checkout path loads the plugin in place, so
+edits in the checkout are live immediately in every project that enabled it (debug log:
+`Read hooks.json for plugin sdd ... /Users/manu/Proyectos/spec-driven-development/hooks/hooks.json`).
+
+**Decision:** Two bullets added to the "Install as a plugin" caveat list. No code change; no AC
+change — AC-011's double-wiring warning is extended, not replaced.
+
+**Reasoning:** Both are consequences of this feature that an adopter would hit on day one, and both
+are documentation, not mechanism. Preventing the duplication mechanically would mean the plugin
+knowing about the installer, which is the coupling D003 avoids.
+
+**Consequences:** The retirement spec inherits the first caveat as a reason: once the installer is
+gone, the duplication cannot happen.

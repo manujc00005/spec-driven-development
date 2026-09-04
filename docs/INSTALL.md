@@ -46,6 +46,13 @@ Two things to know before you choose this path:
 - **Do not wire the same hooks twice.** If a project already has the hooks in its
   `.claude/settings.json` (from `scripts/wire-hooks.sh`), enabling the plugin makes every hook fire
   twice per event. Pick one: remove the project wiring, or do not enable the plugin for that project.
+- **Do not ship the same skills twice either.** If you installed with `--link-user-claude`,
+  `~/.claude/skills` already points at the central copy; enabling the plugin as well lists every skill
+  twice (`verifier` and `sdd:verifier`). Pick one path per machine: the plugin, or the installer link.
+- **A local-directory marketplace loads in place.** When the marketplace was added from a checkout
+  path, the plugin root *is* that checkout: edits there are live in every project with the plugin
+  enabled, half-finished ones included. Installing from the GitHub repo goes through the plugin cache
+  and does not have this property.
 
 The installer below keeps working unchanged and remains the path for profiles, Windows, and
 per-project Codex targets.
