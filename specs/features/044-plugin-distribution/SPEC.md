@@ -2,7 +2,7 @@
 
 ## Status
 
-In Review
+Done
 
 ## Problem
 
@@ -319,8 +319,11 @@ None. No manifest of our own is written or read; `.sdd-install.json` is untouche
 
 ## Open questions
 
-- None blocking. The two uncertainties (conventional-directory discovery for `agents/`, and the
-  `./` source) each have a stated fallback and land in `DECISIONS.md` once observed.
+- Conventional-directory discovery for `agents/`: **Resolved.** Observed in T001 (D001): the loader
+  takes every `.md` under `agents/` by convention — including `agents/README.md`, which is why that
+  file moved to `docs/AGENTS.md` (D009).
+- Acceptance of `source: "./"`: **Resolved.** Observed in T001 and T012: marketplace add and install
+  exit 0 on Claude Code and on Codex (`evidence/SPIKE.md`, `CLAUDE_INSTALL.md`, `CODEX_INSTALL.md`).
 
 ## Contracted services
 
