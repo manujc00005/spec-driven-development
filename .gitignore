@@ -27,3 +27,7 @@ __pycache__/
 # ORCHESTRATION.md is the durable, human-readable record and IS committed;
 # run.jsonl is the transcript of one invocation and is not.
 specs/features/*/run.jsonl
+
+# Graphify state and cache (graph.json, GRAPH_REPORT.md, ast cache) — generated, never committed here;
+# scripts/setup-graphify.sh adds the same line to adopter projects.
+.graphify/

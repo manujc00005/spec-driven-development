@@ -419,7 +419,7 @@ None. Markdown and JSON only.
   does not read the field. Stated so PLAN does not re-litigate it.
 - Copying a skill directory is sufficient to ship it (spec 022 D004 confirmed `install.sh:438`
   calls `copy_tree_safely` on the whole skill directory).
-- The Claude Code CLI is present at `/Users/manu/.local/bin/claude`, so `SKILL_EVAL_RUNNER` can be
+- The Claude Code CLI is present at `~/.local/bin/claude`, so `SKILL_EVAL_RUNNER` can be
   configured and FR-011's eval can actually be run. Its result is not predictable in advance.
 - The 400-character description cap accommodates the negative-trigger clauses D008 requires. If a
   collision cannot be disambiguated within the cap, the cap is challenged in PLAN rather than a

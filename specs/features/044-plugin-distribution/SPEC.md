@@ -313,7 +313,7 @@ None. No manifest of our own is written or read; `.sdd-install.json` is untouche
   `feature/043-real-provider-execution` and its folder name is reserved by that branch.
 - The three review additions are stack-agnostic in wording; the audit command examples are
   illustrative and belong in the line itself only as examples, not as requirements.
-- `everything-claude-code` at `/Users/manu/Proyectos/everything-claude-code` is the WorldFlowAI
+- `everything-claude-code` at `~/Proyectos/everything-claude-code` is the WorldFlowAI
   fork (last commit 2026-01-23); the upstream may have changed since. The comparison is against the
   local copy and says so.
 

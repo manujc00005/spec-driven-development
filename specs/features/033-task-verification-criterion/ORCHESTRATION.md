@@ -40,13 +40,13 @@ proof the run started legitimately.
 | lifecycle-status | `SPEC.md` Status = `Ready`; no prior `ORCHESTRATION.md` -> first entry | PASS |
 | no-open-decisions | D001, D002 both Accepted; 0 Proposed | PASS |
 | runnable-task-queue | 7 unchecked tasks; T001 had no unchecked prerequisite | PASS |
-| isolated-git-location | branch `feat/033-task-verification-criterion`; default `main`; dedicated linked worktree at `/Users/manu/Proyectos/sdd-t023` | PASS **at entry** - see the provenance note below |
+| isolated-git-location | branch `feat/033-task-verification-criterion`; default `main`; dedicated linked worktree at `~/Proyectos/sdd-t023` | PASS **at entry** - see the provenance note below |
 | clean-working-tree | `git status --porcelain` empty | PASS |
 | green-baseline-suite | `./scripts/check-consistency.sh` exit 0; tree byte-identical after | PASS |
 
 ### Provenance note (CONF-014)
 
-The worktree this run executed in, `/Users/manu/Proyectos/sdd-t023`, **was removed before the third
+The worktree this run executed in, `~/Proyectos/sdd-t023`, **was removed before the third
 conformance round could read it**, and its branch no longer exists. The third gate refused to
 certify anything as a result, and was right to: the loop's contract treats ambiguous provenance as a
 fail-closed abort, not as something to reason past.
@@ -111,7 +111,7 @@ explicitly rather than absorbed by re-running the gate until something passes.
 | final-conformance:CONF-010 | 031 CALIBRATION | major | resolved | round 4 |
 | final-conformance:CONF-011 | 031 CALIBRATION | minor | resolved | round 4 |
 | final-conformance:CONF-012 | D003 + probe counts | minor | D003 resolved round 4; probe count missed, reopened as CONF-015 |
-| final-conformance:CONF-013 | unreadable tree | blocker | resolved | readable tree at `/Users/manu/Proyectos/sdd-033-gate` |
+| final-conformance:CONF-013 | unreadable tree | blocker | resolved | readable tree at `~/Proyectos/sdd-033-gate` |
 | final-conformance:CONF-014 | provenance | blocker | escalated | open maintainer question, blocks spec 031's close |
 | final-conformance:CONF-015 | probe counts | major | resolved | round 4 |
 | final-conformance:CONF-016 | 031 T023 record | major | resolved | round 4 |

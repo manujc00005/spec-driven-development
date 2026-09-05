@@ -354,7 +354,7 @@ with no unresolved contradiction. The only remaining closure requirement is T023
 reviewed it.** Run on 2026-08-22 against spec 033 (`task-verification-criterion`) — a real feature
 in this repository, with no seeded defects, planned and executed through the autonomous loop.
 
-- **Worktree:** `/Users/manu/Proyectos/sdd-t023`, branch `feat/033-task-verification-criterion`,
+- **Worktree:** `~/Proyectos/sdd-t023`, branch `feat/033-task-verification-criterion`,
   baseline `4f3542d`. Entry gate: all six conditions PASS **at entry** - see the provenance break below. Budget `max(25, 6 × 7) = 42`.
 - **Delegations used: 3** *(superseded: the run reached 14; see the correction below)* — one worker for T001, one domain review, one worker for the finding task.
   No cap approached.
@@ -431,7 +431,7 @@ rejection as well as the outcome.
 
 #### T023 provenance break - resolved 2026-08-23: tolerated, with the limitation named
 
-The worktree this run executed in, `/Users/manu/Proyectos/sdd-t023`, **was destroyed before the
+The worktree this run executed in, `~/Proyectos/sdd-t023`, **was destroyed before the
 third conformance round could read it**, and its branch no longer exists. The gate refused to
 certify from a prose report and was right to.
 

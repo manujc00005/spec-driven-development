@@ -5,7 +5,7 @@ Manifests: minimal plugin.json (name only + version + description), marketplace.
 Install scope: local (this checkout only) so the spike does not enable the plugin machine-wide.
 
 ```
-$ claude plugin marketplace add /Users/manu/Proyectos/spec-driven-development
+$ claude plugin marketplace add ~/Proyectos/spec-driven-development
 Adding marketplace…✔ Successfully added marketplace: spec-driven-development (declared in user settings)
 [exit 0]
 ```
