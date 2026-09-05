@@ -92,7 +92,7 @@ plugin first and names the installer as the alternative, so the direction is vis
 
 **Status:** Accepted
 
-**Context:** The local copy at `/Users/manu/Proyectos/everything-claude-code` (WorldFlowAI fork,
+**Context:** The local copy at `~/Proyectos/everything-claude-code` (WorldFlowAI fork,
 last commit 2026-01-23) was read in full at the skill, agent, command, rule, hook and script level
 and compared with this framework's 72 skills, 9 agents and 14 hook families. Manuel asked to adopt
 whatever is better and merge it in.
@@ -288,7 +288,7 @@ the spec's edge case ("no `specs/CONSTITUTION.md`") was written assuming `specs/
 A first attempt at this decision was written before the corrected run was read, and claimed the
 hook commands would appear under `~/.claude/plugins/cache/…`. They do not: for a directory-sourced
 marketplace the plugin root **is** the checkout, and the debug log says so
-(`Read hooks.json for plugin sdd (enabled=true): /Users/manu/Proyectos/spec-driven-development/hooks/hooks.json`).
+(`Read hooks.json for plugin sdd (enabled=true): ~/Proyectos/spec-driven-development/hooks/hooks.json`).
 The paragraph was rewritten from the evidence; this note stays so the mistake is visible.
 
 **Decision:** AC-006 is satisfied by the stream-json run recorded at the end of
@@ -315,7 +315,7 @@ this machine: (1) the installer's `--link-user-claude` makes `~/.claude/skills` 
 central copy, so with the plugin enabled every skill is listed twice (`verifier` and
 `sdd:verifier`); (2) a marketplace added from a local checkout path loads the plugin in place, so
 edits in the checkout are live immediately in every project that enabled it (debug log:
-`Read hooks.json for plugin sdd ... /Users/manu/Proyectos/spec-driven-development/hooks/hooks.json`).
+`Read hooks.json for plugin sdd ... ~/Proyectos/spec-driven-development/hooks/hooks.json`).
 
 **Decision:** Two bullets added to the "Install as a plugin" caveat list. No code change; no AC
 change — AC-011's double-wiring warning is extended, not replaced.

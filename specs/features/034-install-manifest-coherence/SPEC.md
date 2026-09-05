@@ -257,7 +257,7 @@ key names:
     "python-sql-data":     { "commit": "1f18894…", "version": "v0.5.0-41-g1f18894", "installedAt": "2026-08-18T06:11:44+00:00" }
   },
   "linkUserClaude": true,
-  "sourceClone": "/Users/manu/Proyectos/spec-driven-development"
+  "sourceClone": "~/Proyectos/spec-driven-development"
 }
 ```
 

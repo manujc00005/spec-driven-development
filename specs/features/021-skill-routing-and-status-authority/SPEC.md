@@ -8,7 +8,7 @@ Done
 
 Two routing/governance gaps, both observed in real sessions and both confirmed by the
 Azure Skills plugin's handling of the same problems
-(`/Users/manu/Proyectos/example/azure-skills`, analysed 2026-07-25):
+(`~/Proyectos/example/azure-skills`, analysed 2026-07-25):
 
 1. **No declared authority over `SPEC.md` status.** Four skills perform the four status
    transitions today — `spec-plan` (Draft → Ready), `spec-implement` (Ready → In Progress),

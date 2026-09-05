@@ -19,7 +19,7 @@ Three concrete gaps:
    passes CI identically to one that works.
 
 2. **Two failure modes are documented empirically elsewhere and both apply here.** Both come
-   from the superpowers project (`/Users/manu/Proyectos/example/superpowers`, analysed
+   from the superpowers project (`~/Proyectos/example/superpowers`, analysed
    2026-07-28), which tests its skills against agent behaviour:
    - **A `description` that summarises the workflow gets followed *instead of* the skill
      body.** Their recorded case: a description saying "code review between tasks" produced

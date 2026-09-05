@@ -2,7 +2,7 @@
 
 ## Environment
 
-- Worktree: `/Users/manu/Proyectos/sdd-032-calibration`
+- Worktree: `~/Proyectos/sdd-032-calibration`
 - Branch: `feat/032-calibration-runs`
 - Baseline commit: `91cd906`
 - Date: 2026-08-21

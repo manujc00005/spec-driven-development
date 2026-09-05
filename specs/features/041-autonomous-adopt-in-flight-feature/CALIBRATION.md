@@ -312,7 +312,7 @@ human-gated `PAUSED` on a real repository — not as an open task.
 
 ## T014 — the originating case, replayed (2026-09-02)
 
-The maintainer supplied the live path: `/Users/manu/Proyectos/lead-platform-workspace/proycto-cumbre`
+The maintainer supplied the live path: `~/Proyectos/lead-platform-workspace/proycto-cumbre`
 (the directory name carries a typo on disk). The replay ran on a copy-on-write copy; the original was
 never touched, and was confirmed still on `main` with its 21 dirty paths afterwards.
 

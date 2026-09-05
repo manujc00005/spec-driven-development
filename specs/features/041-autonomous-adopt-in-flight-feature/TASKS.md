@@ -174,7 +174,7 @@
 
   **[VERIFY AMENDED 2026-09-02 — D011; residual tracked as DEBT-010]** The replay was **performed**,
   against the live repository the maintainer supplied at
-  `/Users/manu/Proyectos/lead-platform-workspace/proycto-cumbre`, on a copy-on-write copy; the
+  `~/Proyectos/lead-platform-workspace/proycto-cumbre`, on a copy-on-write copy; the
   original was never touched and was confirmed afterwards still on `main` with its 21 dirty paths.
   The branch-then-commit remediation worked exactly as documented, clearing the `default branch` and
   `unattributed dirty tree` refusals. The run then stopped on two runner defects, which are this

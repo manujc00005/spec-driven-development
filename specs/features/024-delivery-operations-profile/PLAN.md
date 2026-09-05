@@ -82,7 +82,7 @@ below is not stylistic; reversing steps 2 and 3 fails CI.
 
 ## Dependencies
 
-- **Claude Code CLI** at `/Users/manu/.local/bin/claude` — required for FR-011's eval. Present.
+- **Claude Code CLI** at `~/.local/bin/claude` — required for FR-011's eval. Present.
   `SKILL_EVAL_RUNNER` must be exported with an explicit `--model <id>`, or the harness refuses to
   run (`skill-eval.sh:117` — a result without a model identifier is not evidence).
 - **`pwsh`** — optional, only to spot-check `install.ps1`. If absent, the PowerShell path is
