@@ -33,6 +33,71 @@ AI accelerates execution. SDD keeps delivery controlled through specs, plans, de
 
 SDD does not make agents more autonomous. It makes AI-assisted delivery more accountable: requirements become durable artifacts, work is bounded by explicit responsibilities, and completion requires reviewable evidence.
 
+## Table of contents
+
+- [🧩 What is this?](#-what-is-this)
+- [🎯 Why it exists](#-why-it-exists)
+- [How it works](#how-it-works)
+- [Agents and skills](#agents-and-skills)
+- [Current support](#current-support)
+- [🚀 Quickstart](#-quickstart)
+- [🔄 Core workflow](#-core-workflow)
+- [🌐 Workspace SDD](#-workspace-sdd)
+- [🧠 Multi-model orchestration](#-multi-model-orchestration)
+- [🏗️ Repository architecture](#️-repository-architecture)
+- [🗂️ Profiles](#️-profiles)
+- [⚙️ Installation](#️-installation)
+- [💻 Usage examples](#-usage-examples)
+- [📚 Worked examples](#-worked-examples)
+- [🛡️ Safety model](#️-safety-model)
+- [📊 What is shipped now](#-what-is-shipped-now)
+- [🗺️ Roadmap](#️-roadmap)
+- [📐 Design principles](#-design-principles)
+- [✍️ Author's note](#️-authors-note)
+- [⚠️ Limitations](#️-limitations)
+- [📄 License](#-license)
+
+---
+
+## 🧩 What is this?
+
+A **provider-neutral Spec-Driven Development (SDD) workflow for AI-assisted software engineering** — shipped as a Claude Code plugin (and installable configuration), with an additional prompt-based [Codex adapter](#provider-adapters) over the same core. It is the reproducible sequence that sits between "having an idea" and "opening a pull request":
+
+**specification → clarification → planning → consistency analysis → scoped implementation → layered review → close-out.**
+
+Five kinds of artifacts implement it:
+
+| Artifact | What it is | Where |
+|---|---|---|
+| **Skills** | Slash commands that drive each workflow step (`/spec-create`, `/spec-plan`, `/security-review`, …) as structured, repeatable procedures | [`skills/`](skills/) |
+| **Hooks** | Small scripts Claude Code runs at tool-call level — they can block a destructive git command or surface a compile error *before* the session moves on | [`hooks/`](hooks/) |
+| **Profiles** | A manifest ([`profiles.json`](profiles.json)) mapping stacks (Java/Spring, Next.js, messaging, …) to the skills/hooks/templates/agents they need, consumed by the installers; the plugin loads every profile's content | repo root |
+| **Templates** | Starter documents for specs, plans, tasks, decisions, and project context docs | [`specs/_templates/`](specs/_templates/), [`docs/_templates/`](docs/_templates/) |
+| **Agents** | Six lifecycle responsibility contracts plus the `deep-reasoner` / `fast-worker` model-tier pair used by the existing orchestration path | [`agents/`](agents/) |
+
+> These five artifacts are the **Claude Code** adapter's packaging. Codex consumes the same provider-neutral core through a different packaging — an `AGENTS.md` operating guide plus lifecycle prompts under [`adapters/codex/`](adapters/codex/), with guardrails as conventions rather than enforced hooks. See [Provider adapters](#provider-adapters).
+
+It is not a demo. It is the process used to build real features in real codebases, where an unreviewed change to auth, payments, or a database schema is expensive to get wrong. The AI writes a meaningful share of the code — that part isn't in question. What this repo adds is the structure around that code, and the tooling that makes the structure hard to skip.
+
+## 🎯 Why it exists
+
+AI coding without process has a failure mode every team has now seen: requirements live in chat scrollback, the model makes silent architectural decisions, plans drift from what was actually built, and review happens (if at all) as a vibe check on a diff nobody scoped. The result is ambiguity, regressions, and hidden debt — produced faster than ever.
+
+This workflow addresses that directly:
+
+- **A written spec before implementation starts** — with explicit out-of-scope boundaries and acceptance criteria.
+- **An explicit plan before files change** — impacted modules, risks, rollback strategy.
+- **A consistency gate before tasks are marked done** — spec, plan, tasks, and decisions must agree.
+- **Reviews scoped to what the change actually touches** — a schema change gets a database review; a UI-only change doesn't.
+- **Decisions written down** — every non-obvious choice lands in `DECISIONS.md` with its reasoning, instead of living only in a conversation that will be compacted away.
+- **Enforcement in tooling, not just prose** — hooks intervene at tool-call level (see [Safety model](#️-safety-model)).
+
+The engineer decides what gets built, what risk is acceptable, and which changes should not happen. The AI executes within the process — it does not own it. This is the difference from vibe coding: speed comes from reducing ambiguity, not skipping engineering controls.
+
+It also addresses a cost shift. AI coding tools are moving from seat-based to usage-based (per-token) pricing, where the bill tracks how much context an agent reads and which model tier it burns. SDD treats context as an engineering budget — bounded reading lists, graph-derived impact, and cost-aware model routing instead of loading the whole repository on an expensive model. That makes delivery cheaper and more reviewable at the same time (see [`docs/TOKEN_ECONOMY.md`](docs/TOKEN_ECONOMY.md)).
+
+---
+
 ## How it works
 
 ![Spec-Driven Development architecture](docs/assets/sdd-architecture.svg)
@@ -103,7 +168,7 @@ flowchart TD
 
 > **Skills define how to do something. Agents are responsible for producing an outcome.**
 
-The primary **Claude Code adapter** packages **<!-- count:skills-total -->72<!-- /count --> skills**, **<!-- count:hook-families-total -->13<!-- /count --> hook families**, **<!-- count:templates-total -->33<!-- /count --> document templates**, and **<!-- count:agents-total -->8<!-- /count --> agent definitions** behind a profile-aware installer. A second, prompt-based **Codex adapter** ([`adapters/codex/`](adapters/codex/)) packages the same provider-neutral core as an `AGENTS.md` operating guide plus lifecycle prompts — honestly, with no hook/subagent/skill parity claimed. See [Provider adapters](#provider-adapters).
+The primary **Claude Code adapter** packages **<!-- count:skills-total -->72<!-- /count --> skills**, **<!-- count:hook-families-total -->13<!-- /count --> hook families**, **<!-- count:templates-total -->33<!-- /count --> document templates**, and **<!-- count:agents-total -->8<!-- /count --> agent definitions** — as the `sdd` plugin, or behind a profile-aware installer. A second, prompt-based **Codex adapter** ([`adapters/codex/`](adapters/codex/)) packages the same provider-neutral core as an `AGENTS.md` operating guide plus lifecycle prompts — honestly, with no hook/subagent/skill parity claimed. See [Provider adapters](#provider-adapters).
 
 ## Agents and skills
 
@@ -126,7 +191,7 @@ The existing multi-model orchestration path uses a separate model-tier pair: `de
 |---|---|
 | Plugin distribution — `sdd@spec-driven-development` for Claude Code and Codex, the repository root as plugin and marketplace | **Shipped** (spec 044; local-checkout install verified on both CLIs, inventory 72 skills / 8 agents / default hook set) |
 | Claude Code adapter, installers, skills, hooks, and model-tier orchestration | **Shipped** — the installer is the alternative path: profile selection, Windows hooks, per-project Codex targets |
-| Six lifecycle-agent definitions and profile routing contracts | **Shipped; schema- and dry-run validated, not yet live-install verified** |
+| Six lifecycle-agent definitions and profile routing contracts | **Shipped; schema-validated and listed by the plugin loader's inventory (spec 044).** A live delegation to each one has not been exercised yet |
 | Java/Spring backend profile | **Default** |
 | Messaging/event-driven, payments/fintech, Next/Prisma, and SEO/GEO profiles | **Optional** |
 | Delivery/operations profile (deploy procedure, containers, CI/CD, release gating) | **Optional overlay.** Four reviewers shipped; `iac-review`, `kubernetes-review` and `rightsizing-advisor` declared **planned, not shipped** |
@@ -173,69 +238,6 @@ Model and rationale: [`docs/PROVIDER_ADAPTERS.md`](docs/PROVIDER_ADAPTERS.md) ·
 
 ---
 
-## Table of contents
-
-- [🧩 What is this?](#-what-is-this)
-- [🎯 Why it exists](#-why-it-exists)
-- [How it works](#how-it-works)
-- [Agents and skills](#agents-and-skills)
-- [Current support](#current-support)
-- [🚀 Quickstart](#-quickstart)
-- [🔄 Core workflow](#-core-workflow)
-- [🌐 Workspace SDD](#-workspace-sdd)
-- [🧠 Multi-model orchestration](#-multi-model-orchestration)
-- [🏗️ Repository architecture](#️-repository-architecture)
-- [🗂️ Profiles](#️-profiles)
-- [⚙️ Installation](#️-installation)
-- [💻 Usage examples](#-usage-examples)
-- [📚 Worked examples](#-worked-examples)
-- [🛡️ Safety model](#️-safety-model)
-- [📊 What is shipped now](#-what-is-shipped-now)
-- [🗺️ Roadmap](#️-roadmap)
-- [📐 Design principles](#-design-principles)
-- [✍️ Author's note](#️-authors-note)
-- [⚠️ Limitations](#️-limitations)
-- [📄 License](#-license)
-
----
-
-## 🧩 What is this?
-
-A **provider-neutral Spec-Driven Development (SDD) workflow for AI-assisted software engineering** — shipped primarily as installable Claude Code configuration, with an additional prompt-based [Codex adapter](#provider-adapters) over the same core. It is the reproducible sequence that sits between "having an idea" and "opening a pull request":
-
-**specification → clarification → planning → consistency analysis → scoped implementation → layered review → close-out.**
-
-Five kinds of artifacts implement it:
-
-| Artifact | What it is | Where |
-|---|---|---|
-| **Skills** | Slash commands that drive each workflow step (`/spec-create`, `/spec-plan`, `/security-review`, …) as structured, repeatable procedures | [`skills/`](skills/) |
-| **Hooks** | Small scripts Claude Code runs at tool-call level — they can block a destructive git command or surface a compile error *before* the session moves on | [`hooks/`](hooks/) |
-| **Profiles** | A manifest ([`profiles.json`](profiles.json)) mapping stacks (Java/Spring, Next.js, messaging, …) to the skills/hooks/templates/agents they need, consumed by the installers | repo root |
-| **Templates** | Starter documents for specs, plans, tasks, decisions, and project context docs | [`specs/_templates/`](specs/_templates/), [`docs/_templates/`](docs/_templates/) |
-| **Agents** | Six lifecycle responsibility contracts plus the `deep-reasoner` / `fast-worker` model-tier pair used by the existing orchestration path | [`agents/`](agents/) |
-
-> These five artifacts are the **Claude Code** adapter's packaging. Codex consumes the same provider-neutral core through a different packaging — an `AGENTS.md` operating guide plus lifecycle prompts under [`adapters/codex/`](adapters/codex/), with guardrails as conventions rather than enforced hooks. See [Provider adapters](#provider-adapters).
-
-It is not a demo. It is the process used to build real features in real codebases, where an unreviewed change to auth, payments, or a database schema is expensive to get wrong. The AI writes a meaningful share of the code — that part isn't in question. What this repo adds is the structure around that code, and the tooling that makes the structure hard to skip.
-
-## 🎯 Why it exists
-
-AI coding without process has a failure mode every team has now seen: requirements live in chat scrollback, the model makes silent architectural decisions, plans drift from what was actually built, and review happens (if at all) as a vibe check on a diff nobody scoped. The result is ambiguity, regressions, and hidden debt — produced faster than ever.
-
-This workflow addresses that directly:
-
-- **A written spec before implementation starts** — with explicit out-of-scope boundaries and acceptance criteria.
-- **An explicit plan before files change** — impacted modules, risks, rollback strategy.
-- **A consistency gate before tasks are marked done** — spec, plan, tasks, and decisions must agree.
-- **Reviews scoped to what the change actually touches** — a schema change gets a database review; a UI-only change doesn't.
-- **Decisions written down** — every non-obvious choice lands in `DECISIONS.md` with its reasoning, instead of living only in a conversation that will be compacted away.
-- **Enforcement in tooling, not just prose** — hooks intervene at tool-call level (see [Safety model](#️-safety-model)).
-
-The engineer decides what gets built, what risk is acceptable, and which changes should not happen. The AI executes within the process — it does not own it. This is the difference from vibe coding: speed comes from reducing ambiguity, not skipping engineering controls.
-
-It also addresses a cost shift. AI coding tools are moving from seat-based to usage-based (per-token) pricing, where the bill tracks how much context an agent reads and which model tier it burns. SDD treats context as an engineering budget — bounded reading lists, graph-derived impact, and cost-aware model routing instead of loading the whole repository on an expensive model. That makes delivery cheaper and more reviewable at the same time (see [`docs/TOKEN_ECONOMY.md`](docs/TOKEN_ECONOMY.md)).
-
 ## 🚀 Quickstart
 
 **Install as a plugin** — Claude Code or Codex, two commands, nothing copied into your project:
@@ -252,7 +254,7 @@ codex plugin marketplace add https://github.com/manujc00005/spec-driven-developm
 codex plugin add sdd@spec-driven-development
 ```
 
-That loads the 72 skills, the 8 agents and the default hook set (`hooks/hooks.json`). Read the five caveats before you choose this path — Windows hooks, double wiring, duplicated skills, in-place loading, what you are trusting: [Install as a plugin](docs/INSTALL.md#install-as-a-plugin).
+That loads the 72 skills, the 8 agents and the default hook set (`hooks/hooks.json`). The recorded proof (spec 044) installed from a local clone path; the GitHub form above is the standard plugin mechanism and goes through the plugin cache. Read the five caveats before you choose this path — Windows hooks, double wiring, duplicated skills, in-place loading, what you are trusting: [Install as a plugin](docs/INSTALL.md#install-as-a-plugin).
 
 **Alternative — the profile-aware installer.** Use it when you want a subset of profiles, Windows hooks, or a per-project Codex `AGENTS.md`:
 
@@ -789,7 +791,7 @@ This repo dogfoods its own workflow: the phases that built it are specced under 
 - Installer retirement on the plugin's recorded evidence (`scripts/update.*`, the install manifest, the dead `agents/README.md` copy branch), and the per-profile decision on the recorded token cost
 - Defensive hooks declared in profiles, including `messaging-review-reminder`, `openapi-contract-reminder`, `prisma-migration-guard`, and `stripe-review-reminder`
 - `observability-reviewer` skill + `OBSERVABILITY.md` template
-- Live-install verification of the six lifecycle agents
+- Live delegation to each of the six lifecycle agents from a real session (the plugin loader lists them; nobody has yet driven every one)
 - Codex-adapter verification against a live Codex CLI (confirm the custom-prompt directory and config schema), then promote its status from *prompt-based* to *verified*
 
 **Deferred / external**
@@ -821,7 +823,7 @@ Stated plainly, because they matter:
 
 - **Claude Code is the primary, fully featured adapter.** A second **Codex adapter** ships too, but it is deliberately narrower: prompt-based, with no enforced hooks, no native subagents, and only the lifecycle-spine prompts. The plugin installs into Codex (verified, spec 044) and its skills load there — Codex truncates their descriptions to fit its budget — but a Codex session executing one of them has not been observed yet (account quota, D012). This repository does **not** claim Claude/Codex parity — the gaps are enumerated in [`adapters/codex/PARITY.md`](adapters/codex/PARITY.md).
 - **Model availability depends on your account.** Fable/Opus/Sonnet are aliases resolved by your Claude Code plan and version; the orchestration degrades along the documented fallback table rather than failing, but the "ideal" three-model setup is not guaranteed everywhere.
-- **Agent recognition requires install (or the plugin) + a new session.** Live discovery passed for `deep-reasoner` and `fast-worker`; the six lifecycle agents are authored, schema-validated, and installer dry-run validated, but have not yet been verified through a real agent-registry install.
+- **Agent recognition requires install (or the plugin) + a new session.** Live discovery passed for `deep-reasoner` and `fast-worker`, and the plugin inventory lists all eight agents (spec 044), but a live delegation to each of the six lifecycle agents has not been exercised yet.
 - **`install.sh` requires `python3`** (stdlib only) for profile resolution. No `jq` anywhere.
 - **Windows-first origins.** The default central-dir location and the original hook wiring are Windows-shaped, but parity is shipped, not just documented: every hook has a `.sh` variant, both installers exist, and `settings.template.sh.json` provides the ready-made macOS/Linux hook wiring. The **plugin** wires the bash hooks only; on Windows, keep the installer for hooks until a later spec verifies plugin hooks there.
 - **The autonomous runner is frozen at spec 042** (`runner/README.md`). The supported autonomous path is the prompt in [`docs/AUTONOMOUS_SDD_FEATURE_PROMPT.md`](docs/AUTONOMOUS_SDD_FEATURE_PROMPT.md), which runs gates G0–G8 to a pull request against a real provider.
