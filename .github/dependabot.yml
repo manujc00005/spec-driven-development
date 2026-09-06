@@ -1,0 +1,12 @@
+# Keeps the GitHub Actions this repository uses on supported versions.
+# The only dependencies here are the actions in .github/workflows/; the repo
+# has no package manifest of its own. Each bump arrives as a pull request,
+# so the consistency pipeline runs on it before anything reaches main.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "ci"
