@@ -13,7 +13,7 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Run consistency checker
         run: bash scripts/check-consistency.sh
@@ -36,7 +36,7 @@ jobs:
   shellcheck:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # Severity=error only: near-certain real bugs, no style noise.
       # See specs/features/012-audit-closure-and-ci-hardening D001.
@@ -48,7 +48,7 @@ jobs:
   windows-syntax:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Parse every shipped .ps1
         shell: pwsh
