@@ -328,13 +328,14 @@ else
 fi
 
 # --- AC-011: shipped READMEs are refreshed under --force, with a backup ----
+# hooks/README.md is the only README the installer ships: agents/README.md moved to
+# docs/AGENTS.md in spec 044 (D009) so the plugin loader does not list it as an agent.
 C8="$TMP_BASE/ac011"
 "$REPO_ROOT/install.sh" --central-dir "$C8" --skip-link --profile java-spring-backend >/dev/null 2>&1
-printf 'stale placeholder\n' > "$C8/agents/README.md"
 printf 'stale placeholder\n' > "$C8/hooks/README.md"
 "$REPO_ROOT/install.sh" --central-dir "$C8" --skip-link --force --profile java-spring-backend >/dev/null 2>&1
-if cmp -s "$REPO_ROOT/agents/README.md" "$C8/agents/README.md" && cmp -s "$REPO_ROOT/hooks/README.md" "$C8/hooks/README.md"; then
-  pass "AC-011 agents/ and hooks/ README.md are refreshed under --force"
+if cmp -s "$REPO_ROOT/hooks/README.md" "$C8/hooks/README.md"; then
+  pass "AC-011 hooks/README.md is refreshed under --force"
 else
   fail "AC-011 a shipped README stayed stale after --force"
 fi

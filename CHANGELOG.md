@@ -293,6 +293,11 @@ Spec 024 · Delivery-operations profile — the first coverage of what happens a
 
 ### Fixed
 
+- **CI red after spec 044: the installer suites still expected `agents/README.md`.** D009 moved that file to
+  `docs/AGENTS.md` and kept the installer's copy branch as dead code, but `scripts/install.test.sh` and
+  `scripts/install.test.ps1` (AC-011, AC-012) pre-seeded a stale `agents/README.md` and expected `--force` to
+  refresh it from a source that no longer exists. Both suites now check `hooks/README.md`, the only README
+  the installer ships. Found by CI on `main`, not by the spec's close, which ran only the consistency suite.
 - **`~/.claude/CLAUDE.md` was never linked on a first install (spec 039).** Both installers linked
   it *before* restoring the personal layer — but this repo only ships `CLAUDE.md.example`, and the
   personal import is what creates the real `<central-dir>/CLAUDE.md`. So a fresh machine printed

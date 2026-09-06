@@ -175,17 +175,17 @@ try {
     }
 
     # --- AC-011: shipped READMEs refresh under -Force, with a backup ------
+    # hooks/README.md is the only README the installer ships: agents/README.md moved to
+    # docs/AGENTS.md in spec 044 (D009) so the plugin loader does not list it as an agent.
     $c6 = Join-Path $TmpBase "ac011"
     Invoke-Install @("-CentralDir", $c6, "-SkipLink", "-Profile", "java-spring-backend") | Out-Null
-    Set-Content (Join-Path $c6 "agents/README.md") "stale placeholder" -NoNewline
     Set-Content (Join-Path $c6 "hooks/README.md")  "stale placeholder" -NoNewline
     Invoke-Install @("-CentralDir", $c6, "-SkipLink", "-Force", "-Profile", "java-spring-backend") | Out-Null
-    $agentsSame = (Get-Content (Join-Path $c6 "agents/README.md") -Raw) -ceq (Get-Content (Join-Path $RepoRoot "agents/README.md") -Raw)
     $hooksSame  = (Get-Content (Join-Path $c6 "hooks/README.md")  -Raw) -ceq (Get-Content (Join-Path $RepoRoot "hooks/README.md")  -Raw)
-    if ($agentsSame -and $hooksSame) {
-        Pass "AC-011 agents/ and hooks/ README.md are refreshed under -Force"
+    if ($hooksSame) {
+        Pass "AC-011 hooks/README.md is refreshed under -Force"
     } else {
-        Fail "AC-011 a shipped README stayed stale after -Force" "agents=$agentsSame hooks=$hooksSame"
+        Fail "AC-011 a shipped README stayed stale after -Force" "hooks=$hooksSame"
     }
     if (@(Get-ChildItem -Path (Join-Path $c6 "_install-backups") -Recurse -Filter "README.md" -ErrorAction SilentlyContinue).Count -gt 0) {
         Pass "AC-011 the previous README content is backed up before overwriting"
@@ -197,7 +197,7 @@ try {
     $c10 = Join-Path $TmpBase "ac012"
     Invoke-Install @("-CentralDir", $c10, "-SkipLink", "-Force", "-Profile", "java-spring-backend") | Out-Null
     $mismatched = @()
-    foreach ($rel in @("agents/README.md", "hooks/README.md")) {
+    foreach ($rel in @("hooks/README.md")) {
         $a = Join-Path $RepoRoot $rel
         $b = Join-Path $c10 $rel
         if (-not (Test-Path $b) -or ((Get-Content $a -Raw) -cne (Get-Content $b -Raw))) { $mismatched += $rel }
