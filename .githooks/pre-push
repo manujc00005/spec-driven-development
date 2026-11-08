@@ -27,6 +27,11 @@ set -uo pipefail
 
 cd "$(git rev-parse --show-toplevel)" || exit 1
 
+# git exports GIT_DIR to hooks. A suite that runs `git init` in a temp dir would
+# re-initialise THIS repo as bare (lead-platform, 2026-11-08). Clean it first.
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_OBJECT_DIRECTORY \
+  GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_COMMON_DIR GIT_PREFIX
+
 fail() { printf '\n\033[31m✗ pre-push blocked:\033[0m %s\n\n' "$1"; exit 1; }
 
 printf '→ check-consistency… '

@@ -58,7 +58,7 @@ if ($warnings.Count -gt 0) {
     $msg = "[Spring Config] " + ($warnings -join " | ")
     # Build JSON via ConvertTo-Json (not string interpolation) so file paths
     # with backslashes/quotes can never produce malformed or injected JSON.
-    $payload = @{ systemMessage = $msg } | ConvertTo-Json -Compress
+    $payload = @{ systemMessage = $msg; hookSpecificOutput = @{ hookEventName = "PostToolUse"; additionalContext = $msg } } | ConvertTo-Json -Compress -Depth 3
     Write-Output $payload
 }
 

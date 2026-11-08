@@ -23,14 +23,14 @@ function Invoke-MavenCmd([string]$MvnCmd) {
     $compileOutput = & $MvnCmd compile -q 2>&1 | Select-Object -Last 30
     if ($LASTEXITCODE -ne 0) {
         Write-Output $compileOutput
-        Write-Output '{"systemMessage":"[Java Build] Maven compile failed. Fix compilation errors before proceeding."}'
+        Write-Output '{"systemMessage":"[Java Build] Maven compile failed. Fix compilation errors before proceeding.","hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"[Java Build] Maven compile failed. Fix compilation errors before proceeding."}}'
         return
     }
     if ($RunTests) {
         $testOutput = & $MvnCmd test -q -DskipITs 2>&1 | Select-Object -Last 30
         if ($LASTEXITCODE -ne 0) {
             Write-Output $testOutput
-            Write-Output '{"systemMessage":"[Java Build] Maven fast unit tests failed (SDD_JAVA_HOOK_RUN_TESTS opt-in). Fix failing tests before proceeding."}'
+            Write-Output '{"systemMessage":"[Java Build] Maven fast unit tests failed (SDD_JAVA_HOOK_RUN_TESTS opt-in). Fix failing tests before proceeding.","hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"[Java Build] Maven fast unit tests failed (SDD_JAVA_HOOK_RUN_TESTS opt-in). Fix failing tests before proceeding."}}'
         }
     }
 }
@@ -39,14 +39,14 @@ function Invoke-MavenWrapperBash {
     $compileOutput = bash -c "./mvnw compile -q" 2>&1 | Select-Object -Last 30
     if ($LASTEXITCODE -ne 0) {
         Write-Output $compileOutput
-        Write-Output '{"systemMessage":"[Java Build] Maven compile failed. Fix compilation errors before proceeding."}'
+        Write-Output '{"systemMessage":"[Java Build] Maven compile failed. Fix compilation errors before proceeding.","hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"[Java Build] Maven compile failed. Fix compilation errors before proceeding."}}'
         return
     }
     if ($RunTests) {
         $testOutput = bash -c "./mvnw test -q -DskipITs" 2>&1 | Select-Object -Last 30
         if ($LASTEXITCODE -ne 0) {
             Write-Output $testOutput
-            Write-Output '{"systemMessage":"[Java Build] Maven fast unit tests failed (SDD_JAVA_HOOK_RUN_TESTS opt-in). Fix failing tests before proceeding."}'
+            Write-Output '{"systemMessage":"[Java Build] Maven fast unit tests failed (SDD_JAVA_HOOK_RUN_TESTS opt-in). Fix failing tests before proceeding.","hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"[Java Build] Maven fast unit tests failed (SDD_JAVA_HOOK_RUN_TESTS opt-in). Fix failing tests before proceeding."}}'
         }
     }
 }
@@ -67,14 +67,14 @@ if (Test-Path "gradlew.bat") {
     $output = & .\gradlew.bat compileJava -q 2>&1 | Select-Object -Last 30
     if ($LASTEXITCODE -ne 0) {
         Write-Output $output
-        Write-Output '{"systemMessage":"[Java Build] Gradle compile failed. Fix compilation errors before proceeding."}'
+        Write-Output '{"systemMessage":"[Java Build] Gradle compile failed. Fix compilation errors before proceeding.","hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"[Java Build] Gradle compile failed. Fix compilation errors before proceeding."}}'
         exit 0
     }
     if ($RunTests) {
         $testOutput = & .\gradlew.bat test -q 2>&1 | Select-Object -Last 30
         if ($LASTEXITCODE -ne 0) {
             Write-Output $testOutput
-            Write-Output '{"systemMessage":"[Java Build] Gradle fast test task failed (SDD_JAVA_HOOK_RUN_TESTS opt-in). Fix failing tests before proceeding."}'
+            Write-Output '{"systemMessage":"[Java Build] Gradle fast test task failed (SDD_JAVA_HOOK_RUN_TESTS opt-in). Fix failing tests before proceeding.","hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"[Java Build] Gradle fast test task failed (SDD_JAVA_HOOK_RUN_TESTS opt-in). Fix failing tests before proceeding."}}'
         }
     }
     exit 0
@@ -84,14 +84,14 @@ if (Test-Path "gradlew") {
     $output = bash -c "./gradlew compileJava -q" 2>&1 | Select-Object -Last 30
     if ($LASTEXITCODE -ne 0) {
         Write-Output $output
-        Write-Output '{"systemMessage":"[Java Build] Gradle compile failed. Fix compilation errors before proceeding."}'
+        Write-Output '{"systemMessage":"[Java Build] Gradle compile failed. Fix compilation errors before proceeding.","hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"[Java Build] Gradle compile failed. Fix compilation errors before proceeding."}}'
         exit 0
     }
     if ($RunTests) {
         $testOutput = bash -c "./gradlew test -q" 2>&1 | Select-Object -Last 30
         if ($LASTEXITCODE -ne 0) {
             Write-Output $testOutput
-            Write-Output '{"systemMessage":"[Java Build] Gradle fast test task failed (SDD_JAVA_HOOK_RUN_TESTS opt-in). Fix failing tests before proceeding."}'
+            Write-Output '{"systemMessage":"[Java Build] Gradle fast test task failed (SDD_JAVA_HOOK_RUN_TESTS opt-in). Fix failing tests before proceeding.","hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"[Java Build] Gradle fast test task failed (SDD_JAVA_HOOK_RUN_TESTS opt-in). Fix failing tests before proceeding."}}'
         }
     }
     exit 0

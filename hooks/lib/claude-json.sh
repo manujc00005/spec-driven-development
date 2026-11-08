@@ -118,3 +118,12 @@ claude_json_emit_system_message() {
   escaped="$(claude_json_escape "$msg")"
   printf '{"systemMessage": "%s"}\n' "$escaped"
 }
+
+# Emits a message for BOTH audiences: systemMessage is shown to the user only;
+# hookSpecificOutput.additionalContext is what reaches the model.
+#   claude_json_emit_message_and_context PostToolUse "text"
+claude_json_emit_message_and_context() {
+  local event="$1" escaped
+  escaped="$(claude_json_escape "$2")"
+  printf '{"systemMessage": "%s", "hookSpecificOutput": {"hookEventName": "%s", "additionalContext": "%s"}}\n' "$escaped" "$event" "$escaped"
+}

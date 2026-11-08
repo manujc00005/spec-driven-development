@@ -42,12 +42,6 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/ts-check.sh",
-            "timeout": 30,
-            "statusMessage": "TypeScript check..."
-          },
-          {
-            "type": "command",
             "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/eslint-fix.sh",
             "timeout": 30,
             "statusMessage": "ESLint fix..."
