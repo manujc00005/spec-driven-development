@@ -44,7 +44,7 @@ This skill always sets status to **Draft**, and it is the only status it may wri
 
 - Do not implement production code.
 - Do not modify files outside `specs/features/` unless explicitly requested.
-- Inspect `specs/features/` to determine the next folder number before creating.
+- Determine and reserve the next folder number with the procedure below before creating (never from the local folder alone).
 - Prefer existing project terminology and architecture.
 - Ask for clarification only if the missing information blocks the spec.
 - If something is uncertain but not blocking, write it as an assumption.
@@ -65,16 +65,50 @@ Example:
 
 `001-user-login`
 
-**IMPORTANT — determining the next number:**
-Never rely on Glob to list existing spec folders — it can silently return no results even when folders exist.
-Always use a shell command to list the directory and find the highest existing number:
+**IMPORTANT — determining and reserving the next number:**
+Parallel sessions work in other worktrees and branches; a number taken there is invisible in
+your local `specs/features/`. Taking `max(local) + 1` is how duplicates happen (e.g. two `088-*`
+folders, a 116 renumbered to 118). Never rely on Glob for this either — it can silently return
+nothing. Run, from inside the repository:
 
-```powershell
-Get-ChildItem "specs/features/" -Name | Sort-Object | Select-Object -Last 1
+```bash
+git fetch --quiet origin 2>/dev/null || true
+claims="$(git rev-parse --git-common-dir)/spec-claims"; mkdir -p "$claims"
+taken() {   # every number visible from this clone
+  git ls-tree -d --name-only origin/HEAD:specs/features/ 2>/dev/null
+  ls specs/features/ 2>/dev/null
+  git for-each-ref --format='%(refname:lstrip=-1)' refs/heads refs/remotes
+  git worktree list --porcelain | sed -n 's/^worktree //p' | while read -r w; do ls "$w/specs/features" 2>/dev/null; done
+  ls "$claims"
+}
+max=$(taken | grep -oE '^[0-9]{3}' | sort -n | tail -1); n=$(( 10#${max:-0} + 1 ))
+until mkdir "$claims/$(printf '%03d' "$n")" 2>/dev/null; do n=$((n + 1)); done   # atomic claim
+NNN=$(printf '%03d' "$n"); printf '%s %s\n' "$(date -u +%FT%TZ)" "$(pwd)" > "$claims/$NNN/owner"
+echo "$NNN"
 ```
 
-If the directory is empty or does not exist, start at `001`.
-If folders exist, take the highest number and increment by 1 (zero-padded to 3 digits).
+```powershell
+git fetch --quiet origin 2>$null
+$claims = Join-Path (git rev-parse --git-common-dir) "spec-claims"; New-Item -ItemType Directory -Force $claims | Out-Null
+$taken = @(git ls-tree -d --name-only origin/HEAD:specs/features/ 2>$null) + @(Get-ChildItem specs/features -Name -EA SilentlyContinue) +
+         @(git for-each-ref --format='%(refname:lstrip=-1)' refs/heads refs/remotes) + @(Get-ChildItem $claims -Name) +
+         @(git worktree list --porcelain | Select-String '^worktree (.+)$' | ForEach-Object { Get-ChildItem (Join-Path $_.Matches[0].Groups[1].Value specs/features) -Name -EA SilentlyContinue })
+$n = 1 + [int](($taken | Select-String '^\d{3}' | ForEach-Object { [int]$_.Matches[0].Value } | Measure-Object -Maximum).Maximum)
+while ($true) { $NNN = '{0:D3}' -f $n; try { New-Item -ItemType Directory (Join-Path $claims $NNN) -EA Stop | Out-Null; break } catch { $n++ } }
+"$(Get-Date -AsUTC -Format s)Z $PWD" | Set-Content (Join-Path $claims "$NNN/owner"); $NNN
+```
+
+The claim is a directory in the clone's shared git dir, so every worktree of this clone sees it,
+and `mkdir` succeeds for exactly one session. Use `$NNN` for the folder.
+
+**Abandoned claims.** A claim whose number never became a folder or a branch anywhere above
+(the session died) may be released after 7 days: `rmdir "$claims/<NNN>"` once `taken` shows no
+`<NNN>-*` folder or branch and `owner` is older than that. Never release a claim younger than 7 days.
+
+**Limits — say them when relevant.** Claims coordinate the worktrees of ONE clone on ONE machine.
+Another machine or another clone only sees what is on `origin`: push the spec branch early
+(`<type>/<NNN>-<slug>`) so its number becomes visible there. Until then, a collision across
+machines is still possible.
 
 ## Required file
 
