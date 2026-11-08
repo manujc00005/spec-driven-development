@@ -225,7 +225,7 @@ without_nonsecret() {
 
 remote_signals_write() { # $1 = remote text; 0 when it shows a write/script/secret sign
   local text="$1"
-  echo "$text" | sed -E 's/(-c|--command)( +|=)\\?"[^"]*\\?"//g; s/(-c|--command)( +|=)'"'"'[^'"'"']*'"'"'//g; s/[0-9]*>&[0-9-]+//g; s/[0-9&]*>>? *\/dev\/null//g' | grep -q '>' && return 0
+  echo "$text" | tr '\n' ' ' | sed -E 's/(-c|--command)( +|=)\\?"[^"]*\\?"//g; s/(-c|--command)( +|=)'"'"'[^'"'"']*'"'"'//g; s/[0-9]*>&[0-9-]+//g; s/[0-9&]*>>? *\/dev\/null//g' | grep -q '>' && return 0
   without_nonsecret "$text" | grep -qEi "$SECRET_RE" && return 0
   echo "$text" | grep -qEiw "$MUTATING_SQL_RE" && return 0
   echo "$text" | grep -qE "$WRITE_RE" && return 0
@@ -237,7 +237,7 @@ remote_is_read_only() { # $1 = remote command text (heredocs included)
   # writes by redirection (2>&1 and >/dev/null are fine)
   # (SQL passed with psql -c is not a redirection: `->>`, `a > 0`. It is still
   # scanned for mutating keywords below.)
-  echo "$text" | sed -E 's/(-c|--command)( +|=)\\?"[^"]*\\?"//g; s/(-c|--command)( +|=)'"'"'[^'"'"']*'"'"'//g; s/[0-9]*>&[0-9-]+//g; s/[0-9&]*>>? *\/dev\/null//g' | grep -q '>' && return 1
+  echo "$text" | tr '\n' ' ' | sed -E 's/(-c|--command)( +|=)\\?"[^"]*\\?"//g; s/(-c|--command)( +|=)'"'"'[^'"'"']*'"'"'//g; s/[0-9]*>&[0-9-]+//g; s/[0-9&]*>>? *\/dev\/null//g' | grep -q '>' && return 1
   echo "$text" | grep -qE '(^|[^-])\btee\b' && return 1
   without_nonsecret "$text" | grep -qEi "$SECRET_RE" && return 1
   echo "$text" | grep -qEiw "$MUTATING_SQL_RE" && return 1

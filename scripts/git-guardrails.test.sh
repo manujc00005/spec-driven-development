@@ -113,6 +113,9 @@ SQL"
 expect ask "psql heredoc with a write" "ssh $H 'docker exec -i pg psql -d platform' <<'SQL'
 update leads set status = 'x';
 SQL"
+expect none "multi-line SQL with a comparison inside psql -c is not a redirection" "ssh $H \"docker exec pg psql -d platform -c \\\"
+select status from leads where created_at > now() - interval '1 day'
+\\\"\""
 expect ask "redirection after psql -c still counts" "ssh $H 'docker exec pg psql -At -c \"select 1\" > /tmp/out.txt'"
 expect none "not ssh at all" "ls -la"
 
