@@ -4,6 +4,10 @@
 #   bash scripts/git-guardrails.test.sh
 #   HOOK_IMPL=ps1 bash scripts/git-guardrails.test.sh
 set -uo pipefail
+# This suite creates throwaway repos with `git init`: never let an inherited
+# GIT_DIR (e.g. when run from a git hook) point those commands at a real repo.
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_OBJECT_DIRECTORY \
+  GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_COMMON_DIR GIT_PREFIX
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 IMPL="${HOOK_IMPL:-sh}"
