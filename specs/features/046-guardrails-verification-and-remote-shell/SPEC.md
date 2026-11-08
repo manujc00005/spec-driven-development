@@ -90,7 +90,7 @@ Claude Code sessions (and subagents — settings hooks fire inside them) in repo
 ## Acceptance criteria
 
 - AC-001: `bash scripts/git-guardrails.test.sh` and `HOOK_IMPL=ps1 bash scripts/git-guardrails.test.sh`
-  both pass (69/69 each at time of writing).
+  both pass (78/78 each at time of writing).
 - AC-002: replayed against the 2 478 historical production `ssh`/`scp` tool calls, **0** calls that match
   the write patterns are allowed, and none of them is left without a decision unless its only write is
   in the local part (governed by the permission rules); the allow/ask/none shares are reported.
