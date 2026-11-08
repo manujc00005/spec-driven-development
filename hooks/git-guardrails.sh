@@ -148,7 +148,7 @@ fi
 # and anything this parser does not recognise ask the user. scp/rsync always ask.
 RO_SIMPLE=" cat head tail grep egrep zgrep ls wc stat date echo printf df du free uptime whoami hostname id pgrep ps test [ true false awk sort uniq cut tr jq column nl basename dirname readlink realpath which type file md5sum sha256sum sha1sum sleep cd set journalctl ss netstat lsof dig host nslookup ping openssl "
 SECRET_RE='(^|[ /])(env|printenv)([ "'"'"']|$)|\.env([ "'"'"']|$)|[./]env[a-z]*[ "'"'"']?$|/etc/[^ ]*\.env|secret|id_(rsa|ed25519|ecdsa)|\.pem( |$)|credentials'
-MUTATING_SQL_RE='insert|update|delete|alter|drop|create|truncate|grant|revoke|vacuum|reindex|copy|refresh|cluster|call|merge'
+MUTATING_SQL_RE='insert|update|delete|alter|drop|create|truncate|grant|revoke|vacuum|reindex|copy|refresh|cluster|call|merge|pg_terminate_backend|pg_cancel_backend|setval|nextval|pg_reload_conf|pg_rotate_logfile|pg_switch_wal|pg_promote|lo_unlink|lo_import|lo_export|dblink|dblink_exec|set_config|pg_advisory_lock|pg_drop_replication_slot|pg_create_restore_point'
 
 ro_line() { # one simple command; returns 0 if read-only
   local line="$1" w1 w2 rest
@@ -163,13 +163,19 @@ ro_line() { # one simple command; returns 0 if read-only
   echo "$line" | grep -qE '^for [A-Za-z_]+ in ' && return 0
   w1="${line%% *}"; rest="${line#"$w1"}"; w2="$(echo "$rest" | awk '{print $1}')"
   case "$RO_SIMPLE" in *" $w1 "*)
-    if [ "$w1" = set ]; then
-      echo "$rest" | grep -qE '^ *-[euxo]+( pipefail)?( |$)|^ *\+[a-z]+' || return 1
-    fi
+    case "$w1" in
+      set) echo "$rest" | grep -qE '^ *-[euxo]+( pipefail)?( |$)|^ *\+[a-z]+' || return 1 ;;
+      # read-looking commands that can change the system or write a file:
+      date) echo "$rest" | grep -qE -- '(^| )(-s|--set)( |=|$)' && return 1 ;;
+      hostname) echo "$rest" | grep -qE '^ *(-[fIisdA]+ *)*$' || return 1 ;;
+      sort) echo "$rest" | grep -qE -- '(^| )(-o|--output)( |=|$)' && return 1 ;;
+      uniq) [ "$(echo "$rest" | tr ' ' '\n' | grep -cvE '^(-.*)?$')" -le 1 ] || return 1 ;;
+    esac
     return 0 ;;
   esac
   case "$w1" in
-    sed) echo "$rest" | grep -qE '(^| )-i' && return 1; return 0 ;;
+    sed) echo "$rest" | grep -qE '(^| )-i' && return 1
+         echo "$rest" | grep -qE "(^|[;{}'\" ])w +[^ ]" && return 1; return 0 ;;
     find) echo "$rest" | grep -qE -- '-(delete|exec|execdir|ok|fprint)' && return 1; return 0 ;;
     bash|sh)
       # -c '<script>': the script is in the text and gets judged line by line.
@@ -185,6 +191,8 @@ ro_line() { # one simple command; returns 0 if read-only
     curl)
       echo "$rest" | grep -qE -- '(^| )(-X|--request|-d|--data[a-z-]*|-F|--form|-T|--upload-file|-K|--config)( |=|$)' && return 1
       echo "$rest" | grep -qE -- '(^| )-o +[^/ ]|(^| )-o +/[^d]|(^| )-O( |$)' && return 1
+      # A GET can have effects too: only health/status-style endpoints on loopback count as reads.
+      echo "$rest" | grep -qE 'https?://(127\.0\.0\.1|localhost|\[::1\])(:[0-9]+)?/(api/)?(health|healthz|status|ready|readyz|livez|ping|version|metrics)([/?"'"'"' ]|$)' || return 1
       return 0 ;;
     docker)
       case "$w2" in

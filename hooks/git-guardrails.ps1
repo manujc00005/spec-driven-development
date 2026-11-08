@@ -123,7 +123,7 @@ if ($COMMAND -cmatch '(^|[;&|(] *)gh pr (create|ready|merge)( |$)') {
 # --- Remote shells (ssh): read-only runs, anything else asks ------------------
 $RoSimple = @("cat","head","tail","grep","egrep","zgrep","ls","wc","stat","date","echo","printf","df","du","free","uptime","whoami","hostname","id","pgrep","ps","test","[","true","false","awk","sort","uniq","cut","tr","jq","column","nl","basename","dirname","readlink","realpath","which","type","file","md5sum","sha256sum","sha1sum","sleep","cd","set","journalctl","ss","netstat","lsof","dig","host","nslookup","ping","openssl")
 $SecretRe = '(^|[ /])(env|printenv)([ "'']|$)|\.env([ "'']|$)|[./]env[a-z]*[ "'']?$|/etc/[^ ]*\.env|secret|id_(rsa|ed25519|ecdsa)|\.pem( |$)|credentials'
-$MutatingSqlRe = '(?i)\b(insert|update|delete|alter|drop|create|truncate|grant|revoke|vacuum|reindex|copy|refresh|cluster|call|merge)\b'
+$MutatingSqlRe = '(?i)\b(insert|update|delete|alter|drop|create|truncate|grant|revoke|vacuum|reindex|copy|refresh|cluster|call|merge|pg_terminate_backend|pg_cancel_backend|setval|nextval|pg_reload_conf|pg_rotate_logfile|pg_switch_wal|pg_promote|lo_unlink|lo_import|lo_export|dblink|dblink_exec|set_config|pg_advisory_lock|pg_drop_replication_slot|pg_create_restore_point)\b'
 
 function Test-RoLine([string]$line) {
     $line = $line -replace '^\s*', ''
@@ -139,10 +139,15 @@ function Test-RoLine([string]$line) {
     $w2 = (($rest.Trim()) -split '\s+', 2)[0]
     if ($RoSimple -ccontains $w1) {
         if ($w1 -ceq "set" -and $rest -cnotmatch '^ *-[euxo]+( pipefail)?( |$)|^ *\+[a-z]+') { return $false }
+        # read-looking commands that can change the system or write a file:
+        if ($w1 -ceq "date" -and $rest -cmatch '(^| )(-s|--set)( |=|$)') { return $false }
+        if ($w1 -ceq "hostname" -and $rest -cnotmatch '^ *(-[fIisdA]+ *)*$') { return $false }
+        if ($w1 -ceq "sort" -and $rest -cmatch '(^| )(-o|--output)( |=|$)') { return $false }
+        if ($w1 -ceq "uniq" -and @(($rest.Trim() -split '\s+') | Where-Object { $_ -and $_ -notmatch '^-' }).Count -gt 1) { return $false }
         return $true
     }
     switch -CaseSensitive ($w1) {
-        "sed" { return ($rest -cnotmatch '(^| )-i') }
+        "sed" { return ($rest -cnotmatch '(^| )-i' -and $rest -cnotmatch "(^|[;{}'`" ])w +[^ ]") }
         "find" { return ($rest -cnotmatch '-(delete|exec|execdir|ok|fprint)') }
         { $_ -ceq "bash" -or $_ -ceq "sh" } {
             # -c '<script>': the script is in the text and gets judged line by line.
@@ -160,7 +165,8 @@ function Test-RoLine([string]$line) {
         "curl" {
             if ($rest -cmatch '(^| )(-X|--request|-d|--data[a-z-]*|-F|--form|-T|--upload-file|-K|--config)( |=|$)') { return $false }
             if ($rest -cmatch '(^| )-o +[^/ ]|(^| )-o +/[^d]|(^| )-O( |$)') { return $false }
-            return $true
+            # A GET can have effects too: only health/status-style endpoints on loopback count as reads.
+            return ($rest -cmatch 'https?://(127\.0\.0\.1|localhost|\[::1\])(:[0-9]+)?/(api/)?(health|healthz|status|ready|readyz|livez|ping|version|metrics)([/?"'' ]|$)')
         }
         "docker" {
             if (@("ps","logs","inspect","images","stats","top","port","version","info") -ccontains $w2) { return $true }

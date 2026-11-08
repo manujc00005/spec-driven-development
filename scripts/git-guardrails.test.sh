@@ -95,6 +95,15 @@ expect ask "scp" "scp report.txt $H:/tmp/"
 expect none "unknown command: no decision (permission rules apply)" "ssh $H 'frobnicate --now'"
 expect ask "deploy script" "ssh $H 'cd /opt/lead-platform && infra/deploy.sh'"
 expect none "ssh without a remote command" "ssh -T git@github.com"
+# read-looking but with effects: never granted by the hook
+expect ask  "SELECT that kills sessions" "ssh $H 'docker exec pg psql -At -c \"select pg_terminate_backend(pid) from pg_stat_activity\"'"
+expect ask  "SELECT that moves a sequence" "ssh $H 'docker exec pg psql -At -c \"select setval(\x27leads_id_seq\x27, 1)\"'"
+expect none "curl GET to a non-health endpoint" "ssh $H 'curl -s http://127.0.0.1:3000/api/admin/sync-now'"
+expect none "date -s" "ssh $H 'date -s 2020-01-01'"
+expect none "hostname with a new name" "ssh $H 'hostname evil'"
+expect none "sort -o writes a file" "ssh $H 'sort -o /etc/hosts /tmp/x'"
+expect none "sed w writes a file" "ssh $H 'sed -n \"w /etc/passwd\" /tmp/x'"
+expect allow "plain date and hostname" "ssh $H 'date -u; hostname'"
 # found by replaying real history: every invocation counts, stdin we cannot see asks
 expect ask "two ssh calls, the first writes" "ssh $H 'rm -rf /tmp/x'
 ssh $H 'docker ps'"
