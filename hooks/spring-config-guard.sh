@@ -64,7 +64,7 @@ if grep -qE '^debug\s*[:=]\s*true' "$FILE" 2>/dev/null; then
 fi
 
 if [ -n "$WARNINGS" ]; then
-  claude_json_emit_system_message "[Spring Config] ${WARNINGS}"
+  claude_json_emit_message_and_context PostToolUse "[Spring Config] ${WARNINGS}"
 fi
 
 exit 0

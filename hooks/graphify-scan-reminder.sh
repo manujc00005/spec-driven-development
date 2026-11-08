@@ -38,5 +38,5 @@ fi
 
 mkdir -p .graphify
 touch "$MARKER"
-echo '{"systemMessage":"[Graphify] A dependency graph is available (.graphify/GRAPH_REPORT.md). Prefer graph-first context — /graphify-context, graphify review-context <file>, graphify affected-flows <file> — over broad Grep/Glob scans to save tokens."}'
+echo '{"systemMessage":"[Graphify] A dependency graph is available (.graphify/GRAPH_REPORT.md). Prefer graph-first context — /graphify-context, graphify review-context <file>, graphify affected-flows <file> — over broad Grep/Glob scans to save tokens.","hookSpecificOutput":{"hookEventName":"PreToolUse","additionalContext":"[Graphify] A dependency graph is available (.graphify/GRAPH_REPORT.md). Prefer graph-first context — /graphify-context, graphify review-context <file>, graphify affected-flows <file> — over broad Grep/Glob scans to save tokens."}}'
 exit 0

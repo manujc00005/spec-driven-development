@@ -54,9 +54,9 @@ try_auto_refresh() {
 # If no graph report exists, refresh in background (when possible) or remind
 if [ -z "$GRAPH_REPORT" ]; then
   if try_auto_refresh; then
-    echo '{"systemMessage":"[Graphify] Graph report not found - refreshing in background (graphify update). It will be available at .graphify/GRAPH_REPORT.md shortly."}'
+    echo '{"systemMessage":"[Graphify] Graph report not found - refreshing in background (graphify update). It will be available at .graphify/GRAPH_REPORT.md shortly.","hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"[Graphify] Graph report not found - refreshing in background (graphify update). It will be available at .graphify/GRAPH_REPORT.md shortly."}}'
   else
-    echo '{"systemMessage":"[Graphify] GRAPH_REPORT.md not found. Consider running Graphify for architecture discovery and impact analysis before planning."}'
+    echo '{"systemMessage":"[Graphify] GRAPH_REPORT.md not found. Consider running Graphify for architecture discovery and impact analysis before planning.","hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"[Graphify] GRAPH_REPORT.md not found. Consider running Graphify for architecture discovery and impact analysis before planning."}}'
   fi
   exit 0
 fi
@@ -89,9 +89,9 @@ if [ -n "$NEWEST_SOURCE_MTIME" ] && [ -n "$GRAPH_MTIME" ]; then
   DIFF_DAYS=$((DIFF_SECONDS / 86400))
   if [ "$DIFF_DAYS" -gt "$STALE_DAYS" ]; then
     if try_auto_refresh; then
-      echo "{\"systemMessage\":\"[Graphify] Graph report is ${DIFF_DAYS} days older than the newest source file - refreshing in background (graphify update).\"}"
+      echo "{\"systemMessage\":\"[Graphify] Graph report is ${DIFF_DAYS} days older than the newest source file - refreshing in background (graphify update).\",\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"[Graphify] Graph report is ${DIFF_DAYS} days older than the newest source file - refreshing in background (graphify update).\"}}"
     else
-      echo "{\"systemMessage\":\"[Graphify] GRAPH_REPORT.md is ${DIFF_DAYS} days older than the newest source file. Consider re-running Graphify before relying on it for impact analysis.\"}"
+      echo "{\"systemMessage\":\"[Graphify] GRAPH_REPORT.md is ${DIFF_DAYS} days older than the newest source file. Consider re-running Graphify before relying on it for impact analysis.\",\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"[Graphify] GRAPH_REPORT.md is ${DIFF_DAYS} days older than the newest source file. Consider re-running Graphify before relying on it for impact analysis.\"}}"
     fi
   fi
 fi

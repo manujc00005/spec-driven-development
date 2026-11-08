@@ -30,5 +30,5 @@ if ($markerItem) {
 
 New-Item -ItemType Directory -Path ".graphify" -Force | Out-Null
 New-Item -ItemType File -Path $marker -Force | Out-Null
-Write-Output '{"systemMessage":"[Graphify] A dependency graph is available (.graphify/GRAPH_REPORT.md). Prefer graph-first context - /graphify-context, graphify review-context <file>, graphify affected-flows <file> - over broad Grep/Glob scans to save tokens."}'
+Write-Output '{"systemMessage":"[Graphify] A dependency graph is available (.graphify/GRAPH_REPORT.md). Prefer graph-first context - /graphify-context, graphify review-context <file>, graphify affected-flows <file> - over broad Grep/Glob scans to save tokens.","hookSpecificOutput":{"hookEventName":"PreToolUse","additionalContext":"[Graphify] A dependency graph is available (.graphify/GRAPH_REPORT.md). Prefer graph-first context - /graphify-context, graphify review-context <file>, graphify affected-flows <file> - over broad Grep/Glob scans to save tokens."}}'
 exit 0

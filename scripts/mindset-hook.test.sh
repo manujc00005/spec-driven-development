@@ -39,6 +39,13 @@ if [ "$rc" -eq 0 ] && grep -q '"systemMessage"' <<< "$out"; then
 else
   fail "AC-001 no message or non-zero exit" "rc=$rc out=${out:0:80}"
 fi
+# systemMessage is shown to the user only; the reminder exists for the MODEL,
+# which only receives hookSpecificOutput.additionalContext.
+if grep -q '"hookEventName":"PreToolUse","additionalContext":"\[scope-keeper\]' <<< "$out"; then
+  pass "AC-001b the reminder reaches the model (additionalContext)"
+else
+  fail "AC-001b no additionalContext for the model" "out=${out:0:120}"
+fi
 
 # --- AC-008: the message is identifiable and states it is not a gate -------
 if grep -q '\[scope-keeper\]' <<< "$out" \

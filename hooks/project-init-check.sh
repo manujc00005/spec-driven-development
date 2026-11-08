@@ -10,7 +10,7 @@ fi
 
 # CONSTITUTION.md missing
 if [ ! -f "$CONSTITUTION" ]; then
-  echo '{"systemMessage":"[SDD] specs/CONSTITUTION.md not found. Agents will work without project rules. Run /project-init to set up your project constitution."}'
+  echo '{"systemMessage":"[SDD] specs/CONSTITUTION.md not found. Agents will work without project rules. Run /project-init to set up your project constitution.","hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"[SDD] specs/CONSTITUTION.md not found. Agents will work without project rules. Run /project-init to set up your project constitution."}}'
   exit 0
 fi
 
@@ -19,7 +19,7 @@ TODO_COUNT=$(grep -c "TODO:" "$CONSTITUTION" 2>/dev/null)
 TODO_COUNT=${TODO_COUNT:-0}
 
 if [ "$TODO_COUNT" -gt 0 ] 2>/dev/null; then
-  echo "{\"systemMessage\":\"[SDD] specs/CONSTITUTION.md has $TODO_COUNT unfilled TODO sections. Run /project-init to complete your project setup.\"}"
+  echo "{\"systemMessage\":\"[SDD] specs/CONSTITUTION.md has $TODO_COUNT unfilled TODO sections. Run /project-init to complete your project setup.\",\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"[SDD] specs/CONSTITUTION.md has $TODO_COUNT unfilled TODO sections. Run /project-init to complete your project setup.\"}}"
 fi
 
 exit 0

@@ -55,8 +55,8 @@ try {
     # scripts/mindset-hook.test.sh asserts these claims still exist there, so
     # the two cannot drift silently (D004).
     $msg = '[scope-keeper] Before this edit - do exactly what was asked: the requested scope IS the deliverable. No drive-by refactors, no "while I am at it", no speculative generality. A real improvement you spot mid-task gets reported, not applied. Necessary-adjacent is in scope (say why); "would be nicer" is not. Dead code your change created is yours to remove; dead code you found is not. Match the surrounding code. Full manual: /scope-keeper. This is a reminder, not a gate - use your judgement. Silence it with SDD_SCOPE_REMINDER=0.'
-    $payload = [ordered]@{ systemMessage = $msg }
-    Write-Output ($payload | ConvertTo-Json -Compress)
+    $payload = [ordered]@{ systemMessage = $msg; hookSpecificOutput = [ordered]@{ hookEventName = "PreToolUse"; additionalContext = $msg } }
+    Write-Output ($payload | ConvertTo-Json -Compress -Depth 3)
 } catch {
     # Never let an internal failure block an edit.
 }

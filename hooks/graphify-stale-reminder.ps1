@@ -45,9 +45,9 @@ function Try-AutoRefresh {
 # If no graph report exists, refresh in background (when possible) or remind
 if (-not $GraphReport) {
     if (Try-AutoRefresh) {
-        Write-Output '{"systemMessage":"[Graphify] Graph report not found - refreshing in background (graphify update). It will be available at .graphify/GRAPH_REPORT.md shortly."}'
+        Write-Output '{"systemMessage":"[Graphify] Graph report not found - refreshing in background (graphify update). It will be available at .graphify/GRAPH_REPORT.md shortly.","hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"[Graphify] Graph report not found - refreshing in background (graphify update). It will be available at .graphify/GRAPH_REPORT.md shortly."}}'
     } else {
-        Write-Output '{"systemMessage":"[Graphify] GRAPH_REPORT.md not found. Consider running Graphify for architecture discovery and impact analysis before planning."}'
+        Write-Output '{"systemMessage":"[Graphify] GRAPH_REPORT.md not found. Consider running Graphify for architecture discovery and impact analysis before planning.","hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"[Graphify] GRAPH_REPORT.md not found. Consider running Graphify for architecture discovery and impact analysis before planning."}}'
     }
     exit 0
 }
@@ -64,9 +64,9 @@ $newestSource = Get-ChildItem -Path "." -Recurse -Include "*.java","*.ts","*.tsx
 if ($newestSource -and ($newestSource.LastWriteTime - $graphTime).Days -gt $staleDays) {
     $age = ($newestSource.LastWriteTime - $graphTime).Days
     if (Try-AutoRefresh) {
-        Write-Output "{`"systemMessage`":`"[Graphify] Graph report is $age days older than the newest source file - refreshing in background (graphify update).`"}"
+        Write-Output "{`"systemMessage`":`"[Graphify] Graph report is $age days older than the newest source file - refreshing in background (graphify update).`",`"hookSpecificOutput`":{`"hookEventName`":`"SessionStart`",`"additionalContext`":`"[Graphify] Graph report is $age days older than the newest source file - refreshing in background (graphify update).`"}}"
     } else {
-        Write-Output "{`"systemMessage`":`"[Graphify] GRAPH_REPORT.md is $age days older than the newest source file. Consider re-running Graphify before relying on it for impact analysis.`"}"
+        Write-Output "{`"systemMessage`":`"[Graphify] GRAPH_REPORT.md is $age days older than the newest source file. Consider re-running Graphify before relying on it for impact analysis.`",`"hookSpecificOutput`":{`"hookEventName`":`"SessionStart`",`"additionalContext`":`"[Graphify] GRAPH_REPORT.md is $age days older than the newest source file. Consider re-running Graphify before relying on it for impact analysis.`"}}"
     }
 }
 
