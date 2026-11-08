@@ -27,6 +27,13 @@ jobs:
       - name: Run mindset-hook suite
         run: bash scripts/mindset-hook.test.sh
 
+      # Same cases against both implementations (CONTRIBUTING rule 2: sh/ps1 parity).
+      # ubuntu-latest ships pwsh.
+      - name: Run git-guardrails suite (sh + ps1)
+        run: |
+          bash scripts/git-guardrails.test.sh
+          HOOK_IMPL=ps1 bash scripts/git-guardrails.test.sh
+
       - name: Run installer suite
         run: bash scripts/install.test.sh
 
